@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barzol — Soporte de Celulares</title>
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/ventapos-design-system-5107e781-5c8c-438c-8b6f-c9dfd60af676/tokens/fonts.css">
+  <link rel="stylesheet" href="barzol-tokens.css">
+  <script src="./image-slot.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: #f4f5f7; color: #1a1a2e; -webkit-font-smoothing: antialiased; }
+    [data-noscroll] { scrollbar-width: none; }
+    [data-noscroll]::-webkit-scrollbar { display: none; }
+    @keyframes annIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .cat-trigger .cat-panel { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.1s ease; }
+    .cat-trigger:hover .cat-panel { opacity: 1; visibility: visible; pointer-events: auto; }
+    #logo-img::part(frame) { background: white; }
+    [data-hero-cat] { -webkit-mask-image: radial-gradient(ellipse 80% 100% at 65% 50%, black 30%, transparent 75%); mask-image: radial-gradient(ellipse 80% 100% at 65% 50%, black 30%, transparent 75%); }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; background:#f4f5f7;">
+
+  <div style="position:sticky; top:0; z-index:200;">
+  <!-- ANNOUNCEMENT BAR -->
+  <div style="background:#1e4d8c; color:white; padding:8px 32px; font-size:12px; font-weight:500; text-align:center; letter-spacing:0.025em; display:flex; align-items:center; justify-content:center; gap:8px;">
+    <sc-if value="{{ annIcons }}" hint-placeholder-val="{{ false }}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <rect x="1" y="3" width="15" height="13" rx="2" stroke="white" strokeWidth="1.8" strokeLinejoin="round"></rect>
+        <path d="M16 8h3l3 4v5h-6V8z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"></path>
+        <circle cx="5.5" cy="18.5" r="1.5" stroke="white" strokeWidth="1.5"></circle>
+        <circle cx="18.5" cy="18.5" r="1.5" stroke="white" strokeWidth="1.5"></circle>
+      </svg>
+    </sc-if>
+    <span key="{{ annIdx }}" style="animation: annIn 0.4s ease both;">{{ annText }}</span>
+    <sc-if value="{{ annIcons }}" hint-placeholder-val="{{ false }}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 00-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" stroke="white" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"></path>
+      </svg>
+    </sc-if>
+  </div>
+
+  <!-- HEADER -->
+  <header style="background:white; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+    <!-- Backdrop -->
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeMenu }}" style="position:fixed; inset:0; z-index:195; background:transparent;"></div>
+    </sc-if>
+
+    <!-- Fila 1: Logo + Buscador -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 32px; height:64px; display:flex; align-items:center; gap:6px; border-bottom:1px solid #f0f2f5;">
+
+      <!-- Logo -->
+      <a href="Barzol Home.dc.html" style="display:flex; align-items:center; text-decoration:none; flex-shrink:0;">
+        <image-slot id="logo-img" shape="rect" fit="contain" position="0% 50%" radius="6" placeholder="Logo Barzol" style="width:180px; height:34px; display:block; background:white;"></image-slot>
+      </a>
+
+      <!-- Categorías (junto al logo) -->
+      <div class="cat-trigger" onMouseEnter="{{ enterProductos }}" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0;">
+        <button style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:13px; font-weight:600; color:{{ productosColor }}; background:{{ productosBg }}; border:1px solid {{ productosBorder }}; cursor:pointer; border-radius:8px; font-family:'Poppins',sans-serif; white-space:nowrap;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"></path></svg>
+          Categorías
+        </button>
+
+        <!-- MEGA PANEL -->
+        <div class="cat-panel" style="position:absolute; top:100%; left:0; width:{{ panelWidth }}; background:white; border:1px solid #eef0f2; box-shadow:0 12px 28px rgba(0,0,0,0.09); z-index:300; border-radius:8px; overflow:hidden; margin-top:0; display:flex; transition:width 0.15s;">
+            <div style="width:222px; background:#fafbfc; border-right:{{ sidebarBorder }}; padding:6px; flex-shrink:0; display:flex; flex-direction:column; gap:1px;">
+              <sc-for list="{{ currentSubs }}" as="sub" hint-placeholder-count="4">
+                <button onMouseEnter="{{ sub.setActive }}" style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:6px; background:{{ sub.bg }}; border:none; text-align:left; cursor:pointer; font-family:'Poppins',sans-serif; transition:background 0.12s; white-space:nowrap; overflow:hidden;">
+                  <div style="width:17px; height:17px; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:{{ sub.iconColor }};">
+                    <sc-if value="{{ sub.isSoportes }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="1.2" stroke="currentColor" strokeWidth="1.6"></rect><line x1="6" y1="17.5" x2="18" y2="17.5" stroke="currentColor" strokeWidth="1.6"></line></svg>
+                    </sc-if>
+                    <sc-if value="{{ sub.isSordinas }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 9v6h3.5l6.5 4.5V4.5L7.5 9H4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"></path><path d="M17.5 9.5a3.2 3.2 0 010 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ sub.isTopes }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l6.5 2.4v5.6c0 4.4-2.8 7.5-6.5 9.6-3.7-2.1-6.5-5.2-6.5-9.6V5.4L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ sub.isBerp }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 10.5l13-5v13l-13-5v-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"></path><path d="M9 15.5v2.3a1.7 1.7 0 001.7 1.7h.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"></path></svg>
+                    </sc-if>
+                  </div>
+                  <span style="font-size:12px; font-weight:{{ sub.fontWeight }}; color:{{ sub.textColor }}; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ sub.name }}</span>
+                  <sc-if value="{{ sub.hasDepth }}" hint-placeholder-val="{{ true }}">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ activeHasSubs }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1; padding:18px 20px; display:flex; flex-direction:column;">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:14.5px; font-weight:700; color:#1a1a2e; margin-bottom:6px;">{{ activeSubName }}</div>
+                <div style="width:26px; height:2.5px; background:#1e4d8c; border-radius:99px;"></div>
+              </div>
+
+              <div style="display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; flex:1;">
+                <sc-for list="{{ activeSubItems }}" as="item" hint-placeholder-count="6">
+                  <a href="Barzol Categoria.dc.html" style="display:inline-flex; align-items:center; padding:7px 13px; border-radius:6px; border:1px solid #e5e7eb; background:#fafbfc; font-size:12.5px; font-weight:500; color:#374151; text-decoration:none; white-space:nowrap; transition:all 0.12s;" style-hover="border-color:#1a1a2e; color:#1a1a2e; background:#f4f5f7; transform:translateY(-1px); box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    {{ item.name }}
+                  </a>
+                </sc-for>
+              </div>
+              <div style="border-top:1px solid #f0f2f5; margin-top:12px; padding-top:12px;">
+                <a href="Barzol Categoria.dc.html" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#1e4d8c; text-decoration:none;" style-hover="opacity:0.75;">
+                  Ver todo en {{ activeSubName }}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="#1e4d8c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+                </a>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+      </div>
+
+      <!-- Buscador centrado y prominente -->
+      <div style="position:relative; flex:1 1 260px; max-width:420px; min-width:190px; z-index:300;">
+        <input type="text" value="{{ searchQuery }}" onInput="{{ onSearchInput }}" onFocus="{{ onSearchFocus }}" onBlur="{{ onSearchBlur }}" placeholder="Buscar productos, sordinas, soportes..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid {{ searchBorder }}; border-radius:{{ searchRadius }}; font-size:13px; font-family:'Poppins',sans-serif; color:#1a1a2e; background:white; outline:none; transition:border-color 0.15s;">
+        <button style="position:absolute; right:3px; top:50%; transform:translateY(-50%); width:32px; height:32px; background:transparent; color:#1e4d8c; border:none; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center;" style-hover="background:#f4f5f7;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="8" stroke="#1e4d8c" strokeWidth="2.2"></circle>
+            <path d="M21 21l-4.35-4.35" stroke="#1e4d8c" strokeWidth="2.2" strokeLinecap="round"></path>
+          </svg>
+        </button>
+
+        <!-- Dropdown de resultados -->
+        <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; top:calc(100% + 6px); left:0; right:0; background:white; border:1px solid #e5e7eb; border-radius:14px; box-shadow:0 20px 56px rgba(0,0,0,0.14); overflow:hidden; z-index:310;">
+
+            <!-- Búsqueda reciente -->
+            <sc-if value="{{ hasRecentSearches }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:12px 8px 4px;">
+              <div style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:#9ca3af; text-transform:uppercase; padding:0 8px; margin-bottom:6px;">Búsqueda reciente</div>
+              <sc-for list="{{ recentSearches }}" as="q" hint-placeholder-count="4">
+                <div onClick="{{ q.go }}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; color:#374151; font-family:'Poppins',sans-serif;" style-hover="background:#f4f5f7;">
+                  <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ q.name }}</span>
+                  <button onClick="{{ q.remove }}" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; background:transparent; border:none; border-radius:5px; color:#9ca3af; cursor:pointer; flex-shrink:0;" style-hover="background:#e5e7eb; color:#374151;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"></path></svg>
+                  </button>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+
+            <!-- Sugerencias de categoría -->
+            <div style="padding:8px 16px 8px;">
+              <div style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:#9ca3af; text-transform:uppercase; margin-bottom:10px;">Categorías</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <sc-for list="{{ searchCats }}" as="cat" hint-placeholder-count="4">
+                  <button onClick="{{ cat.go }}" style="display:inline-flex; align-items:center; padding:7px 13px; border-radius:6px; border:1px solid #e5e7eb; background:#fafbfc; font-size:12.5px; font-weight:500; color:#374151; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.12s;" style-hover="border-color:#1a1a2e; color:#1a1a2e; background:#f4f5f7;">
+                    {{ cat.name }}
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="flex:1; min-width:0;"></div>
+
+      <!-- Servicios / Nosotros -->
+      <a href="Barzol Servicios.dc.html" style="display:flex; align-items:center; gap:4px; padding:6px 8px; font-size:13px; font-weight:500; color:#1f2937; text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap;" style-hover="background:#f4f5f7; color:#1e4d8c;">
+        Servicios
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+      </a>
+      <a href="Barzol Nosotros.dc.html" style="padding:6px 8px; font-size:13px; font-weight:500; color:#1f2937; text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap; margin-left:2px;" style-hover="background:#f4f5f7; color:#1e4d8c;">Nosotros</a>
+
+      <div style="width:1px; height:20px; background:#e5e7eb; flex-shrink:0; margin:0 2px;"></div>
+
+      <!-- Contacto WhatsApp -->
+      <a href="https://wa.me/51950759032" target="_blank" style="display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:8px; background:transparent; border:1px solid #e5e7eb; flex-shrink:0; text-decoration:none; white-space:nowrap;" style-hover="background:#f4f5f7; border-color:#d1d5db;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="#16a34a">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.856L.054 23.25a.75.75 0 00.916.916l5.395-1.478A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.925 0-3.73-.513-5.28-1.41l-.378-.22-3.927 1.075 1.074-3.926-.22-.378A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path>
+        </svg>
+        <span style="font-size:13px; font-weight:600; color:#1f2937;">950 759 032</span>
+      </a>
+
+    </div>
+
+  </header>
+  </div>
+
+  <!-- BREADCRUMB -->
+  <div style="max-width:1200px; margin:0 auto; padding:14px 32px 0;">
+    <div style="display:flex; align-items:center; gap:7px; font-size:12px; color:#9ca3af;">
+      <a href="Barzol Home.dc.html" style="color:#6b7280; text-decoration:none;" style-hover="color:#0550ae;">Inicio</a>
+      <span>›</span>
+      <span style="color:#1a1a2e; font-weight:500;">Soporte de Celulares</span>
+    </div>
+  </div>
+
+  <!-- CATEGORY HERO -->
+  <div style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
+    <div style="position:relative; height:220px; background:linear-gradient(130deg,#e8edf8 0%,#dde4f2 60%,#d0daea 100%); border-radius:16px; overflow:hidden; display:flex; align-items:center;">
+      <div style="position:relative; z-index:2; padding:0 48px; max-width:480px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#0550ae; text-transform:uppercase; margin-bottom:8px;">Categoría</div>
+        <h1 style="font-size:32px; font-weight:700; color:#1a1a2e; line-height:1.15; margin-bottom:10px;">Soporte de Celulares</h1>
+        <p style="font-size:13.5px; color:#6b7280; line-height:1.6;">Monta tu celular en cualquier instrumento. Diseñados con impresión 3D.</p>
+      </div>
+      <div data-hero-cat="" style="position:absolute; right:0; top:0; width:55%; height:100%;">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-hero" shape="rect" fit="cover" placeholder="Imagen de categoría" style="width:100%; height:220px;" hint-size="100%,220px"></x-import>
+      </div>
+      <div style="position:absolute; left:0; top:0; width:35%; height:100%; background:linear-gradient(to right,#e8edf8 40%,transparent 100%); pointer-events:none; z-index:1;"></div>
+    </div>
+  </div>
+
+  <!-- SUB-CATEGORY TABS -->
+  <div style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
+    <div style="display:flex; align-items:center; gap:8px; overflow-x:auto; padding-bottom:4px;" data-noscroll="">
+      <button onClick="{{ setInstr0 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr0Border }}; background:{{ instr0Bg }}; color:{{ instr0Color }}; font-size:13px; font-weight:{{ instr0Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Todos</button>
+      <button onClick="{{ setInstr1 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr1Border }}; background:{{ instr1Bg }}; color:{{ instr1Color }}; font-size:13px; font-weight:{{ instr1Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Trompeta</button>
+      <button onClick="{{ setInstr2 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr2Border }}; background:{{ instr2Bg }}; color:{{ instr2Color }}; font-size:13px; font-weight:{{ instr2Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Clarinete</button>
+      <button onClick="{{ setInstr3 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr3Border }}; background:{{ instr3Bg }}; color:{{ instr3Color }}; font-size:13px; font-weight:{{ instr3Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Euphonium</button>
+      <button onClick="{{ setInstr4 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr4Border }}; background:{{ instr4Bg }}; color:{{ instr4Color }}; font-size:13px; font-weight:{{ instr4Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Trombón</button>
+      <button onClick="{{ setInstr5 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr5Border }}; background:{{ instr5Bg }}; color:{{ instr5Color }}; font-size:13px; font-weight:{{ instr5Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Tuba</button>
+      <button onClick="{{ setInstr6 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr6Border }}; background:{{ instr6Bg }}; color:{{ instr6Color }}; font-size:13px; font-weight:{{ instr6Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Saxofón</button>
+      <button onClick="{{ setInstr7 }}" style="flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid {{ instr7Border }}; background:{{ instr7Bg }}; color:{{ instr7Color }}; font-size:13px; font-weight:{{ instr7Weight }}; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s;">Saxo tenor</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div style="max-width:1200px; margin:0 auto; padding:20px 32px 64px; display:grid; grid-template-columns:200px 1fr; gap:24px; align-items:start;">
+
+    <!-- SIDEBAR -->
+    <div style="background:white; border-radius:12px; border:1px solid #e9ebee; padding:20px; position:sticky; top:94px;">
+      <div style="font-size:13px; font-weight:700; color:#1a1a2e; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+        Filtros
+        <button style="font-size:11px; font-weight:500; color:#0550ae; background:none; border:none; cursor:pointer; font-family:'Poppins',sans-serif;" style-hover="text-decoration:underline;">Limpiar</button>
+      </div>
+
+      <!-- Precio -->
+      <div style="margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid #f0f2f5;">
+        <div style="font-size:11px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Precio (S/)</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="number" placeholder="0" style="width:72px; padding:7px 8px; border:1.5px solid #e5e7eb; border-radius:7px; font-size:12px; font-family:'Poppins',sans-serif; outline:none;"/>
+          <span style="color:#9ca3af; font-size:12px;">—</span>
+          <input type="number" placeholder="300" style="width:72px; padding:7px 8px; border:1.5px solid #e5e7eb; border-radius:7px; font-size:12px; font-family:'Poppins',sans-serif; outline:none;"/>
+        </div>
+      </div>
+
+
+
+      <!-- Ordenar -->
+      <div>
+        <div style="font-size:11px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Ordenar</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:#374151;">
+            <input type="radio" name="sort" checked="" style="accent-color:#0550ae; cursor:pointer;"/>Relevancia
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:#374151;">
+            <input type="radio" name="sort" style="accent-color:#0550ae; cursor:pointer;"/>Menor precio
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:#374151;">
+            <input type="radio" name="sort" style="accent-color:#0550ae; cursor:pointer;"/>Mayor precio
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:#374151;">
+            <input type="radio" name="sort" style="accent-color:#0550ae; cursor:pointer;"/>Más nuevos
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCT GRID -->
+    <div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <span style="font-size:13px; color:#6b7280;"><span style="font-weight:600; color:#1a1a2e;">{{ resultCount }}</span> productos</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px;">
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+          <a href="Barzol Producto.dc.html" style="background:white; border-radius:12px; border:1px solid #e9ebee; cursor:pointer; overflow:hidden; text-decoration:none; display:block; transition:box-shadow 0.18s ease,transform 0.18s ease;" style-hover="box-shadow:0 8px 28px rgba(0,0,0,0.1); transform:translateY(-3px);">
+            <div data-product-img-container="" style="width:100%; aspect-ratio:1; background:#f0f2f5; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="18" height="18" rx="3" stroke="#d1d5db" strokeWidth="1.5"/>
+                <circle cx="8.5" cy="8.5" r="1.5" stroke="#d1d5db" strokeWidth="1.5"/>
+                <path d="M21 15l-5-5L5 21" stroke="#d1d5db" strokeWidth="1.5" strokeLinejoin="round"/>
+              </svg>
+              <sc-if value="{{ p.isNew }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; top:8px; left:8px; padding:3px 8px; background:#1e4d8c; color:white; font-size:9px; font-weight:700; border-radius:99px; z-index:2;">NUEVO</div>
+              </sc-if>
+            </div>
+            <div style="padding:13px 15px 16px;">
+              <div style="font-size:10px; font-weight:600; color:#6b7280; letter-spacing:0.07em; margin-bottom:5px; text-transform:uppercase;">BARZOL</div>
+              <div style="font-size:13.5px; font-weight:500; color:#1a1a2e; line-height:1.4; margin-bottom:10px; min-height:38px;">{{ p.name }}</div>
+              <div style="font-size:12px; color:#6b7280; text-decoration:line-through; margin-bottom:3px;">S/ {{ p.original }}.00</div>
+              <div style="font-size:16px; font-weight:700; color:#1e4d8c;">S/ {{ p.sale }}.00</div>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+
+      <!-- Pagination -->
+      <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:36px;">
+        <button style="width:36px; height:36px; border-radius:8px; border:1.5px solid #e5e7eb; background:white; cursor:pointer; display:flex; align-items:center; justify-content:center;" style-hover="border-color:#0550ae;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        <button style="width:36px; height:36px; border-radius:8px; border:1.5px solid #0550ae; background:#0550ae; cursor:pointer; font-size:13px; font-weight:600; color:white; font-family:'Poppins',sans-serif;">1</button>
+        <button style="width:36px; height:36px; border-radius:8px; border:1.5px solid #e5e7eb; background:white; cursor:pointer; font-size:13px; font-weight:500; color:#374151; font-family:'Poppins',sans-serif;" style-hover="border-color:#0550ae; color:#0550ae;">2</button>
+        <button style="width:36px; height:36px; border-radius:8px; border:1.5px solid #e5e7eb; background:white; cursor:pointer; display:flex; align-items:center; justify-content:center;" style-hover="border-color:#0550ae;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FLOATING WHATSAPP -->
+  <a href="https://wa.me/51950759032" target="_blank" style="position:fixed; bottom:28px; right:28px; z-index:500; width:54px; height:54px; background:#25D366; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(37,211,102,0.45); transition:transform 0.18s,box-shadow 0.18s;" style-hover="transform:scale(1.1); box-shadow:0 6px 28px rgba(37,211,102,0.55);">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.856L.054 23.25a.75.75 0 00.916.916l5.395-1.478A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.925 0-3.73-.513-5.28-1.41l-.378-.22-3.927 1.075 1.074-3.926-.22-.378A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+    </svg>
+  </a>
+
+  <!-- FOOTER -->
+  <footer style="background:#152848; margin-top:64px; padding:52px 0 28px;">
+    <div style="max-width:1200px; margin:0 auto; padding:0 32px;">
+
+    <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:40px; margin-bottom:44px;">
+
+      <!-- Brand -->
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+          <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+            <polygon points="15,1 28,8 28,22 15,29 2,22 2,8" fill="#4a82e0"></polygon>
+            <polygon points="15,7 22,11 22,19 15,23 8,19 8,11" fill="white" opacity="0.8"></polygon>
+            <polygon points="15,11.5 19,14 19,17 15,19.5 11,17 11,14" fill="#4a82e0"></polygon>
+          </svg>
+          <span style="font-size:15px; font-weight:700; color:white; letter-spacing:0.01em;">BARZOL</span>
+        </div>
+        <p style="font-size:13px; color:rgba(255,255,255,0.55); line-height:1.65; margin-bottom:12px;">Accesorios musicales innovadores fabricados con tecnología de impresión 3D. Productos exclusivos y patentados.</p>
+      </div>
+
+      <!-- Contacto -->
+      <div>
+        <h4 style="font-size:12.5px; font-weight:600; color:white; margin-bottom:16px; letter-spacing:0.04em; text-transform:uppercase;">Contáctanos</h4>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <a href="tel:950759032" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.13 1.18 2 2 0 012.11 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+            950 759 032
+          </a>
+          <a href="mailto:atencioncliente@barzol.com" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"></path><polyline points="22,6 12,13 2,6" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"></polyline></svg>
+            atencioncliente@barzol.com
+          </a>
+        </div>
+      </div>
+
+      <!-- Social -->
+      <div>
+        <h4 style="font-size:12.5px; font-weight:600; color:white; margin-bottom:16px; letter-spacing:0.04em; text-transform:uppercase;">Síguenos en</h4>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <a href="#" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"></path></svg>
+            Facebook
+          </a>
+          <a href="#" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-1.01-.04z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8"></path><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"></polygon></svg>
+            TikTok
+          </a>
+        </div>
+      </div>
+
+      <!-- Payments -->
+      <div>
+        <h4 style="font-size:12.5px; font-weight:600; color:white; margin-bottom:16px; letter-spacing:0.04em; text-transform:uppercase;">Medios de pago</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Visa</div>
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Mastercard</div>
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Yape</div>
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Plin</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom bar -->
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; display:flex; align-items:center; justify-content:center;">
+      <p style="font-size:12px; color:rgba(255,255,255,0.35);">© 2026 Barzol 3D Industry S.A.C. Todos los derechos reservados.</p>
+    </div>
+
+  </div>
+  </footer>
+
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { openMenu: null, activeSub: 0, annIdx: 0, activeInstr: 0, searchQuery: '', searchOpen: false,
+    recentSearches: ['Sordina trombón', 'Soporte para trompeta', 'BERP euphonium', 'Tope de vara'] };
+
+  _blurTimer = null;
+
+  _searchCats = [
+    { emoji: '📱', name: 'Soportes para celular' },
+    { emoji: '🎺', name: 'Sordinas' },
+    { emoji: '🛡️', name: 'Topes protectores de vara' },
+    { emoji: '🎵', name: 'BERP' },
+  ];
+
+  announcements = [
+    { text: 'Envío a nivel nacional e internacional', icons: true },
+  ];
+
+  megaCats = [
+    { name: 'Soportes para celular', instruments: [
+      { name: 'Trompeta' }, { name: 'Clarinete' },
+      { name: 'Euphonium' }, { name: 'Trombón' },
+      { name: 'Tuba' }, { name: 'Saxofón alto' },
+      { name: 'Saxo tenor' },
+    ]},
+    { name: 'Sordinas', instruments: [
+      { name: 'Trombón' }, { name: 'Trompeta' },
+    ]},
+    { name: 'Topes protectores de vara', instruments: [] },
+    { name: 'BERP', instruments: [
+      { name: 'Trombón' }, { name: 'Trompeta' }, { name: 'Euphonium' },
+    ]},
+  ];
+
+  allProducts = [
+    { id:1, name:'Soporte de Celular Trompeta', instr:1, original:180, sale:160, isNew:false },
+    { id:2, name:'Soporte de Celular Tromb\u00f3n (Tudel Delgado)', instr:4, original:195, sale:170, isNew:false },
+    { id:3, name:'Soporte de Celular Saxof\u00f3n Alto', instr:6, original:180, sale:160, isNew:true },
+    { id:4, name:'Soporte de Celular Clarinete', instr:2, original:200, sale:175, isNew:false },
+    { id:5, name:'Soporte de Celular Euphonium Frontal', instr:3, original:210, sale:185, isNew:false },
+    { id:6, name:'Soporte de Celular Tuba (Tudel Ancho)', instr:5, original:230, sale:200, isNew:true },
+    { id:7, name:'Soporte de Celular Trompeta XL', instr:1, original:220, sale:190, isNew:false },
+    { id:8, name:'Soporte de Celular Tromb\u00f3n (Tudel Ancho)', instr:4, original:215, sale:185, isNew:true },
+    { id:9, name:'Soporte de Celular Saxof\u00f3n Alto XL', instr:6, original:185, sale:160, isNew:false },
+    { id:10, name:'Soporte de Celular Saxo Tenor', instr:7, original:190, sale:165, isNew:false },
+    { id:11, name:'Soporte de Celular Euphonium Recto', instr:3, original:210, sale:185, isNew:false },
+    { id:12, name:'Soporte de Celular Tuba (Tudel Delgado)', instr:5, original:230, sale:200, isNew:true },
+  ];
+
+  _closeTimer = null;
+  _getSubsList() { return this.megaCats; }
+  _scheduleClose() { this._closeTimer = setTimeout(() => this.setState({ openMenu: null }), 200); }
+  _cancelClose() { if (this._closeTimer) { clearTimeout(this._closeTimer); this._closeTimer = null; } }
+  toggleMenu(n) { this.setState(s => ({ openMenu: s.openMenu === n ? null : n })); }
+
+  componentDidMount() {
+    this._annTimer = setInterval(() => {
+      this.setState(s => ({ annIdx: (s.annIdx + 1) % this.announcements.length }));
+    }, 3800);
+
+    fetch('.image-slots.state.json')
+      .then(r => r.ok ? r.json() : null)
+      .then(state => {
+        if (!state) return;
+        const entry = state['pd-t1'];
+        const url = entry && (typeof entry === 'string' ? entry : entry.u);
+        if (!url) return;
+        const applyImages = () => {
+          document.querySelectorAll('[data-product-img-container]').forEach(el => {
+            if (!el.querySelector('img')) {
+              el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+            }
+          });
+        };
+        applyImages();
+        this._imgObserver = new MutationObserver(() => applyImages());
+        this._imgObserver.observe(document.body, { childList: true, subtree: true });
+      })
+      .catch(() => {});
+  }
+  componentWillUnmount() { clearInterval(this._annTimer); if (this._imgObserver) this._imgObserver.disconnect(); }
+
+  instrStyle(i) {
+    const active = this.state.activeInstr === i;
+    return {
+      bg: active ? '#1e4d8c' : 'white',
+      color: active ? 'white' : '#374151',
+      border: active ? '#1e4d8c' : '#e5e7eb',
+      weight: active ? '600' : '500',
+    };
+  }
+
+  renderVals() {
+    const ac = this.state.activeSub;
+    const list = this._getSubsList();
+    const ai = this.state.activeInstr;
+    const filtered = ai === 0 ? this.allProducts : this.allProducts.filter(p => p.instr === ai);
+    const s = (i) => this.instrStyle(i);
+    return {
+      products: filtered,
+      resultCount: filtered.length,
+      annText: this.announcements[this.state.annIdx].text,
+      annIcons: this.announcements[this.state.annIdx].icons || false,
+      annIdx: this.state.annIdx,
+      setInstr0: () => this.setState({ activeInstr: 0 }),
+      setInstr1: () => this.setState({ activeInstr: 1 }),
+      setInstr2: () => this.setState({ activeInstr: 2 }),
+      setInstr3: () => this.setState({ activeInstr: 3 }),
+      setInstr4: () => this.setState({ activeInstr: 4 }),
+      setInstr5: () => this.setState({ activeInstr: 5 }),
+      setInstr6: () => this.setState({ activeInstr: 6 }),
+      setInstr7: () => this.setState({ activeInstr: 7 }),
+      instr0Bg: s(0).bg, instr0Color: s(0).color, instr0Border: s(0).border, instr0Weight: s(0).weight,
+      instr1Bg: s(1).bg, instr1Color: s(1).color, instr1Border: s(1).border, instr1Weight: s(1).weight,
+      instr2Bg: s(2).bg, instr2Color: s(2).color, instr2Border: s(2).border, instr2Weight: s(2).weight,
+      instr3Bg: s(3).bg, instr3Color: s(3).color, instr3Border: s(3).border, instr3Weight: s(3).weight,
+      instr4Bg: s(4).bg, instr4Color: s(4).color, instr4Border: s(4).border, instr4Weight: s(4).weight,
+      instr5Bg: s(5).bg, instr5Color: s(5).color, instr5Border: s(5).border, instr5Weight: s(5).weight,
+      instr6Bg: s(6).bg, instr6Color: s(6).color, instr6Border: s(6).border, instr6Weight: s(6).weight,
+      instr7Bg: s(7).bg, instr7Color: s(7).color, instr7Border: s(7).border, instr7Weight: s(7).weight,
+      currentSubs: list.map((s2, i) => {
+        const isActive = i === ac;
+        return {
+          name:       s2.name,
+          setActive:  () => this.setState({ activeSub: i }),
+          bg:         isActive ? '#eef0f2' : 'transparent',
+          iconColor:  isActive ? '#1a1a2e' : '#8b909a',
+          textColor:  isActive ? '#1a1a2e' : '#4b5563',
+          fontWeight: isActive ? '600' : '500',
+          hasDepth:   s2.instruments.length > 0,
+          isSoportes: s2.name === 'Soportes para celular',
+          isSordinas: s2.name === 'Sordinas',
+          isTopes:    s2.name === 'Topes protectores de vara',
+          isBerp:     s2.name === 'BERP',
+        };
+      }),
+      activeSubName: (list[ac]||list[0]).name,
+      activeSubItems: (list[ac]||list[0]).instruments,
+      activeHasSubs: (list[ac]||list[0]).instruments.length > 0,
+      panelWidth: (list[ac]||list[0]).instruments.length > 0 ? '532px' : '224px',
+      sidebarBorder: (list[ac]||list[0]).instruments.length > 0 ? '1px solid #eef0f2' : 'none',
+      menuOpen: this.state.openMenu !== null,
+      closeMenu: () => this.setState({ openMenu: null }),
+      productosColor:  '#1e4d8c',
+      productosBg:     this.state.openMenu === 'productos' ? '#dbe8fb' : '#eef4ff',
+      productosBorder: this.state.openMenu === 'productos' ? '#93bef5' : '#d3e3fa',
+      enterProductos:  () => { if (this.state.activeSub !== 0) this.setState({ activeSub: 0 }); },
+      searchQuery:   this.state.searchQuery,
+      searchOpen:    this.state.searchOpen,
+      searchBorder:  '#d1d5db',
+      searchRadius:  this.state.searchOpen ? '9px 9px 0 0' : '9px',
+      onSearchInput: (e) => this.setState({ searchQuery: e.target.value, searchOpen: true }),
+      onSearchFocus: () => { if (this._blurTimer) clearTimeout(this._blurTimer); this.setState({ searchOpen: true }); },
+      onSearchBlur:  () => { this._blurTimer = setTimeout(() => this.setState({ searchOpen: false }), 180); },
+      searchCats:    this._searchCats.map(c => ({ ...c, go: () => { window.location.href = 'Barzol Busqueda.dc.html'; } })),
+      recentSearches: this.state.recentSearches.map((q, i) => ({
+        name: q,
+        go: () => { window.location.href = 'Barzol Busqueda.dc.html'; },
+        remove: (e) => { e.stopPropagation(); this.setState(s => ({ recentSearches: s.recentSearches.filter((_, idx) => idx !== i) })); },
+      })),
+      hasRecentSearches: this.state.recentSearches.length > 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

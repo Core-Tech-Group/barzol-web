@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barzol — Nosotros</title>
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/ventapos-design-system-5107e781-5c8c-438c-8b6f-c9dfd60af676/tokens/fonts.css">
+  <link rel="stylesheet" href="barzol-tokens.css">
+  <script src="./image-slot.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: #f4f5f7; color: #1a1a2e; -webkit-font-smoothing: antialiased; }
+    [data-noscroll] { scrollbar-width: none; }
+    [data-noscroll]::-webkit-scrollbar { display: none; }
+    @keyframes annIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .cat-trigger .cat-panel { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.1s ease; }
+    .cat-trigger:hover .cat-panel { opacity: 1; visibility: visible; pointer-events: auto; }
+    #logo-img::part(frame) { background: white; }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; background:#f4f5f7;">
+
+  <div style="position:sticky; top:0; z-index:200;">
+  <!-- ANNOUNCEMENT BAR -->
+  <div style="background:#1e4d8c; color:white; padding:8px 32px; font-size:12px; font-weight:500; text-align:center; letter-spacing:0.025em; display:flex; align-items:center; justify-content:center; gap:8px;">
+    <sc-if value="{{ annIcons }}" hint-placeholder-val="{{ false }}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <rect x="1" y="3" width="15" height="13" rx="2" stroke="white" strokeWidth="1.8" strokeLinejoin="round"></rect>
+        <path d="M16 8h3l3 4v5h-6V8z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"></path>
+        <circle cx="5.5" cy="18.5" r="1.5" stroke="white" strokeWidth="1.5"></circle>
+        <circle cx="18.5" cy="18.5" r="1.5" stroke="white" strokeWidth="1.5"></circle>
+      </svg>
+    </sc-if>
+    <span key="{{ annIdx }}" style="animation: annIn 0.4s ease both;">{{ annText }}</span>
+    <sc-if value="{{ annIcons }}" hint-placeholder-val="{{ false }}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 00-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" stroke="white" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"></path>
+      </svg>
+    </sc-if>
+  </div>
+
+  <!-- HEADER -->
+  <header style="background:white; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+    <!-- Backdrop -->
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeMenu }}" style="position:fixed; inset:0; z-index:195; background:transparent;"></div>
+    </sc-if>
+
+    <!-- Fila 1: Logo + Buscador -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 32px; height:64px; display:flex; align-items:center; gap:6px; border-bottom:1px solid #f0f2f5;">
+
+      <!-- Logo -->
+      <a href="Barzol Home.dc.html" style="display:flex; align-items:center; text-decoration:none; flex-shrink:0;">
+        <image-slot id="logo-img" shape="rect" fit="contain" position="0% 50%" radius="6" placeholder="Logo Barzol" style="width:180px; height:34px; display:block; background:white;"></image-slot>
+      </a>
+
+      <!-- Categorías (junto al logo) -->
+      <div class="cat-trigger" onMouseEnter="{{ enterProductos }}" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0;">
+        <button style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:13px; font-weight:600; color:{{ productosColor }}; background:{{ productosBg }}; border:1px solid {{ productosBorder }}; cursor:pointer; border-radius:8px; font-family:'Poppins',sans-serif; white-space:nowrap;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"></path></svg>
+          Categorías
+        </button>
+
+        <!-- MEGA PANEL -->
+        <div class="cat-panel" style="position:absolute; top:100%; left:0; width:{{ panelWidth }}; background:white; border:1px solid #eef0f2; box-shadow:0 12px 28px rgba(0,0,0,0.09); z-index:300; border-radius:8px; overflow:hidden; margin-top:0; display:flex; transition:width 0.15s;">
+            <div style="width:222px; background:#fafbfc; border-right:{{ sidebarBorder }}; padding:6px; flex-shrink:0; display:flex; flex-direction:column; gap:1px;">
+              <sc-for list="{{ currentSubs }}" as="sub" hint-placeholder-count="4">
+                <button onMouseEnter="{{ sub.setActive }}" style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:6px; background:{{ sub.bg }}; border:none; text-align:left; cursor:pointer; font-family:'Poppins',sans-serif; transition:background 0.12s; white-space:nowrap; overflow:hidden;">
+                  <div style="width:17px; height:17px; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:{{ sub.iconColor }};">
+                    <sc-if value="{{ sub.isSoportes }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="1.2" stroke="currentColor" strokeWidth="1.6"></rect><line x1="6" y1="17.5" x2="18" y2="17.5" stroke="currentColor" strokeWidth="1.6"></line></svg>
+                    </sc-if>
+                    <sc-if value="{{ sub.isSordinas }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 9v6h3.5l6.5 4.5V4.5L7.5 9H4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"></path><path d="M17.5 9.5a3.2 3.2 0 010 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ sub.isTopes }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l6.5 2.4v5.6c0 4.4-2.8 7.5-6.5 9.6-3.7-2.1-6.5-5.2-6.5-9.6V5.4L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ sub.isBerp }}" hint-placeholder-val="{{ false }}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 10.5l13-5v13l-13-5v-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"></path><path d="M9 15.5v2.3a1.7 1.7 0 001.7 1.7h.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"></path></svg>
+                    </sc-if>
+                  </div>
+                  <span style="font-size:12px; font-weight:{{ sub.fontWeight }}; color:{{ sub.textColor }}; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ sub.name }}</span>
+                  <sc-if value="{{ sub.hasDepth }}" hint-placeholder-val="{{ true }}">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ activeHasSubs }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1; padding:18px 20px; display:flex; flex-direction:column;">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:14.5px; font-weight:700; color:#1a1a2e; margin-bottom:6px;">{{ activeSubName }}</div>
+                <div style="width:26px; height:2.5px; background:#1e4d8c; border-radius:99px;"></div>
+              </div>
+
+              <div style="display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; flex:1;">
+                <sc-for list="{{ activeSubItems }}" as="item" hint-placeholder-count="6">
+                  <a href="Barzol Categoria.dc.html" style="display:inline-flex; align-items:center; padding:7px 13px; border-radius:6px; border:1px solid #e5e7eb; background:#fafbfc; font-size:12.5px; font-weight:500; color:#374151; text-decoration:none; white-space:nowrap; transition:all 0.12s;" style-hover="border-color:#1a1a2e; color:#1a1a2e; background:#f4f5f7; transform:translateY(-1px); box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    {{ item.name }}
+                  </a>
+                </sc-for>
+              </div>
+              <div style="border-top:1px solid #f0f2f5; margin-top:12px; padding-top:12px;">
+                <a href="Barzol Categoria.dc.html" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#1e4d8c; text-decoration:none;" style-hover="opacity:0.75;">
+                  Ver todo en {{ activeSubName }}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="#1e4d8c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+                </a>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+      </div>
+
+      <!-- Buscador centrado y prominente -->
+      <div style="position:relative; flex:1 1 260px; max-width:420px; min-width:190px; z-index:300;">
+        <input type="text" value="{{ searchQuery }}" onInput="{{ onSearchInput }}" onFocus="{{ onSearchFocus }}" onBlur="{{ onSearchBlur }}" placeholder="Buscar productos, sordinas, soportes..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid {{ searchBorder }}; border-radius:{{ searchRadius }}; font-size:13px; font-family:'Poppins',sans-serif; color:#1a1a2e; background:white; outline:none; transition:border-color 0.15s;">
+        <button style="position:absolute; right:3px; top:50%; transform:translateY(-50%); width:32px; height:32px; background:transparent; color:#1e4d8c; border:none; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center;" style-hover="background:#f4f5f7;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="8" stroke="#1e4d8c" strokeWidth="2.2"></circle>
+            <path d="M21 21l-4.35-4.35" stroke="#1e4d8c" strokeWidth="2.2" strokeLinecap="round"></path>
+          </svg>
+        </button>
+
+        <!-- Dropdown de resultados -->
+        <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; top:calc(100% + 6px); left:0; right:0; background:white; border:1px solid #e5e7eb; border-radius:14px; box-shadow:0 20px 56px rgba(0,0,0,0.14); overflow:hidden; z-index:310;">
+
+            <!-- Búsqueda reciente -->
+            <sc-if value="{{ hasRecentSearches }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:12px 8px 4px;">
+              <div style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:#9ca3af; text-transform:uppercase; padding:0 8px; margin-bottom:6px;">Búsqueda reciente</div>
+              <sc-for list="{{ recentSearches }}" as="q" hint-placeholder-count="4">
+                <div onClick="{{ q.go }}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; color:#374151; font-family:'Poppins',sans-serif;" style-hover="background:#f4f5f7;">
+                  <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ q.name }}</span>
+                  <button onClick="{{ q.remove }}" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; background:transparent; border:none; border-radius:5px; color:#9ca3af; cursor:pointer; flex-shrink:0;" style-hover="background:#e5e7eb; color:#374151;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"></path></svg>
+                  </button>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+
+            <!-- Sugerencias de categoría -->
+            <div style="padding:8px 16px 8px;">
+              <div style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:#9ca3af; text-transform:uppercase; margin-bottom:10px;">Categorías</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <sc-for list="{{ searchCats }}" as="cat" hint-placeholder-count="4">
+                  <button onClick="{{ cat.go }}" style="display:inline-flex; align-items:center; padding:7px 13px; border-radius:6px; border:1px solid #e5e7eb; background:#fafbfc; font-size:12.5px; font-weight:500; color:#374151; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.12s;" style-hover="border-color:#1a1a2e; color:#1a1a2e; background:#f4f5f7;">
+                    {{ cat.name }}
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="flex:1; min-width:0;"></div>
+
+      <!-- Servicios / Nosotros -->
+      <a href="Barzol Servicios.dc.html" style="display:flex; align-items:center; gap:4px; padding:6px 8px; font-size:13px; font-weight:500; color:#1f2937; text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap;" style-hover="background:#f4f5f7; color:#1e4d8c;">
+        Servicios
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+      </a>
+      <a href="Barzol Nosotros.dc.html" style="padding:6px 8px; font-size:13px; font-weight:500; color:#1f2937; text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap; margin-left:2px;" style-hover="background:#f4f5f7; color:#1e4d8c;">Nosotros</a>
+
+      <div style="width:1px; height:20px; background:#e5e7eb; flex-shrink:0; margin:0 2px;"></div>
+
+      <!-- Contacto WhatsApp -->
+      <a href="https://wa.me/51950759032" target="_blank" style="display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:8px; background:transparent; border:1px solid #e5e7eb; flex-shrink:0; text-decoration:none; white-space:nowrap;" style-hover="background:#f4f5f7; border-color:#d1d5db;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="#16a34a">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.856L.054 23.25a.75.75 0 00.916.916l5.395-1.478A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.925 0-3.73-.513-5.28-1.41l-.378-.22-3.927 1.075 1.074-3.926-.22-.378A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path>
+        </svg>
+        <span style="font-size:13px; font-weight:600; color:#1f2937;">950 759 032</span>
+      </a>
+
+    </div>
+
+  </header>
+  </div>
+
+  <!-- HERO NOSOTROS -->
+  <div style="position:relative; padding:100px 32px 56px; text-align:center; overflow:hidden;">
+    <image-slot id="hero-s1" shape="rect" fit="cover" placeholder="Foto de fondo — trompeta, soporte y sordina" style="position:absolute; inset:0; width:100%; height:100%; display:block;"></image-slot>
+    <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #0B1928EB, #2B3A57BB)"></div>
+    <div style="position:relative; max-width:680px; margin:0 auto;">
+      <div style="font-size:14px; font-weight:700; letter-spacing:0.22em; color:rgba(255,255,255,0.9); text-transform:uppercase; margin-bottom:6px;">Somos</div>
+      <h1 style="font-size:76px; font-weight:800; color:white; line-height:1; letter-spacing:-0.01em; margin-bottom:16px;">BARZOL</h1>
+      <p style="font-size:18px; font-weight:500; color:rgba(255,255,255,0.92); margin-bottom:24px;">Diseñamos y fabricamos accesorios musicales con tecnología 3D, para músicos en Perú.</p>
+      <div style="display:inline-flex; align-items:center; gap:7px; padding:6px 14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); border-radius:99px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="white" strokeWidth="1.8"></rect><path d="M8 11V7a4 4 0 018 0v4" stroke="white" strokeWidth="1.8" strokeLinecap="round"></path></svg>
+        <span style="font-size:11.5px; font-weight:600; letter-spacing:0.02em; color:white;">Productos exclusivos y protegidos por patente</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIANZA -->
+  <div style="background:white; padding:32px 32px 24px; text-align:center; border-bottom:1px solid #e9ebee;">
+    <div style="max-width:680px; margin:0 auto;">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; max-width:720px; margin:0 auto 36px;">
+        <div style="background:white; border:1px solid #e9ebee; border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px; transition:transform 0.18s ease;">
+          <div style="width:44px; height:44px; background:#eef4ff; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="#1e4d8c" strokeWidth="1.7" strokeLinejoin="round"></path></svg>
+          </div>
+          <span style="font-size:12px; font-weight:600; color:#374151; text-align:center; line-height:1.35;">Diseño exclusivo</span>
+        </div>
+        <div style="background:white; border:1px solid #e9ebee; border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px; transition:transform 0.18s ease;">
+          <div style="width:44px; height:44px; background:#eef4ff; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="#1e4d8c" strokeWidth="1.7"></rect><path d="M8 11V7a4 4 0 018 0v4" stroke="#1e4d8c" strokeWidth="1.7" strokeLinecap="round"></path></svg>
+          </div>
+          <span style="font-size:12px; font-weight:600; color:#374151; text-align:center; line-height:1.35;">Productos patentados</span>
+        </div>
+        <div style="background:white; border:1px solid #e9ebee; border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px; transition:transform 0.18s ease;">
+          <div style="width:44px; height:44px; background:#eef4ff; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="1" y="3" width="15" height="13" rx="2" stroke="#1e4d8c" strokeWidth="1.7" strokeLinejoin="round"></rect><path d="M16 8h3l3 4v5h-6V8z" stroke="#1e4d8c" strokeWidth="1.7" strokeLinejoin="round"></path><circle cx="5.5" cy="18.5" r="1.5" stroke="#1e4d8c" strokeWidth="1.4"></circle><circle cx="18.5" cy="18.5" r="1.5" stroke="#1e4d8c" strokeWidth="1.4"></circle></svg>
+          </div>
+          <span style="font-size:12px; font-weight:600; color:#374151; text-align:center; line-height:1.35;">Envío nacional e internacional</span>
+        </div>
+        <div style="background:white; border:1px solid #e9ebee; border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px; transition:transform 0.18s ease;">
+          <div style="width:44px; height:44px; background:#eef4ff; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="#1e4d8c" strokeWidth="1.7" strokeLinecap="round"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#1e4d8c" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+          </div>
+          <span style="font-size:12px; font-weight:600; color:#374151; text-align:center; line-height:1.35;">Personalización disponible</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIA -->
+  <div style="max-width:1200px; margin:0 auto; padding:64px 32px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
+      <div>
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#1e4d8c; text-transform:uppercase; margin-bottom:12px;">Nuestra historia</div>
+        <h2 style="font-size:30px; font-weight:700; color:#1a1a2e; line-height:1.2; margin-bottom:20px;">Tecnología al servicio de la música</h2>
+        <p style="font-size:14px; color:#6b7280; line-height:1.75; margin-bottom:20px;">Diseñamos con software CAD/CAE y fabricamos con impresión 3D para estudiantes, orquestas, bandas sinfónicas y músicos independientes. Nuestros productos son exclusivos y están protegidos por patentes.</p>
+        <p style="font-size:15px; color:#1a1a2e; font-weight:500; line-height:1.7; margin-bottom:28px; padding-left:16px; border-left:3px solid #1e4d8c;">“No solo fabricamos accesorios: damos vida a las ideas de los músicos, impulsando la creatividad y la pasión que los inspira.”</p>
+        <div style="display:flex; gap:12px;">
+          <a href="https://wa.me/51950759032" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:12px 22px; background:#1e4d8c; color:white; font-size:13.5px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(5,80,174,0.26);" style-hover="background:#043d87;">
+            Contáctanos
+          </a>
+          <a href="Barzol Home.dc.html" style="display:inline-flex; align-items:center; gap:8px; padding:12px 22px; background:white; color:#374151; font-size:13.5px; font-weight:500; text-decoration:none; border-radius:9px; border:1.5px solid #e5e7eb;" style-hover="border-color:#1e4d8c; color:#1e4d8c;">
+            Ver productos
+          </a>
+        </div>
+      </div>
+      <div style="position:relative; height:380px; border-radius:16px; overflow:hidden; background:#f0f2f5; border:1px solid #e9ebee;">
+        <image-slot id="nos-historia" shape="rect" fit="cover" placeholder="Foto del taller / equipo" style="width:100%; height:380px; display:block;"></image-slot>
+      </div>
+    </div>
+  </div>
+
+  <!-- CÓMO TRABAJAMOS -->
+  <div style="background:#f8f9fb; padding:64px 32px;">
+    <div style="max-width:1200px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:44px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#1e4d8c; text-transform:uppercase; margin-bottom:12px;">Nuestro proceso</div>
+        <h2 style="font-size:28px; font-weight:700; color:#1a1a2e;">Cómo fabricamos</h2>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:960px; margin:0 auto; position:relative;">
+        <div style="position:absolute; top:26px; left:16.6%; right:16.6%; height:2px; background:#e5e7eb; z-index:0;"></div>
+        <div style="position:relative; z-index:1; background:#f8f9fb; text-align:center; padding:0 12px;">
+          <div style="width:52px; height:52px; border-radius:50%; background:#1e4d8c; color:white; font-size:19px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">1</div>
+          <h3 style="font-size:15px; font-weight:700; color:#1a1a2e; margin-bottom:8px;">Diseño CAD/CAE</h3>
+          <p style="font-size:13px; color:#6b7280; line-height:1.65;">Modelamos la pieza con software profesional, ajustada a tu instrumento.</p>
+        </div>
+        <div style="position:relative; z-index:1; background:#f8f9fb; text-align:center; padding:0 12px;">
+          <div style="width:52px; height:52px; border-radius:50%; background:#1e4d8c; color:white; font-size:19px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">2</div>
+          <h3 style="font-size:15px; font-weight:700; color:#1a1a2e; margin-bottom:8px;">Ingeniería inversa y escaneo 3D</h3>
+          <p style="font-size:13px; color:#6b7280; line-height:1.65;">Digitalizamos formas reales para lograr un ajuste exacto en cada pieza.</p>
+        </div>
+        <div style="position:relative; z-index:1; background:#f8f9fb; text-align:center; padding:0 12px;">
+          <div style="width:52px; height:52px; border-radius:50%; background:#1e4d8c; color:white; font-size:19px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">3</div>
+          <h3 style="font-size:15px; font-weight:700; color:#1a1a2e; margin-bottom:8px;">Fabricación</h3>
+          <p style="font-size:13px; color:#6b7280; line-height:1.65;">Producimos con impresión 3D y control de calidad antes del envío.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MISIÓN Y VISIÓN -->
+  <div style="background:white; padding:64px 32px;">
+    <div style="max-width:1200px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:44px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#1e4d8c; text-transform:uppercase; margin-bottom:12px;">Hacia dónde vamos</div>
+        <h2 style="font-size:28px; font-weight:700; color:#1a1a2e;">Misión y visión</h2>
+      </div>
+      <div style="max-width:860px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div style="background:#f8f9fb; border-radius:14px; border:1px solid #e9ebee; padding:28px 26px; text-align:left;">
+          <div style="width:44px; height:44px; background:#eef4ff; border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#1e4d8c" strokeWidth="1.7"></circle><circle cx="12" cy="12" r="5" stroke="#1e4d8c" strokeWidth="1.7"></circle><circle cx="12" cy="12" r="1" fill="#1e4d8c"></circle></svg>
+          </div>
+          <div style="font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#1e4d8c; margin-bottom:10px;">Misión</div>
+          <p style="font-size:14px; color:#4b5563; line-height:1.7;">Diseñar y fabricar accesorios musicales innovadores con tecnología 3D que potencien la creatividad y la comodidad de los músicos.</p>
+        </div>
+        <div style="background:#f8f9fb; border-radius:14px; border:1px solid #e9ebee; padding:28px 26px; text-align:left;">
+          <div style="width:44px; height:44px; background:#eef4ff; border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="#1e4d8c" strokeWidth="1.7" strokeLinejoin="round"></path><circle cx="12" cy="12" r="3.2" stroke="#1e4d8c" strokeWidth="1.7"></circle></svg>
+          </div>
+          <div style="font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#1e4d8c; margin-bottom:10px;">Visión</div>
+          <p style="font-size:14px; color:#4b5563; line-height:1.7;">Convertirnos en una empresa líder en el desarrollo de soluciones musicales impresas en 3D en el Perú y Latinoamérica.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALORES -->
+  <div style="background:white; padding:64px 32px;">
+    <div style="max-width:1200px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:44px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#1e4d8c; text-transform:uppercase; margin-bottom:12px;">Nuestros pilares</div>
+        <h2 style="font-size:28px; font-weight:700; color:#1a1a2e;">Nuestros valores</h2>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:860px; margin:0 auto;">
+        <div style="padding:32px 28px; border-radius:12px; border:1px solid #e9ebee; text-align:center;">
+          <div style="width:52px; height:52px; background:#eef4ff; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="#1e4d8c" strokeWidth="1.8" strokeLinejoin="round"></path></svg>
+          </div>
+          <h3 style="font-size:15px; font-weight:700; color:#1a1a2e; margin-bottom:10px;">Calidad</h3>
+          <p style="font-size:13px; color:#6b7280; line-height:1.65;">Empleamos materiales de alto rendimiento que aseguran durabilidad y comodidad.</p>
+        </div>
+        <div style="padding:32px 28px; border-radius:12px; border:1px solid #e9ebee; text-align:center;">
+          <div style="width:52px; height:52px; background:#eef4ff; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="#1e4d8c" strokeWidth="1.8"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="#1e4d8c" strokeWidth="1.8"></polyline></svg>
+          </div>
+          <h3 style="font-size:15px; font-weight:700; color:#1a1a2e; margin-bottom:10px;">Innovación</h3>
+          <p style="font-size:13px; color:#6b7280; line-height:1.65;">Transformamos ideas en productos únicos que enriquecen la experiencia musical.</p>
+        </div>
+        <div style="padding:32px 28px; border-radius:12px; border:1px solid #e9ebee; text-align:center;">
+          <div style="width:52px; height:52px; background:#eef4ff; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="#1e4d8c" strokeWidth="1.8" strokeLinecap="round"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#1e4d8c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+          </div>
+          <h3 style="font-size:15px; font-weight:700; color:#1a1a2e; margin-bottom:10px;">Personalización</h3>
+          <p style="font-size:13px; color:#6b7280; line-height:1.65;">Ofrecemos la posibilidad de añadir nombres, logos o detalles especiales a cada accesorio.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EQUIPO -->
+  <div style="background:white; padding:64px 32px;">
+    <div style="max-width:1200px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:44px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#1e4d8c; text-transform:uppercase; margin-bottom:12px;">Quién está detrás</div>
+        <h2 style="font-size:28px; font-weight:700; color:#1a1a2e;">El fundador</h2>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; max-width:420px; margin:0 auto;">
+        <div style="width:140px; height:140px; border-radius:50%; overflow:hidden; background:#f0f2f5; margin:0 auto 18px; border:3px solid #eef4ff;">
+          <image-slot id="nos-team1" shape="circle" placeholder="Foto" style="width:140px; height:140px; display:block;"></image-slot>
+        </div>
+        <div style="font-size:18px; font-weight:700; color:#1a1a2e; margin-bottom:4px;">William Barzola</div>
+        <div style="font-size:13px; color:#6b7280; margin-bottom:14px;">Fundador<br></div>
+        <a href="https://wa.me/51950759032" target="_blank" style="display:inline-flex; align-items:center; gap:7px; padding:9px 18px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:99px; font-size:12.5px; font-weight:600; color:#16a34a; text-decoration:none;" style-hover="background:#dcfce7;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#16a34a"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.856L.054 23.25a.75.75 0 00.916.916l5.395-1.478A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.925 0-3.73-.513-5.28-1.41l-.378-.22-3.927 1.075 1.074-3.926-.22-.378A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path></svg>
+          +51 950 759 032
+        </a>
+      </div>
+
+      <div style="max-width:420px; margin:32px auto 0; padding-top:24px; border-top:1px solid #f0f2f5; display:flex; align-items:center; justify-content:center; gap:10px;">
+        <span style="font-size: 13px; color: #6b7280">Distribuidor autorizado — Alexis Caycho<br></span>
+        <a href="https://wa.me/51941556169" target="_blank" style="font-size:12.5px; font-weight:600; color:#1e4d8c; text-decoration:none;" style-hover="text-decoration:underline;">+51 941 556 169</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING WHATSAPP -->
+  <a href="https://wa.me/51950759032" target="_blank" style="position:fixed; bottom:28px; right:28px; z-index:500; width:54px; height:54px; background:#25D366; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(37,211,102,0.45); transition:transform 0.18s,box-shadow 0.18s;" style-hover="transform:scale(1.1); box-shadow:0 6px 28px rgba(37,211,102,0.55);">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path>
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.856L.054 23.25a.75.75 0 00.916.916l5.395-1.478A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.925 0-3.73-.513-5.28-1.41l-.378-.22-3.927 1.075 1.074-3.926-.22-.378A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path>
+    </svg>
+  </a>
+
+  <!-- FOOTER -->
+  <footer style="background:#152848; margin-top:64px; padding:52px 0 28px;">
+    <div style="max-width:1200px; margin:0 auto; padding:0 32px;">
+
+    <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:40px; margin-bottom:44px;">
+
+      <!-- Brand -->
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+          <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+            <polygon points="15,1 28,8 28,22 15,29 2,22 2,8" fill="#4a82e0"></polygon>
+            <polygon points="15,7 22,11 22,19 15,23 8,19 8,11" fill="white" opacity="0.8"></polygon>
+            <polygon points="15,11.5 19,14 19,17 15,19.5 11,17 11,14" fill="#4a82e0"></polygon>
+          </svg>
+          <span style="font-size:15px; font-weight:700; color:white; letter-spacing:0.01em;">BARZOL</span>
+        </div>
+        <p style="font-size:13px; color:rgba(255,255,255,0.65); line-height:1.65; margin-bottom:12px;">Accesorios musicales innovadores fabricados con tecnología de impresión 3D. Productos exclusivos y patentados.</p>
+      </div>
+
+      <!-- Contacto -->
+      <div>
+        <h4 style="font-size:12.5px; font-weight:600; color:white; margin-bottom:16px; letter-spacing:0.04em; text-transform:uppercase;">Contáctanos</h4>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <a href="tel:950759032" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.72); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.13 1.18 2 2 0 012.11 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+            950 759 032
+          </a>
+          <a href="mailto:atencioncliente@barzol.com" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.72); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"></path><polyline points="22,6 12,13 2,6" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"></polyline></svg>
+            atencioncliente@barzol.com
+          </a>
+        </div>
+      </div>
+
+      <!-- Social -->
+      <div>
+        <h4 style="font-size:12.5px; font-weight:600; color:white; margin-bottom:16px; letter-spacing:0.04em; text-transform:uppercase;">Síguenos en</h4>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <a href="#" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.72); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"></path></svg>
+            Facebook
+          </a>
+          <a href="#" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.72); text-decoration:none;" style-hover="color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-1.01-.04z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8"></path><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinejoin="round"></polygon></svg>
+            TikTok
+          </a>
+        </div>
+      </div>
+
+      <!-- Payments -->
+      <div>
+        <h4 style="font-size:12.5px; font-weight:600; color:white; margin-bottom:16px; letter-spacing:0.04em; text-transform:uppercase;">Medios de pago</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Visa</div>
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Mastercard</div>
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Yape</div>
+          <div style="padding:5px 11px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14); border-radius:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); letter-spacing:0.03em;">Plin</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom bar -->
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; display:flex; align-items:center; justify-content:center;">
+      <p style="font-size:12px; color:rgba(255,255,255,0.35);">© 2026 Barzol 3D Industry S.A.C. Todos los derechos reservados.</p>
+    </div>
+
+  </div>
+  </footer>
+
+</div>
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { openMenu: null, activeSub: 0, annIdx: 0 , searchQuery: '', searchOpen: false,
+    recentSearches: ['Sordina trombón', 'Soporte para trompeta', 'BERP euphonium', 'Tope de vara'] };
+
+  announcements = [
+    { text: 'Envío a nivel nacional e internacional', icons: true },
+  ];
+
+
+  _blurTimer = null;
+
+  _searchCats = [
+    { emoji: '📱', name: 'Soportes para celular' },
+    { emoji: '🎺', name: 'Sordinas' },
+    { emoji: '🛡️', name: 'Topes protectores de vara' },
+    { emoji: '🎵', name: 'BERP' },
+  ];
+
+  megaCats = [
+    { name: 'Soportes para celular', instruments: [
+      { name: 'Trompeta' }, { name: 'Clarinete' },
+      { name: 'Euphonium' }, { name: 'Trombón' },
+      { name: 'Tuba' }, { name: 'Saxofón alto' },
+      { name: 'Saxo tenor' },
+    ]},
+    { name: 'Sordinas', instruments: [
+      { name: 'Trombón' }, { name: 'Trompeta' },
+    ]},
+    { name: 'Topes protectores de vara', instruments: [] },
+    { name: 'BERP', instruments: [
+      { name: 'Trombón' }, { name: 'Trompeta' }, { name: 'Euphonium' },
+    ]},
+  ];
+
+  _closeTimer = null;
+  _getSubsList() { return this.megaCats; }
+  _scheduleClose() { this._closeTimer = setTimeout(() => this.setState({ openMenu: null }), 200); }
+  _cancelClose() { if (this._closeTimer) { clearTimeout(this._closeTimer); this._closeTimer = null; } }
+  toggleMenu(n) { this.setState(s => ({ openMenu: s.openMenu === n ? null : n })); }
+
+  componentDidMount() {
+    this._annTimer = setInterval(() => {
+      this.setState(s => ({ annIdx: (s.annIdx + 1) % this.announcements.length }));
+    }, 3800);
+  }
+  componentWillUnmount() { clearInterval(this._annTimer); }
+
+  renderVals() {
+    const ac = this.state.activeSub;
+    const list = this._getSubsList();
+    return {
+      annText: this.announcements[this.state.annIdx].text,
+      annIcons: this.announcements[this.state.annIdx].icons || false,
+      annIdx: this.state.annIdx,
+      currentSubs: list.map((s, i) => {
+        const isActive = i === ac;
+        return {
+          name:       s.name,
+          setActive:  () => this.setState({ activeSub: i }),
+          bg:         isActive ? '#eef0f2' : 'transparent',
+          iconColor:  isActive ? '#1a1a2e' : '#8b909a',
+          textColor:  isActive ? '#1a1a2e' : '#4b5563',
+          fontWeight: isActive ? '600' : '500',
+          hasDepth:   s.instruments.length > 0,
+          isSoportes: s.name === 'Soportes para celular',
+          isSordinas: s.name === 'Sordinas',
+          isTopes:    s.name === 'Topes protectores de vara',
+          isBerp:     s.name === 'BERP',
+        };
+      }),
+      activeSubName: (list[ac]||list[0]).name,
+      activeSubItems: (list[ac]||list[0]).instruments,
+      activeHasSubs: (list[ac]||list[0]).instruments.length > 0,
+      panelWidth: (list[ac]||list[0]).instruments.length > 0 ? '532px' : '224px',
+      sidebarBorder: (list[ac]||list[0]).instruments.length > 0 ? '1px solid #eef0f2' : 'none',
+      activeHasNoSubs: (list[ac]||list[0]).instruments.length === 0,
+      activeHasSubs: (list[ac]||list[0]).instruments.length > 0,
+      menuOpen: this.state.openMenu !== null,
+      closeMenu: () => this.setState({ openMenu: null }),
+      productosColor:  '#1e4d8c',
+      productosBg:     this.state.openMenu === 'productos' ? '#dbe8fb' : '#eef4ff',
+      productosBorder: this.state.openMenu === 'productos' ? '#93bef5' : '#d3e3fa',
+      enterProductos:  () => { if (this.state.activeSub !== 0) this.setState({ activeSub: 0 }); },
+      searchQuery:   this.state.searchQuery,
+      searchOpen:    this.state.searchOpen,
+      searchBorder:  '#d1d5db',
+      searchRadius:  this.state.searchOpen ? '9px 9px 0 0' : '9px',
+      onSearchInput: (e) => this.setState({ searchQuery: e.target.value, searchOpen: true }),
+      onSearchFocus: () => { if (this._blurTimer) clearTimeout(this._blurTimer); this.setState({ searchOpen: true }); },
+      onSearchBlur:  () => { this._blurTimer = setTimeout(() => this.setState({ searchOpen: false }), 180); },
+      searchCats:    this._searchCats.map(c => ({ ...c, go: () => { window.location.href = 'Barzol Busqueda.dc.html'; } })),
+      recentSearches: this.state.recentSearches.map((q, i) => ({
+        name: q,
+        go: () => { window.location.href = 'Barzol Busqueda.dc.html'; },
+        remove: (e) => { e.stopPropagation(); this.setState(s => ({ recentSearches: s.recentSearches.filter((_, idx) => idx !== i) })); },
+      })),
+      hasRecentSearches: this.state.recentSearches.length > 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

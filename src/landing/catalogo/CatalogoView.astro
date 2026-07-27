@@ -1,0 +1,119 @@
+---
+import PublicLayout from '@landing/layout/PublicLayout.astro';
+import Breadcrumb from '@landing/shared/Breadcrumb.astro';
+import ProductCard from '@landing/producto/ProductCard.astro';
+import Pagination from '@landing/busqueda/Pagination.astro';
+
+interface Props {
+  categoria?: string;
+}
+
+const { categoria } = Astro.props;
+
+// TODO: datos mock — reemplazar por @shared/lib/categorias + @shared/lib/productos
+// cuando se conecte Supabase. El nombre de la categoría se derivará del slug real.
+const categoryName = (categoria ?? '')
+  .split('-')
+  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+  .join(' ') || 'Categoría';
+
+const instrumentos = ['Todos', 'Trompeta', 'Clarinete', 'Euphonium', 'Trombón', 'Tuba', 'Saxofón', 'Saxo tenor'];
+
+const products = [
+  { id: 1, nombre: 'Soporte de Celular Trompeta', precio: 160, precioOriginal: 180, isNew: false },
+  { id: 2, nombre: 'Soporte de Celular Trombón (Tudel Delgado)', precio: 170, precioOriginal: 195, isNew: false },
+  { id: 3, nombre: 'Soporte de Celular Saxofón Alto', precio: 160, precioOriginal: 180, isNew: true },
+  { id: 4, nombre: 'Soporte de Celular Clarinete', precio: 175, precioOriginal: 200, isNew: false },
+  { id: 5, nombre: 'Soporte de Celular Euphonium Frontal', precio: 185, precioOriginal: 210, isNew: false },
+  { id: 6, nombre: 'Soporte de Celular Tuba (Tudel Ancho)', precio: 200, precioOriginal: 230, isNew: true },
+  { id: 7, nombre: 'Soporte de Celular Trompeta XL', precio: 190, precioOriginal: 220, isNew: false },
+  { id: 8, nombre: 'Soporte de Celular Trombón (Tudel Ancho)', precio: 185, precioOriginal: 215, isNew: true },
+];
+---
+
+<PublicLayout title={`${categoryName} — Barzol`}>
+	<Breadcrumb items={[{ label: 'Inicio', href: '/' }, { label: categoryName }]} />
+
+	<!-- CATEGORY HERO -->
+	<div style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
+		<div style="position:relative; height:220px; background:linear-gradient(130deg,#e8edf8 0%,#dde4f2 60%,#d0daea 100%); border-radius:16px; overflow:hidden; display:flex; align-items:center;">
+			<div style="position:relative; z-index:2; padding:0 48px; max-width:480px;">
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:8px;">Categoría</div>
+				<h1 style="font-size:32px; font-weight:700; color:var(--color-text); line-height:1.15; margin-bottom:10px;">{categoryName}</h1>
+				<p style="font-size:13.5px; color:var(--color-text-muted); line-height:1.6;">Monta tu celular en cualquier instrumento. Diseñados con impresión 3D.</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- SUB-CATEGORY TABS -->
+	<div style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
+		<div style="display:flex; align-items:center; gap:8px; overflow-x:auto; padding-bottom:4px;" data-noscroll>
+			{instrumentos.map((instrumento, i) => (
+				<button
+					type="button"
+					style={`flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid ${i === 0 ? 'var(--color-primary)' : 'var(--color-border)'}; background:${i === 0 ? 'var(--color-primary)' : 'white'}; color:${i === 0 ? 'white' : 'var(--color-text-soft)'}; font-size:13px; font-weight:${i === 0 ? '600' : '500'}; cursor:pointer; white-space:nowrap;`}
+				>{instrumento}</button>
+			))}
+		</div>
+	</div>
+
+	<!-- MAIN CONTENT -->
+	<div style="max-width:1200px; margin:0 auto; padding:20px 32px 64px; display:grid; grid-template-columns:200px 1fr; gap:24px; align-items:start;">
+
+		<!-- SIDEBAR -->
+		<div style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
+			<div style="font-size:13px; font-weight:700; color:var(--color-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+				Filtros
+				<button type="button" style="font-size:11px; font-weight:500; color:var(--color-primary); background:none; border:none; cursor:pointer; ">Limpiar</button>
+			</div>
+
+			<div style="margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--color-surface-muted);">
+				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Precio (S/)</div>
+				<div style="display:flex; gap:6px; align-items:center;">
+					<input type="number" placeholder="0" style="width:72px; padding:7px 8px; border:1.5px solid var(--color-border); border-radius:7px; font-size:12px; outline:none;" />
+					<span style="color:var(--color-text-faint); font-size:12px;">—</span>
+					<input type="number" placeholder="300" style="width:72px; padding:7px 8px; border:1.5px solid var(--color-border); border-radius:7px; font-size:12px; outline:none;" />
+				</div>
+			</div>
+
+			<div>
+				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Ordenar</div>
+				<div style="display:flex; flex-direction:column; gap:8px;">
+					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
+						<input type="radio" name="sort" checked style="accent-color:var(--color-primary); cursor:pointer;" />Relevancia
+					</label>
+					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
+						<input type="radio" name="sort" style="accent-color:var(--color-primary); cursor:pointer;" />Menor precio
+					</label>
+					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
+						<input type="radio" name="sort" style="accent-color:var(--color-primary); cursor:pointer;" />Mayor precio
+					</label>
+					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
+						<input type="radio" name="sort" style="accent-color:var(--color-primary); cursor:pointer;" />Más nuevos
+					</label>
+				</div>
+			</div>
+		</div>
+
+		<!-- PRODUCT GRID -->
+		<div>
+			<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+				<span style="font-size:13px; color:var(--color-text-muted);"><span style="font-weight:600; color:var(--color-text);">{products.length}</span> productos</span>
+			</div>
+			<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px;">
+				{products.map((p) => (
+					<ProductCard
+						href={`/producto/producto-${p.id}`}
+						nombre={p.nombre}
+						precio={p.precio}
+						precioOriginal={p.precioOriginal}
+						isNew={p.isNew}
+					/>
+				))}
+			</div>
+
+			<Pagination currentPage={1} totalPages={2} />
+		</div>
+
+	</div>
+</PublicLayout>

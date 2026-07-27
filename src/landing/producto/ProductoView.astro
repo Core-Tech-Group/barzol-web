@@ -1,0 +1,119 @@
+---
+import PublicLayout from '@landing/layout/PublicLayout.astro';
+import Breadcrumb from '@landing/shared/Breadcrumb.astro';
+import ProductCarousel from './ProductCarousel.astro';
+import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
+
+interface Props {
+  slug?: string;
+}
+
+const { slug } = Astro.props;
+
+// TODO: datos mock — reemplazar por @shared/lib/productos/productoService
+// cuando se conecte Supabase, usando el slug para buscar el producto real.
+const nombre = 'Soporte de Celular para Trompeta';
+const precio = 160;
+const precioOriginal = 180;
+const descuentoPct = Math.round((1 - precio / precioOriginal) * 100);
+
+const suggested = [
+  { href: '/producto/soporte-celular-clarinete', nombre: 'Soporte de Celular Clarinete', precio: 175, precioOriginal: 200 },
+  { href: '/producto/soporte-celular-trombon', nombre: 'Soporte de Celular Trombón', precio: 170, precioOriginal: 195 },
+  { href: '/producto/soporte-celular-saxofon-alto', nombre: 'Soporte de Celular Saxofón Alto', precio: 160, precioOriginal: 180 },
+  { href: '/producto/soporte-celular-tuba', nombre: 'Soporte de Celular Tuba', precio: 200, precioOriginal: 230 },
+];
+---
+
+<PublicLayout title={`${nombre} — Barzol`}>
+	<Breadcrumb
+		items={[
+			{ label: 'Inicio', href: '/' },
+			{ label: 'Soportes para celular', href: '/catalogo/soportes-para-celular' },
+			{ label: slug ?? '' },
+		]}
+	/>
+
+	<!-- PRODUCT DETAIL -->
+	<div style="max-width:1200px; margin:0 auto; padding:24px 32px 32px;">
+		<div style="display:grid; grid-template-columns:448px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
+
+			<!-- GALERÍA -->
+			<div style="display:flex; gap:12px; align-items:flex-start;">
+				<div style="display:flex; flex-direction:column; gap:10px;">
+					{[1, 2, 3, 4].map(() => (
+						<div style="width:80px; height:80px; background:var(--color-surface-muted); border-radius:8px; flex-shrink:0;"></div>
+					))}
+				</div>
+				<div style="width:448px; height:540px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
+					Foto principal del producto
+				</div>
+			</div>
+
+			<!-- INFO -->
+			<div style="padding-top:4px;">
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--color-text-faint); text-transform:uppercase; margin-bottom:8px;">BARZOL</div>
+				<h1 style="font-size:24px; font-weight:700; color:var(--color-text); line-height:1.25; margin-bottom:12px;">{nombre}</h1>
+
+				<div style="display:flex; align-items:center; gap:12px; margin-bottom:22px; padding-bottom:22px; border-bottom:1px solid var(--color-surface-muted);">
+					<span style="font-size:30px; font-weight:700; color:var(--color-primary);">S/ {precio.toFixed(2)}</span>
+					<span style="font-size:16px; color:var(--color-text-faint); text-decoration:line-through;">S/ {precioOriginal.toFixed(2)}</span>
+					<span style="padding:3px 10px; background:var(--color-danger-bg); color:var(--color-danger); font-size:11px; font-weight:700; border-radius:99px;">{descuentoPct}% OFF</span>
+				</div>
+				<p style="font-size:13.5px; color:var(--color-text-body); line-height:1.7; margin-bottom:12px;">Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.</p>
+				<ul style="list-style:none; display:flex; flex-direction:column; gap:7px; margin-bottom:22px; padding:0;">
+					{[
+						'Permite sujetar el celular de forma segura al instrumento.',
+						'Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.',
+						'Brinda mayor comodidad durante las presentaciones.',
+						'Personalización disponible (nombre, logo o detalle especial) — bajo pedido.',
+					].map((bullet) => (
+						<li style="display:flex; align-items:center; gap:9px; font-size:13px; color:var(--color-text-body);">
+							<span style="width:6px; height:6px; border-radius:50%; background:var(--color-primary); flex-shrink:0;"></span>
+							{bullet}
+						</li>
+					))}
+				</ul>
+
+				<div style="display:flex; flex-direction:row; gap:10px; margin-bottom:24px; flex-wrap:wrap;">
+					<a href={`https://wa.me/51950759032?text=${encodeURIComponent(`Hola, me interesa: ${nombre}`)}`} target="_blank" rel="noopener" class="product-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:11px 20px; background:var(--color-whatsapp); color:white; font-size:13px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 3px 12px rgba(var(--color-whatsapp-rgb),0.3);">
+						<WhatsAppIcon size={16} fill="white" />
+						Consultar por WhatsApp
+					</a>
+					<a href="/catalogo/soportes-para-celular" class="product-cta-secondary" style="display:inline-flex; align-items:center; padding:11px 18px; background:white; border:1.5px solid var(--color-border); border-radius:9px; font-size:13px; font-weight:500; color:var(--color-text-soft); text-decoration:none;">Ver más soportes</a>
+				</div>
+				<div style="background:var(--color-surface-soft); border:1px solid var(--color-border-soft); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:10px;">
+					<div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--color-text-soft);">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="1" y="3" width="15" height="13" rx="2" stroke="var(--color-primary)" stroke-width="1.8"></rect><path d="M16 8h3l3 4v5h-6V8z" stroke="var(--color-primary)" stroke-width="1.8"></path><circle cx="5.5" cy="18.5" r="1.5" stroke="var(--color-primary)" stroke-width="1.5"></circle><circle cx="18.5" cy="18.5" r="1.5" stroke="var(--color-primary)" stroke-width="1.5"></circle></svg>
+						Envío a nivel nacional e internacional
+					</div>
+					<div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--color-text-soft);">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+						Personalización disponible (nombre, logo, grabado)
+					</div>
+					<div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--color-text-soft);">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.13 1.18 2 2 0 012.11 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+						Atención directa por WhatsApp — respuesta rápida
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- PRODUCTOS SUGERIDOS -->
+	<div style="max-width:1200px; margin:0 auto; padding:0 32px 64px;">
+		<div style="border-top:1px solid var(--color-border-soft); padding-top:40px;">
+			<ProductCarousel title="Más soportes de celular" products={suggested} />
+		</div>
+	</div>
+</PublicLayout>
+
+<style>
+	.product-cta-primary:hover {
+		background: var(--color-whatsapp-dark);
+	}
+	.product-cta-secondary:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+</style>

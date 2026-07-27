@@ -1,0 +1,82 @@
+---
+import ProductCard from './ProductCard.astro';
+
+interface Product {
+  href: string;
+  nombre: string;
+  precio: number;
+  precioOriginal?: number;
+  marca?: string;
+  isNew?: boolean;
+}
+
+interface Props {
+  title: string;
+  viewAllHref?: string;
+  products: Product[];
+}
+
+const { title, viewAllHref, products } = Astro.props;
+---
+
+<div class="product-carousel" style="margin-top:44px;">
+	<div style="display:flex; align-items:center; gap:14px; margin-bottom:18px;">
+		<h2 style="font-size:16px; font-weight:600; color:var(--color-text);">{title}</h2>
+		{viewAllHref && (
+			<a href={viewAllHref} style="font-size:12px; font-weight:500; color:var(--color-primary); text-decoration:none; margin-left:auto;">Ver todo</a>
+		)}
+	</div>
+	<div style="position:relative;">
+		<button class="carousel-prev" type="button" aria-label="Anterior" style="position:absolute; left:-18px; top:50%; transform:translateY(-50%); z-index:5; width:34px; height:34px; border-radius:50%; background:white; border:1px solid var(--color-border); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.08); transition:opacity 0.2s;">
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="var(--color-text-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+		</button>
+		<div class="carousel-track" data-noscroll style="display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; scroll-behavior:smooth;">
+			{products.map((product) => (
+				<div style="flex-shrink:0; width:218px;">
+					<ProductCard
+						href={product.href}
+						nombre={product.nombre}
+						precio={product.precio}
+						precioOriginal={product.precioOriginal}
+						marca={product.marca}
+						isNew={product.isNew}
+					/>
+				</div>
+			))}
+		</div>
+		<button class="carousel-next" type="button" aria-label="Siguiente" style="position:absolute; right:-18px; top:50%; transform:translateY(-50%); z-index:5; width:34px; height:34px; border-radius:50%; background:white; border:1px solid var(--color-border); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.08); transition:opacity 0.2s;">
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+		</button>
+	</div>
+</div>
+
+<script>
+	function initCarousels() {
+		document.querySelectorAll<HTMLElement>('.product-carousel').forEach((carousel) => {
+			if (carousel.dataset.wired) return;
+			carousel.dataset.wired = 'true';
+
+			const track = carousel.querySelector<HTMLElement>('.carousel-track');
+			const prevBtn = carousel.querySelector<HTMLButtonElement>('.carousel-prev');
+			const nextBtn = carousel.querySelector<HTMLButtonElement>('.carousel-next');
+			if (!track || !prevBtn || !nextBtn) return;
+
+			const updateArrows = () => {
+				const atStart = track.scrollLeft <= 2;
+				const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+				prevBtn.style.opacity = atStart ? '0' : '1';
+				prevBtn.style.pointerEvents = atStart ? 'none' : 'auto';
+				nextBtn.style.opacity = atEnd ? '0' : '1';
+				nextBtn.style.pointerEvents = atEnd ? 'none' : 'auto';
+			};
+
+			prevBtn.addEventListener('click', () => track.scrollBy({ left: -300, behavior: 'smooth' }));
+			nextBtn.addEventListener('click', () => track.scrollBy({ left: 300, behavior: 'smooth' }));
+			track.addEventListener('scroll', updateArrows);
+			updateArrows();
+		});
+	}
+
+	document.addEventListener('astro:page-load', initCarousels);
+	initCarousels();
+</script>

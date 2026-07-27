@@ -1,0 +1,123 @@
+---
+import PublicLayout from '@landing/layout/PublicLayout.astro';
+import ServiceFeatureBlock from './ServiceFeatureBlock.astro';
+import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
+
+const features3d = [
+  { icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', title: 'Alta precisión', desc: 'Piezas fabricadas con precisión' },
+  { icon: 'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18', title: 'Personalización', desc: 'Piezas a tu medida y con tu diseño' },
+  { icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', title: 'Durabilidad', desc: 'Piezas resistentes fabricados con materiales de alta calidad' },
+  { icon: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z', title: 'Entrega rápida', desc: 'Coordinamos el plazo según tu pedido' },
+];
+
+const featuresIng = [
+  { icon: 'M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z', title: 'Diseño CAD', desc: 'Modelado 3D profesional' },
+  { icon: 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z', title: 'Ingeniería', desc: 'Soluciones a medida' },
+  { icon: 'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18', title: 'Ingeniería inversa', desc: 'Escaneo 3D para reconstruir piezas existentes' },
+];
+
+const areasIng = ['Diseño CAD/CAE', 'Escaneo 3D', 'Ingeniería inversa'];
+
+const proceso = [
+  { n: '1', title: 'Nos contactas', desc: 'Cuéntanos tu proyecto por WhatsApp o email' },
+  { n: '2', title: 'Cotizamos', desc: 'Te enviamos precio y tiempo estimado' },
+  { n: '3', title: 'Fabricamos', desc: 'Producción con control de calidad en cada paso' },
+  { n: '4', title: 'Te lo enviamos', desc: 'Despacho a nivel nacional e internacional' },
+];
+---
+
+<PublicLayout title="Servicios — Barzol">
+	<!-- HERO -->
+	<div style="position:relative; padding:56px 32px; overflow:hidden; background:var(--gradient-hero-dark);">
+		<div style="max-width:1200px; margin:0 auto; position:relative; z-index:1;">
+			<div style="display:inline-flex; align-items:center; gap:8px; padding:5px 14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:99px; font-size:11px; font-weight:600; letter-spacing:0.08em; color:white; text-transform:uppercase; margin-bottom:14px; white-space:nowrap;">
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="white" stroke-width="2"></path></svg>
+				Fabricación a medida
+			</div>
+			<h1 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:10px;">Servicios de fabricación personalizada</h1>
+			<p style="font-size:15px; color:rgba(255,255,255,0.9); line-height:1.6; max-width:560px;">Desde piezas únicas con impresión 3D hasta soluciones de ingeniería complejas.</p>
+		</div>
+	</div>
+
+	<!-- SERVICIOS -->
+	<div style="background:white; padding:64px 32px 16px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:48px;">
+				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Lo que hacemos</div>
+				<h2 style="font-size:34px; font-weight:700; color:var(--color-text); line-height:1.2;">Nuestros servicios</h2>
+			</div>
+
+			<ServiceFeatureBlock
+				badge="Servicio 01"
+				title="Impresión 3D<br>personalizada"
+				description="Fabricamos piezas únicas a medida usando impresión 3D. Ideal para soportes de celular, sordinas y cualquier accesorio que necesites."
+				ctaHref="https://wa.me/51950759032?text=Hola,%20quiero%20cotizar%20un%20servicio%20de%20impresi%C3%B3n%203D"
+				ctaLabel="Cotizar por WhatsApp"
+				imagePlaceholder="Impresora 3D o pieza impresa — fotografía del proceso"
+				features={features3d}
+			/>
+
+			<ServiceFeatureBlock
+				badge="Servicio 02"
+				title="Trabajos de<br>ingeniería"
+				description="Desarrollamos soluciones técnicas personalizadas: desde el diseño CAD hasta la fabricación del prototipo final. Si tienes un proyecto especial o necesitas una pieza que no existe en el mercado, hablemos."
+				ctaHref="https://wa.me/51950759032?text=Hola,%20quiero%20cotizar%20un%20trabajo%20de%20ingenier%C3%ADa"
+				ctaLabel="Cotizar por WhatsApp"
+				imagePlaceholder="Planos técnicos, prototipo o proyecto de ingeniería"
+				features={featuresIng}
+				areas={areasIng}
+				reverse
+			/>
+		</div>
+	</div>
+
+	<!-- PROCESO -->
+	<div style="background:white; padding:64px 32px; margin-top:16px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:48px;">
+				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Cómo trabajamos</div>
+				<h2 style="font-size:30px; font-weight:700; color:var(--color-text);">De la cotización a la entrega</h2>
+			</div>
+			<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:24px; position:relative;">
+				<div style="position:absolute; top:28px; left:12.5%; right:12.5%; height:2px; background:linear-gradient(90deg,var(--color-primary),var(--color-primary-accent),var(--color-primary-soft)); border-radius:99px; z-index:0; pointer-events:none;"></div>
+				{proceso.map((paso) => (
+					<div style="display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; z-index:1;">
+						<div style="width:56px; height:56px; border-radius:50%; background:var(--color-primary); color:white; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; margin-bottom:18px; box-shadow:0 4px 16px rgba(var(--color-primary-rgb),0.35);">{paso.n}</div>
+						<div style="font-size:14px; font-weight:600; color:var(--color-text); margin-bottom:8px;">{paso.title}</div>
+						<div style="font-size:12.5px; color:var(--color-text-muted); line-height:1.55;">{paso.desc}</div>
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+
+	<!-- CTA FINAL -->
+	<div style="background:linear-gradient(135deg,var(--color-navy) 0%,var(--color-primary) 100%); padding:64px 32px; position:relative; overflow:hidden;">
+		<div style="position:absolute; top:-60px; right:-60px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,0.05); pointer-events:none;"></div>
+		<div style="max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:32px; position:relative; z-index:1;">
+			<div>
+				<h2 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:12px;">¿Tienes un proyecto en mente?</h2>
+				<p style="font-size:15px; color:rgba(255,255,255,0.88); max-width:480px; line-height:1.65;">Cuéntanos tu idea y te enviamos una cotización sin costo.</p>
+			</div>
+			<div style="display:flex; gap:12px; flex-shrink:0;">
+				<a href="https://wa.me/51950759032?text=Hola,%20tengo%20un%20proyecto%20y%20quiero%20cotizar" target="_blank" rel="noopener" class="cta-final-primary" style="display:inline-flex; align-items:center; gap:9px; padding:14px 28px; background:var(--color-success); color:white; font-size:14px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-success-rgb),0.4); white-space:nowrap;">
+					<WhatsAppIcon size={17} fill="white" />
+					Escribir por WhatsApp
+				</a>
+				<a href="mailto:atencioncliente@barzol.com" class="cta-final-secondary" style="display:inline-flex; align-items:center; gap:8px; padding:14px 24px; background:rgba(255,255,255,0.12); color:white; font-size:14px; font-weight:500; text-decoration:none; border-radius:9px; border:1px solid rgba(255,255,255,0.25); white-space:nowrap;">
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="white" stroke-width="1.8" stroke-linejoin="round"></path><polyline points="22,6 12,13 2,6" stroke="white" stroke-width="1.8" stroke-linecap="round"></polyline></svg>
+					Enviar email
+				</a>
+			</div>
+		</div>
+	</div>
+</PublicLayout>
+
+<style>
+	.cta-final-primary:hover {
+		background: var(--color-success-dark);
+	}
+	.cta-final-secondary:hover {
+		background: rgba(255, 255, 255, 0.22);
+	}
+</style>

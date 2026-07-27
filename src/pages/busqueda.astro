@@ -1,0 +1,7 @@
+---
+import BusquedaView from '@landing/busqueda/BusquedaView.astro';
+
+const query = Astro.url.searchParams.get('q') ?? '';
+---
+
+<BusquedaView query={query} />

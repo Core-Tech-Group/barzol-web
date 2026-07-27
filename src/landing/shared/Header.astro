@@ -1,0 +1,207 @@
+---
+import WhatsAppIcon from './WhatsAppIcon.astro';
+
+// TODO: reemplazar por categorías reales desde @shared/lib/categorias/categoriaService
+// cuando se conecte Supabase. Por ahora son datos mock para el menú.
+const megaCats = [
+  {
+    name: 'Soportes para celular',
+    href: '/catalogo/soportes-para-celular',
+    instruments: [
+      'Trompeta', 'Clarinete', 'Euphonium', 'Trombón', 'Tuba', 'Saxofón alto', 'Saxo tenor',
+    ],
+  },
+  {
+    name: 'Sordinas',
+    href: '/catalogo/sordinas',
+    instruments: ['Trombón', 'Trompeta'],
+  },
+  {
+    name: 'Topes protectores de vara',
+    href: '/catalogo/topes-protectores-de-vara',
+    instruments: [] as string[],
+  },
+  {
+    name: 'BERP',
+    href: '/catalogo/berp',
+    instruments: ['Trombón', 'Trompeta', 'Euphonium'],
+  },
+];
+
+const announcement = { text: 'Envío a nivel nacional e internacional', icons: true };
+---
+
+<div style="position:sticky; top:0; z-index:200;">
+	<!-- ANNOUNCEMENT BAR -->
+	<div style="background:var(--color-primary); color:white; padding:8px 32px; font-size:12px; font-weight:500; text-align:center; letter-spacing:0.025em; display:flex; align-items:center; justify-content:center; gap:8px;">
+		{announcement.icons && (
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+				<rect x="1" y="3" width="15" height="13" rx="2" stroke="white" stroke-width="1.8" stroke-linejoin="round"></rect>
+				<path d="M16 8h3l3 4v5h-6V8z" stroke="white" stroke-width="1.8" stroke-linejoin="round"></path>
+				<circle cx="5.5" cy="18.5" r="1.5" stroke="white" stroke-width="1.5"></circle>
+				<circle cx="18.5" cy="18.5" r="1.5" stroke="white" stroke-width="1.5"></circle>
+			</svg>
+		)}
+		<span>{announcement.text}</span>
+		{announcement.icons && (
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+				<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 00-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" stroke="white" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path>
+			</svg>
+		)}
+	</div>
+
+	<!-- HEADER -->
+	<header style="background:white; box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+		<div style="max-width:1200px; margin:0 auto; padding:0 32px; height:64px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--color-surface-muted);">
+
+			<!-- Logo -->
+			<a href="/" style="display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0;">
+				<svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+					<polygon points="15,1 28,8 28,22 15,29 2,22 2,8" fill="var(--color-primary)"></polygon>
+					<polygon points="15,7 22,11 22,19 15,23 8,19 8,11" fill="white" opacity="0.85"></polygon>
+					<polygon points="15,11.5 19,14 19,17 15,19.5 11,17 11,14" fill="var(--color-primary)"></polygon>
+				</svg>
+				<span style="font-size:16px; font-weight:700; color:var(--color-text); letter-spacing:0.01em;">BARZOL</span>
+			</a>
+
+			<!-- Categorías (mega menú) -->
+			<div class="cat-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
+				<button style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:13px; font-weight:600; color:var(--color-primary); background:var(--color-primary-light); border:1px solid var(--color-primary-border); cursor:pointer; border-radius:8px; white-space:nowrap;">
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
+					Categorías
+				</button>
+
+				<div class="cat-panel" style="position:absolute; top:100%; left:0; width:532px; background:white; border:1px solid var(--color-border-faint); box-shadow:0 12px 28px rgba(0,0,0,0.09); z-index:300; border-radius:8px; overflow:hidden; display:flex;">
+					<div class="subcat-list" style="width:222px; background:var(--color-surface-alt); border-right:1px solid var(--color-border-faint); padding:6px; flex-shrink:0; display:flex; flex-direction:column; gap:1px;">
+						{megaCats.map((cat, i) => (
+							<div class="subcat-trigger" data-idx={i} style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:6px; white-space:nowrap; overflow:hidden;">
+								<span style="font-size:12px; font-weight:500; color:var(--color-text-body); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{cat.name}</span>
+								{cat.instruments.length > 0 && (
+									<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+								)}
+							</div>
+						))}
+					</div>
+					<div class="subcat-content-wrap" style="flex:1; padding:18px 20px; display:flex; flex-direction:column;">
+						{megaCats.map((cat, i) => (
+							<div class="subcat-panel" data-idx={i}>
+								<div style="margin-bottom:14px;">
+									<div style="font-size:14.5px; font-weight:700; color:var(--color-text); margin-bottom:6px;">{cat.name}</div>
+									<div style="width:26px; height:2.5px; background:var(--color-primary); border-radius:99px;"></div>
+								</div>
+								<div style="display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; flex:1;">
+									{cat.instruments.map((instrument) => (
+										<a href={cat.href} style="display:inline-flex; align-items:center; padding:7px 13px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-surface-alt); font-size:12.5px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap;">
+											{instrument}
+										</a>
+									))}
+								</div>
+								<div style="border-top:1px solid var(--color-surface-muted); margin-top:12px; padding-top:12px;">
+									<a href={cat.href} style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--color-primary); text-decoration:none;">
+										Ver todo en {cat.name}
+										<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+									</a>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			</div>
+
+			<!-- Buscador -->
+			<form action="/busqueda" style="position:relative; flex:1 1 260px; max-width:420px; min-width:190px; margin-left:12px;">
+				<input type="text" name="q" placeholder="Buscar productos, sordinas, soportes..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:13px; color:var(--color-text); background:white; outline:none;" />
+				<button type="submit" style="position:absolute; right:3px; top:50%; transform:translateY(-50%); width:32px; height:32px; background:transparent; color:var(--color-primary); border:none; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+						<circle cx="11" cy="11" r="8" stroke="var(--color-primary)" stroke-width="2.2"></circle>
+						<path d="M21 21l-4.35-4.35" stroke="var(--color-primary)" stroke-width="2.2" stroke-linecap="round"></path>
+					</svg>
+				</button>
+			</form>
+
+			<div style="flex:1; min-width:0;"></div>
+
+			<!-- Servicios (mega menú) -->
+			<div class="serv-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0;">
+				<a href="/servicios" style="display:flex; align-items:center; gap:4px; padding:6px 8px; font-size:13px; font-weight:500; color:var(--color-text-strong); text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap;">
+					Servicios
+					<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--color-text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+				</a>
+				<div class="serv-panel" style="position:absolute; top:100%; left:0; width:300px; background:white; border:1px solid var(--color-border-faint); box-shadow:0 12px 28px rgba(0,0,0,0.09); z-index:300; border-radius:10px; overflow:hidden; padding:8px;">
+					<a href="/servicios" style="display:flex; align-items:flex-start; gap:12px; padding:11px 10px; border-radius:8px; text-decoration:none;">
+						<div style="width:36px; height:36px; border-radius:9px; background:var(--color-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+							<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="var(--color-primary)" stroke-width="1.6"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="var(--color-primary)" stroke-width="1.6"></polyline><line x1="12" y1="22.08" x2="12" y2="12" stroke="var(--color-primary)" stroke-width="1.6"></line></svg>
+						</div>
+						<div>
+							<div style="font-size:12.5px; font-weight:600; color:var(--color-text); margin-bottom:2px;">Impresión 3D</div>
+							<div style="font-size:11.5px; color:var(--color-text-muted); line-height:1.4;">Fabricación de piezas mediante impresión 3D</div>
+						</div>
+					</a>
+					<a href="/servicios" style="display:flex; align-items:flex-start; gap:12px; padding:11px 10px; border-radius:8px; text-decoration:none;">
+						<div style="width:36px; height:36px; border-radius:9px; background:var(--color-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+							<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke="var(--color-primary)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+						</div>
+						<div>
+							<div style="font-size:12.5px; font-weight:600; color:var(--color-text); margin-bottom:2px;">Trabajos de ingeniería</div>
+							<div style="font-size:11.5px; color:var(--color-text-muted); line-height:1.4;">Diseño CAD/CAE, escaneo 3D e ingeniería inversa</div>
+						</div>
+					</a>
+				</div>
+			</div>
+			<a href="/nosotros" style="padding:6px 8px; font-size:13px; font-weight:500; color:var(--color-text-strong); text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap; margin-left:2px;">Nosotros</a>
+
+			<div style="width:1px; height:20px; background:var(--color-border); flex-shrink:0; margin:0 2px;"></div>
+
+			<!-- Contacto WhatsApp -->
+			<a href="https://wa.me/51950759032" target="_blank" rel="noopener" style="display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:8px; background:transparent; border:1px solid var(--color-border); flex-shrink:0; text-decoration:none; white-space:nowrap;">
+				<WhatsAppIcon size={17} fill="var(--color-success)" />
+				<span style="font-size:13px; font-weight:600; color:var(--color-text-strong);">950 759 032</span>
+			</a>
+
+		</div>
+	</header>
+</div>
+
+<style>
+	/* Paneles flotantes: se abren con :hover, sin JS. */
+	.cat-trigger .cat-panel,
+	.serv-trigger .serv-panel {
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transition: opacity 0.1s ease;
+	}
+	.cat-trigger:hover .cat-panel,
+	.serv-trigger:hover .serv-panel {
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
+	}
+
+	/* Sub-categoría activa en el mega menú: por defecto la primera; al
+	   pasar el mouse por otro trigger, ese pasa a ser el activo.
+	   NOTA: asume un máximo de 4 categorías (mock actual). Cuando el menú
+	   pase a datos dinámicos desde Supabase, esto debería resolverse con
+	   un pequeño script cliente en vez de :has(). */
+	.subcat-panel { display: none; }
+	.subcat-panel[data-idx='0'] { display: flex; flex-direction: column; }
+	.subcat-trigger[data-idx='0'] { background: var(--color-border-faint); }
+	.subcat-trigger span { color: var(--color-text); font-weight: 600; }
+
+	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-panel { display: none; }
+	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-panel[data-idx='1'] { display: flex; flex-direction: column; }
+	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-trigger { background: transparent; }
+	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-trigger[data-idx='1'] { background: var(--color-border-faint); }
+
+	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-panel { display: none; }
+	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-trigger { background: transparent; }
+	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-trigger[data-idx='2'] { background: var(--color-border-faint); }
+	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) { width: 224px; }
+	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-content-wrap { display: none; }
+	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-list { border-right: none; }
+
+	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-panel { display: none; }
+	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-panel[data-idx='3'] { display: flex; flex-direction: column; }
+	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-trigger { background: transparent; }
+	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-trigger[data-idx='3'] { background: var(--color-border-faint); }
+</style>

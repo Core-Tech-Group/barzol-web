@@ -1,0 +1,23 @@
+---
+import WhatsAppIcon from './WhatsAppIcon.astro';
+
+interface Props {
+  message?: string;
+}
+
+const { message } = Astro.props;
+const href = message
+  ? `https://wa.me/51950759032?text=${encodeURIComponent(message)}`
+  : 'https://wa.me/51950759032';
+---
+
+<a href={href} target="_blank" rel="noopener" style="position:fixed; bottom:28px; right:28px; z-index:500; width:54px; height:54px; background:var(--color-whatsapp); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(var(--color-whatsapp-rgb),0.45); transition:transform 0.18s,box-shadow 0.18s;">
+	<WhatsAppIcon size={28} fill="white" />
+</a>
+
+<style>
+	a:hover {
+		transform: scale(1.1);
+		box-shadow: 0 6px 28px rgba(var(--color-whatsapp-rgb), 0.55);
+	}
+</style>

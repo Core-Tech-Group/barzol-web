@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/*
+  BARZOL — Design tokens
+  Fuente única de verdad para colores y tipografía del proyecto.
+  Usa el bloque @theme (Tailwind v4, CSS-first) para que cada token
+  quede disponible de dos formas:
+    1. Como variable CSS: var(--color-primary) — para los style="..."
+       inline usados en la mayoría de componentes/páginas.
+    2. Como utilidad Tailwind autogenerada: bg-primary, text-primary,
+       border-primary — para código que sí use clases Tailwind.
+*/
+@theme {
+	/* Marca — azul primario */
+	--color-primary: #1e4d8c;
+	--color-primary-dark: #043d87;
+	--color-primary-light: #eef4ff;
+	--color-primary-border: #d3e3fa;
+	--color-primary-soft: #93c5fd;
+	--color-primary-accent: #4a82e0;
+
+	/* Marca — navy institucional (footer, hero "Nosotros"/"Servicios") */
+	--color-navy: #1e3560;
+	--color-navy-dark: #152848;
+
+	/* Marca — acento de servicio (BARZOL_CONTEXTO.md: "Naranja servicio") */
+	--color-orange: #c2410c;
+
+	/* Texto */
+	--color-text: #1a1a2e;
+	--color-text-strong: #1f2937;
+	--color-text-soft: #374151;
+	--color-text-body: #4b5563;
+	--color-text-muted: #6b7280;
+	--color-text-faint: #9ca3af;
+
+	/* Fondos y superficies */
+	--color-bg: #f4f5f7;
+	--color-surface: #ffffff;
+	--color-surface-soft: #f8f9fb;
+	--color-surface-alt: #fafbfc;
+	--color-surface-muted: #f0f2f5;
+
+	/* Bordes */
+	--color-border: #e5e7eb;
+	--color-border-soft: #e9ebee;
+	--color-border-faint: #eef0f2;
+	--color-border-muted: #d1d5db;
+
+	/* Semánticos */
+	--color-success: #16a34a;
+	--color-success-dark: #15803d;
+	--color-success-bg: #dcfce7;
+	--color-success-border: #bbf7d0;
+	--color-success-soft-bg: #f0fdf4;
+	--color-whatsapp: #25d366;
+	--color-whatsapp-dark: #1da851;
+	--color-danger: #dc2626;
+	--color-danger-bg: #fee2e2;
+
+	/* Tipografía */
+	--font-sans: 'Poppins', sans-serif;
+}
+
+/*
+  Valores derivados de los tokens de arriba que no generan utilidades
+  Tailwind (no forman parte del namespace de colores ni tipografía),
+  pero siguen centralizados aquí para no repetirlos en cada página.
+*/
+:root {
+	--gradient-hero-dark: linear-gradient(135deg, #0b1928 0%, #2b3a57 100%);
+
+	/* Componentes RGB de tokens de color, para usarlos dentro de
+	   rgba(var(--color-x-rgb), alpha) en sombras/overlays con
+	   transparencia variable. */
+	--color-primary-rgb: 30, 77, 140;
+	--color-success-rgb: 22, 163, 74;
+	--color-whatsapp-rgb: 37, 211, 102;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html,
+body {
+	font-family: var(--font-sans);
+	background: var(--color-bg);
+	color: var(--color-text);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Los elementos de formulario no heredan font-family por defecto en la
+   mayoría de navegadores; esta regla evita repetir font-family: Poppins
+   en cada input/button/select del proyecto. */
+button,
+input,
+select,
+textarea {
+	font-family: inherit;
+}
+
+[data-noscroll] {
+	scrollbar-width: none;
+}
+[data-noscroll]::-webkit-scrollbar {
+	display: none;
+}
+
+@keyframes fadeSlide {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

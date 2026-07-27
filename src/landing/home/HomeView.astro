@@ -1,0 +1,84 @@
+---
+import PublicLayout from '@landing/layout/PublicLayout.astro';
+import ProductCarousel from '@landing/producto/ProductCarousel.astro';
+import ServicePromoCard from './ServicePromoCard.astro';
+
+// TODO: datos mock — reemplazar por @shared/lib/productos/productoService
+// cuando se conecte Supabase.
+const soportes = [
+  { href: '/producto/soporte-celular-trompeta', nombre: 'Soporte de Celular Trompeta', precio: 160, precioOriginal: 180 },
+  { href: '/producto/soporte-celular-clarinete', nombre: 'Soporte de Celular Clarinete', precio: 175, precioOriginal: 200 },
+  { href: '/producto/soporte-celular-euphonium-frontal', nombre: 'Soporte de Celular Euphonium Frontal', precio: 185, precioOriginal: 210 },
+  { href: '/producto/soporte-celular-euphonium-recto', nombre: 'Soporte de Celular Euphonium Recto', precio: 185, precioOriginal: 210 },
+  { href: '/producto/soporte-celular-trombon-tudel-delgado', nombre: 'Soporte de Celular Trombón (Tudel Delgado)', precio: 170, precioOriginal: 195 },
+  { href: '/producto/soporte-celular-trombon-tudel-ancho', nombre: 'Soporte de Celular Trombón (Tudel Ancho)', precio: 170, precioOriginal: 195 },
+  { href: '/producto/soporte-celular-tuba-tudel-ancho', nombre: 'Soporte de Celular Tuba (Tudel Ancho)', precio: 200, precioOriginal: 230 },
+  { href: '/producto/soporte-celular-tuba-tudel-delgado', nombre: 'Soporte de Celular Tuba (Tudel Delgado)', precio: 200, precioOriginal: 230 },
+  { href: '/producto/soporte-celular-saxofon-alto', nombre: 'Soporte de Celular Saxofón Alto', precio: 160, precioOriginal: 180 },
+  { href: '/producto/soporte-celular-saxo-tenor', nombre: 'Soporte de Celular Saxo Tenor', precio: 165, precioOriginal: 190 },
+];
+
+const sordinas = [
+  { href: '/producto/sordina-trombon', nombre: 'Sordina de Trombón', precio: 130, precioOriginal: 150 },
+  { href: '/producto/sordina-trompeta', nombre: 'Sordina de Trompeta', precio: 98, precioOriginal: 120 },
+];
+
+const berp = [
+  { href: '/producto/berp-trombon', nombre: 'BERP para Trombón', precio: 120, precioOriginal: 140 },
+  { href: '/producto/berp-trompeta', nombre: 'BERP para Trompeta', precio: 110, precioOriginal: 130 },
+  { href: '/producto/berp-euphonium', nombre: 'BERP para Euphonium', precio: 130, precioOriginal: 150 },
+];
+---
+
+<PublicLayout title="Barzol — Accesorios musicales impresos en 3D">
+	<!-- HERO BANNER -->
+	<div style="position:relative; height:560px; overflow:hidden; background:linear-gradient(120deg,#0f1e46 0%,var(--color-primary) 100%);">
+		<div style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:20px 72px 0; z-index:10; max-width:720px;">
+			<div style="font-size:10px; font-weight:700; letter-spacing:0.16em; color:rgba(255,255,255,0.75); text-transform:uppercase; margin-bottom:14px; animation:fadeSlide 0.6s ease both; animation-delay:0.1s;">Barzol, Perú</div>
+			<h1 style="font-size:44px; font-weight:700; color:white; line-height:1.12; margin-bottom:16px; animation:fadeSlide 0.7s ease both; animation-delay:0.3s;">Accesorios exclusivos,<br /><span style="color:var(--color-primary-soft);">diseñados para tu instrumento</span></h1>
+			<p style="font-size:15px; color:rgba(255,255,255,0.82); margin-bottom:24px; line-height:1.7; max-width:420px; animation:fadeSlide 0.7s ease both; animation-delay:0.55s;">Diseñados con Ingeniería Inversa e Impresión 3D. Usados por bandas y orquestas en todo el Perú.</p>
+			<p style="font-size:12.5px; font-weight:500; color:rgba(255,255,255,0.75); margin-bottom:32px; animation:fadeSlide 0.7s ease both; animation-delay:0.7s;">Diseño exclusivo · Productos patentados · Envío nacional e internacional</p>
+			<div style="display:flex; gap:12px; align-items:center; animation:fadeSlide 0.7s ease both; animation-delay:0.8s;">
+				<a href="/catalogo/soportes-para-celular" class="hero-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:13px 26px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-primary-rgb),0.4);">
+					Ver Productos
+					<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+				</a>
+				<a href="/servicios" class="hero-cta-secondary" style="display:inline-flex; align-items:center; gap:8px; padding:13px 22px; background:rgba(255,255,255,0.15); color:white; font-size:14px; font-weight:500; text-decoration:none; border-radius:9px; border:1px solid rgba(255,255,255,0.3);">Servicios →</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- PRODUCT SECTIONS -->
+	<div style="max-width:1200px; margin:0 auto; padding:0 32px;">
+		<div style="margin-top:48px;">
+			<ProductCarousel title="Soportes para celular" viewAllHref="/catalogo/soportes-para-celular" products={soportes} />
+		</div>
+		<ProductCarousel title="Sordinas" viewAllHref="/catalogo/sordinas" products={sordinas} />
+		<ProductCarousel title="BERP" viewAllHref="/catalogo/berp" products={berp} />
+	</div>
+
+	<!-- SERVICES -->
+	<div style="max-width:1200px; margin:52px auto 0; padding:0 32px;">
+		<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+			<ServicePromoCard
+				title="Impresión 3D<br>personalizada"
+				href="/servicios"
+				gradient="linear-gradient(135deg,#0d3b8c 0%,var(--color-primary) 60%,#2979ff 100%)"
+			/>
+			<ServicePromoCard
+				title="Trabajos de ingeniería"
+				href="/servicios"
+				gradient="linear-gradient(135deg,#7c2d12 0%,var(--color-orange) 55%,#f97316 100%)"
+			/>
+		</div>
+	</div>
+</PublicLayout>
+
+<style>
+	.hero-cta-primary:hover {
+		background: var(--color-primary-dark);
+	}
+	.hero-cta-secondary:hover {
+		background: rgba(255, 255, 255, 0.25);
+	}
+</style>

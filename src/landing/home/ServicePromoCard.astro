@@ -1,0 +1,29 @@
+---
+interface Props {
+  title: string;
+  href: string;
+  gradient: string;
+}
+
+const { title, href, gradient } = Astro.props;
+---
+
+<div style={`position:relative; height:288px; border-radius:12px; overflow:hidden; background:${gradient}; cursor:pointer;`}>
+	<div style="position:absolute; inset:0; background:rgba(0,0,0,0.28);"></div>
+	<div style="position:absolute; top:-40px; right:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,0.05); pointer-events:none;"></div>
+	<div style="position:absolute; top:30px; right:30px; width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,0.04); pointer-events:none;"></div>
+	<div style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:flex-end; padding:28px 30px 32px;">
+		<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.7); margin-bottom:8px;">SERVICIOS</div>
+		<h3 style="font-size:28px; font-weight:700; color:white; line-height:1.1; margin-bottom:22px;" set:html={title} />
+		<a href={href} class="service-promo-cta" style="display:inline-flex; align-items:center; gap:8px; padding:11px 20px; background:#111827; color:white; font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; text-decoration:none; border-radius:7px; align-self:flex-start;">
+			VER MÁS
+			<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+		</a>
+	</div>
+</div>
+
+<style>
+	.service-promo-cta:hover {
+		background: var(--color-text-strong);
+	}
+</style>

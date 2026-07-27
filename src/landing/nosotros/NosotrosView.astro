@@ -1,0 +1,177 @@
+---
+import PublicLayout from '@landing/layout/PublicLayout.astro';
+import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
+
+const confianza = [
+  { icon: 'M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z', label: 'Diseño exclusivo' },
+  { icon: 'rect', label: 'Productos patentados' },
+  { icon: 'truck', label: 'Envío nacional e internacional' },
+  { icon: 'pencil', label: 'Personalización disponible' },
+];
+
+const proceso = [
+  { n: '1', title: 'Diseño CAD/CAE', desc: 'Modelamos la pieza con software profesional, ajustada a tu instrumento.' },
+  { n: '2', title: 'Ingeniería inversa y escaneo 3D', desc: 'Digitalizamos formas reales para lograr un ajuste exacto en cada pieza.' },
+  { n: '3', title: 'Fabricación', desc: 'Producimos con impresión 3D y control de calidad antes del envío.' },
+];
+
+const valores = [
+  { title: 'Calidad', desc: 'Empleamos materiales de alto rendimiento que aseguran durabilidad y comodidad.' },
+  { title: 'Innovación', desc: 'Transformamos ideas en productos únicos que enriquecen la experiencia musical.' },
+  { title: 'Personalización', desc: 'Ofrecemos la posibilidad de añadir nombres, logos o detalles especiales a cada accesorio.' },
+];
+---
+
+<PublicLayout title="Nosotros — Barzol">
+	<!-- HERO NOSOTROS -->
+	<div style="position:relative; padding:100px 32px 56px; text-align:center; overflow:hidden; background:var(--gradient-hero-dark);">
+		<div style="position:relative; max-width:680px; margin:0 auto;">
+			<div style="font-size:14px; font-weight:700; letter-spacing:0.22em; color:rgba(255,255,255,0.9); text-transform:uppercase; margin-bottom:6px;">Somos</div>
+			<h1 style="font-size:76px; font-weight:800; color:white; line-height:1; letter-spacing:-0.01em; margin-bottom:16px;">BARZOL</h1>
+			<p style="font-size:18px; font-weight:500; color:rgba(255,255,255,0.92); margin-bottom:24px;">Diseñamos y fabricamos accesorios musicales con tecnología 3D, para músicos en Perú.</p>
+			<div style="display:inline-flex; align-items:center; gap:7px; padding:6px 14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); border-radius:99px;">
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="white" stroke-width="1.8"></rect><path d="M8 11V7a4 4 0 018 0v4" stroke="white" stroke-width="1.8" stroke-linecap="round"></path></svg>
+				<span style="font-size:11.5px; font-weight:600; letter-spacing:0.02em; color:white;">Productos exclusivos y protegidos por patente</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- CONFIANZA -->
+	<div style="background:white; padding:32px 32px 24px; text-align:center; border-bottom:1px solid var(--color-border-soft);">
+		<div style="max-width:680px; margin:0 auto;">
+			<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; max-width:720px; margin:0 auto 36px;">
+				{confianza.map((item) => (
+					<div style="background:white; border:1px solid var(--color-border-soft); border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+						<div style="width:44px; height:44px; background:var(--color-primary-light); border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--color-primary)" stroke-width="1.7"></circle></svg>
+						</div>
+						<span style="font-size:12px; font-weight:600; color:var(--color-text-soft); text-align:center; line-height:1.35;">{item.label}</span>
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+
+	<!-- HISTORIA -->
+	<div style="max-width:1200px; margin:0 auto; padding:64px 32px;">
+		<div style="display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
+			<div>
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:12px;">Nuestra historia</div>
+				<h2 style="font-size:30px; font-weight:700; color:var(--color-text); line-height:1.2; margin-bottom:20px;">Tecnología al servicio de la música</h2>
+				<p style="font-size:14px; color:var(--color-text-muted); line-height:1.75; margin-bottom:20px;">Diseñamos con software CAD/CAE y fabricamos con impresión 3D para estudiantes, orquestas, bandas sinfónicas y músicos independientes. Nuestros productos son exclusivos y están protegidos por patentes.</p>
+				<p style="font-size:15px; color:var(--color-text); font-weight:500; line-height:1.7; margin-bottom:28px; padding-left:16px; border-left:3px solid var(--color-primary);">"No solo fabricamos accesorios: damos vida a las ideas de los músicos, impulsando la creatividad y la pasión que los inspira."</p>
+				<div style="display:flex; gap:12px;">
+					<a href="https://wa.me/51950759032" target="_blank" rel="noopener" class="nosotros-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:12px 22px; background:var(--color-primary); color:white; font-size:13.5px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-primary-rgb),0.26);">Contáctanos</a>
+					<a href="/" class="nosotros-cta-secondary" style="display:inline-flex; align-items:center; gap:8px; padding:12px 22px; background:white; color:var(--color-text-soft); font-size:13.5px; font-weight:500; text-decoration:none; border-radius:9px; border:1.5px solid var(--color-border);">Ver productos</a>
+				</div>
+			</div>
+			<div style="position:relative; height:380px; border-radius:16px; overflow:hidden; background:var(--color-surface-muted); border:1px solid var(--color-border-soft); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
+				Foto del taller / equipo
+			</div>
+		</div>
+	</div>
+
+	<!-- CÓMO TRABAJAMOS -->
+	<div style="background:var(--color-surface-soft); padding:64px 32px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:44px;">
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:12px;">Nuestro proceso</div>
+				<h2 style="font-size:28px; font-weight:700; color:var(--color-text);">Cómo fabricamos</h2>
+			</div>
+			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:960px; margin:0 auto; position:relative;">
+				<div style="position:absolute; top:26px; left:16.6%; right:16.6%; height:2px; background:var(--color-border); z-index:0;"></div>
+				{proceso.map((paso) => (
+					<div style="position:relative; z-index:1; background:var(--color-surface-soft); text-align:center; padding:0 12px;">
+						<div style="width:52px; height:52px; border-radius:50%; background:var(--color-primary); color:white; font-size:19px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">{paso.n}</div>
+						<h3 style="font-size:15px; font-weight:700; color:var(--color-text); margin-bottom:8px;">{paso.title}</h3>
+						<p style="font-size:13px; color:var(--color-text-muted); line-height:1.65;">{paso.desc}</p>
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+
+	<!-- MISIÓN Y VISIÓN -->
+	<div style="background:white; padding:64px 32px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:44px;">
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:12px;">Hacia dónde vamos</div>
+				<h2 style="font-size:28px; font-weight:700; color:var(--color-text);">Misión y visión</h2>
+			</div>
+			<div style="max-width:860px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+				<div style="background:var(--color-surface-soft); border-radius:14px; border:1px solid var(--color-border-soft); padding:28px 26px; text-align:left;">
+					<div style="width:44px; height:44px; background:var(--color-primary-light); border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--color-primary)" stroke-width="1.7"></circle><circle cx="12" cy="12" r="5" stroke="var(--color-primary)" stroke-width="1.7"></circle><circle cx="12" cy="12" r="1" fill="var(--color-primary)"></circle></svg>
+					</div>
+					<div style="font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:10px;">Misión</div>
+					<p style="font-size:14px; color:var(--color-text-body); line-height:1.7;">Diseñar y fabricar accesorios musicales innovadores con tecnología 3D que potencien la creatividad y la comodidad de los músicos.</p>
+				</div>
+				<div style="background:var(--color-surface-soft); border-radius:14px; border:1px solid var(--color-border-soft); padding:28px 26px; text-align:left;">
+					<div style="width:44px; height:44px; background:var(--color-primary-light); border-radius:11px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="var(--color-primary)" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="12" cy="12" r="3.2" stroke="var(--color-primary)" stroke-width="1.7"></circle></svg>
+					</div>
+					<div style="font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:10px;">Visión</div>
+					<p style="font-size:14px; color:var(--color-text-body); line-height:1.7;">Convertirnos en una empresa líder en el desarrollo de soluciones musicales impresas en 3D en el Perú y Latinoamérica.</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- VALORES -->
+	<div style="background:white; padding:64px 32px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:44px;">
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:12px;">Nuestros pilares</div>
+				<h2 style="font-size:28px; font-weight:700; color:var(--color-text);">Nuestros valores</h2>
+			</div>
+			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:860px; margin:0 auto;">
+				{valores.map((valor) => (
+					<div style="padding:32px 28px; border-radius:12px; border:1px solid var(--color-border-soft); text-align:center;">
+						<div style="width:52px; height:52px; background:var(--color-primary-light); border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+						</div>
+						<h3 style="font-size:15px; font-weight:700; color:var(--color-text); margin-bottom:10px;">{valor.title}</h3>
+						<p style="font-size:13px; color:var(--color-text-muted); line-height:1.65;">{valor.desc}</p>
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+
+	<!-- EQUIPO -->
+	<div style="background:white; padding:64px 32px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:44px;">
+				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:12px;">Quién está detrás</div>
+				<h2 style="font-size:28px; font-weight:700; color:var(--color-text);">El fundador</h2>
+			</div>
+			<div style="display:flex; flex-direction:column; align-items:center; text-align:center; max-width:420px; margin:0 auto;">
+				<div style="width:140px; height:140px; border-radius:50%; overflow:hidden; background:var(--color-surface-muted); margin:0 auto 18px; border:3px solid var(--color-primary-light);"></div>
+				<div style="font-size:18px; font-weight:700; color:var(--color-text); margin-bottom:4px;">William Barzola</div>
+				<div style="font-size:13px; color:var(--color-text-muted); margin-bottom:14px;">Fundador</div>
+				<a href="https://wa.me/51950759032" target="_blank" rel="noopener" class="founder-whatsapp" style="display:inline-flex; align-items:center; gap:7px; padding:9px 18px; background:var(--color-success-soft-bg); border:1px solid var(--color-success-border); border-radius:99px; font-size:12.5px; font-weight:600; color:var(--color-success); text-decoration:none;">
+					<WhatsAppIcon size={13} fill="var(--color-success)" />
+					+51 950 759 032
+				</a>
+			</div>
+
+			<div style="max-width:420px; margin:32px auto 0; padding-top:24px; border-top:1px solid var(--color-surface-muted); display:flex; align-items:center; justify-content:center; gap:10px;">
+				<span style="font-size:13px; color:var(--color-text-muted);">Distribuidor autorizado — Alexis Caycho</span>
+				<a href="https://wa.me/51941556169" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; color:var(--color-primary); text-decoration:none;">+51 941 556 169</a>
+			</div>
+		</div>
+	</div>
+</PublicLayout>
+
+<style>
+	.nosotros-cta-primary:hover {
+		background: var(--color-primary-dark);
+	}
+	.nosotros-cta-secondary:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+	.founder-whatsapp:hover {
+		background: var(--color-success-bg);
+	}
+</style>

@@ -1,0 +1,36 @@
+---
+import '@shared/styles/tokens.css';
+import Header from '@landing/shared/Header.astro';
+import Footer from '@landing/shared/Footer.astro';
+import WhatsAppButton from '@landing/shared/WhatsAppButton.astro';
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Barzol' } = Astro.props;
+---
+
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+		/>
+		<title>{title}</title>
+	</head>
+	<body>
+		<div style="min-height:100vh; background:var(--color-bg);">
+			<Header />
+			<slot />
+			<WhatsAppButton />
+			<Footer />
+		</div>
+	</body>
+</html>
