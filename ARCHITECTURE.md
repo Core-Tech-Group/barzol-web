@@ -159,6 +159,7 @@ src/
 | `/servicios` | PublicLayout | `landing/servicios/ServiciosView.astro` | Institucional |
 | `/nosotros` | PublicLayout | `landing/nosotros/NosotrosView.astro` | Institucional |
 | `/busqueda` | PublicLayout | `landing/busqueda/BusquedaView.astro` | Resultados de búsqueda, usa `Pagination.astro` |
+| `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (mock — Supabase Auth pendiente) |
 | `/admin` | AdminLayout | `admin/dashboard/DashboardView.astro` | Dashboard del panel |
 | `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD de productos |
 | `/admin/categorias` | AdminLayout | `admin/categorias/CategoriasView.astro` | CRUD de categorías |

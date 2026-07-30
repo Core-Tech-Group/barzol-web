@@ -4,36 +4,35 @@ import WhatsAppIcon from './WhatsAppIcon.astro';
 // TODO: reemplazar por categorías reales desde @shared/lib/categorias/categoriaService
 // cuando se conecte Supabase. Por ahora son datos mock para el menú.
 const megaCats = [
-  {
-    name: 'Soportes para celular',
-    href: '/catalogo/soportes-para-celular',
-    instruments: [
-      'Trompeta', 'Clarinete', 'Euphonium', 'Trombón', 'Tuba', 'Saxofón alto', 'Saxo tenor',
-    ],
-  },
-  {
-    name: 'Sordinas',
-    href: '/catalogo/sordinas',
-    instruments: ['Trombón', 'Trompeta'],
-  },
-  {
-    name: 'Topes protectores de vara',
-    href: '/catalogo/topes-protectores-de-vara',
-    instruments: [] as string[],
-  },
-  {
-    name: 'BERP',
-    href: '/catalogo/berp',
-    instruments: ['Trombón', 'Trompeta', 'Euphonium'],
-  },
+	{
+		name: 'Accesorios Instrumentos',
+		instruments: [
+			{ name: 'Soportes de Celular', href: '/catalogo/soportes-para-celular' },
+			{ name: 'Sordinas', href: '/catalogo/sordinas' },
+			{ name: 'Topes Protector de Vara', href: '/catalogo/topes-protectores-de-vara' },
+			{ name: 'BERP', href: '/catalogo/berp' },
+		],
+	},
+	{
+		name: 'Accesorios Personalizados',
+		instruments: [] as { name: string; href: string }[],
+		href: '/servicios#servicios',
+	},
+	{
+		name: 'Trabajos de Ingeniería',
+		instruments: [] as { name: string; href: string }[],
+		href: '/servicios#servicios',
+	},
 ];
+
+const catWithDepth = megaCats.find((cat) => cat.instruments.length > 0) ?? megaCats[0];
 
 const announcement = { text: 'Envío a nivel nacional e internacional', icons: true };
 ---
 
 <div style="position:sticky; top:0; z-index:200;">
 	<!-- ANNOUNCEMENT BAR -->
-	<div style="background:var(--color-primary); color:white; padding:8px 32px; font-size:12px; font-weight:500; text-align:center; letter-spacing:0.025em; display:flex; align-items:center; justify-content:center; gap:8px;">
+	<div style="background:var(--color-primary); color:white; padding:9px 32px; font-size:13px; font-weight:500; text-align:center; letter-spacing:0.025em; display:flex; align-items:center; justify-content:center; gap:8px;">
 		{announcement.icons && (
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
 				<rect x="1" y="3" width="15" height="13" rx="2" stroke="white" stroke-width="1.8" stroke-linejoin="round"></rect>
@@ -52,10 +51,10 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 
 	<!-- HEADER -->
 	<header style="background:white; box-shadow:0 2px 8px rgba(0,0,0,0.07);">
-		<div style="max-width:1200px; margin:0 auto; padding:0 32px; height:64px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--color-surface-muted);">
+		<div class="bz-header-row" style="max-width:1200px; margin:0 auto; padding:0 32px; height:58px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--color-surface-muted);">
 
 			<!-- Logo -->
-			<a href="/" style="display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0;">
+			<a href="/" class="bz-logo-link" style="display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0;">
 				<svg width="26" height="26" viewBox="0 0 30 30" fill="none">
 					<polygon points="15,1 28,8 28,22 15,29 2,22 2,8" fill="var(--color-primary)"></polygon>
 					<polygon points="15,7 22,11 22,19 15,23 8,19 8,11" fill="white" opacity="0.85"></polygon>
@@ -64,44 +63,78 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 				<span style="font-size:16px; font-weight:700; color:var(--color-text); letter-spacing:0.01em;">BARZOL</span>
 			</a>
 
-			<!-- Categorías (mega menú) -->
+			<!-- Categorías (mega menú desktop / drawer mobile) -->
 			<div class="cat-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
-				<button style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:13px; font-weight:600; color:var(--color-primary); background:var(--color-primary-light); border:1px solid var(--color-primary-border); cursor:pointer; border-radius:8px; white-space:nowrap;">
+				<button id="cat-trigger-btn" class="bz-cat-btn" type="button" style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:14px; font-weight:600; color:var(--color-primary); background:var(--color-primary-light); border:1px solid var(--color-primary-border); cursor:pointer; border-radius:8px; white-space:nowrap;">
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
-					Categorías
+					<span class="bz-cat-label">Categorías</span>
 				</button>
 
-				<div class="cat-panel" style="position:absolute; top:100%; left:0; width:532px; background:white; border:1px solid var(--color-border-faint); box-shadow:0 12px 28px rgba(0,0,0,0.09); z-index:300; border-radius:8px; overflow:hidden; display:flex;">
-					<div class="subcat-list" style="width:222px; background:var(--color-surface-alt); border-right:1px solid var(--color-border-faint); padding:6px; flex-shrink:0; display:flex; flex-direction:column; gap:1px;">
-						{megaCats.map((cat, i) => (
-							<div class="subcat-trigger" data-idx={i} style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:6px; white-space:nowrap; overflow:hidden;">
-								<span style="font-size:12px; font-weight:500; color:var(--color-text-body); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{cat.name}</span>
-								{cat.instruments.length > 0 && (
-									<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-								)}
-							</div>
-						))}
+				<!-- MEGA PANEL (desktop, hover) -->
+				<div class="cat-panel" style="position:absolute; top:100%; left:0; display:flex; align-items:flex-start; background:white; border:1px solid var(--color-border-soft); border-top:none; box-shadow:0 10px 32px rgba(20,30,50,0.1); border-radius:0 0 10px 10px; overflow:hidden;">
+					<div class="cat-divider" style="position:absolute; left:222px; top:0; bottom:0; width:1px; background:var(--color-surface-muted);"></div>
+					<div class="cat-sidebar" style="width:222px; padding:10px 0 6px; flex-shrink:0; display:flex; flex-direction:column; gap:1px;">
+						{megaCats.map((cat) =>
+							cat.instruments.length > 0 ? (
+								<button type="button" class="cat-sidebar-item" style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 16px; background:var(--color-border-faint); border:none; text-align:left; cursor:default; white-space:nowrap; overflow:hidden;">
+									<span style="font-size:13px; font-weight:600; color:var(--color-text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{cat.name}</span>
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+								</button>
+							) : (
+								<a href={cat.href} class="cat-sidebar-item" style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 16px; background:transparent; text-decoration:none; white-space:nowrap; overflow:hidden; box-sizing:border-box;">
+									<span style="font-size:13px; font-weight:500; color:var(--color-text-soft); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{cat.name}</span>
+								</a>
+							)
+						)}
 					</div>
-					<div class="subcat-content-wrap" style="flex:1; padding:18px 20px; display:flex; flex-direction:column;">
+					<div class="cat-subs" style="width:230px; padding:10px 0 6px; display:flex; flex-direction:column;">
+						<div style="display:flex; flex-direction:column; gap:1px;">
+							{catWithDepth.instruments.map((item) => (
+								<a href={item.href} class="cat-sub-item" style="display:flex; align-items:center; width:100%; padding:9px 16px; background:transparent; font-size:13px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap; box-sizing:border-box;">
+									{item.name}
+								</a>
+							))}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Drawer de categorías (mobile) -->
+			<div id="cat-drawer-overlay" class="bz-cat-drawer-overlay" hidden style="position:fixed; inset:0; z-index:399; background:rgba(0,0,0,0.45);"></div>
+			<div id="cat-drawer-panel" class="bz-cat-drawer-panel" hidden style="position:fixed; left:0; top:0; bottom:0; width:min(320px, 82vw); background:white; z-index:400; display:flex; flex-direction:column; box-shadow:8px 0 32px rgba(0,0,0,0.15);">
+				<div id="cat-drawer-level0">
+					<div style="display:flex; align-items:center; justify-content:flex-end; padding:16px 18px; border-bottom:1px solid var(--color-surface-muted); flex-shrink:0;">
+						<button type="button" id="cat-drawer-close" style="display:flex; align-items:center; gap:6px; background:transparent; border:none; cursor:pointer; font-size:15px; font-weight:600; color:var(--color-text);">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="var(--color-text)" stroke-width="2.2" stroke-linecap="round"></path></svg>
+							Cerrar
+						</button>
+					</div>
+					<div style="flex:1; overflow-y:auto;">
+						{megaCats.map((cat, i) =>
+							cat.instruments.length > 0 ? (
+								<button type="button" class="cat-drawer-open-sub" data-idx={i} style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--color-surface-muted); background:transparent; border:none; text-align:left; cursor:pointer;">
+									<span style="font-size:14.5px; font-weight:600; color:var(--color-text);">{cat.name}</span>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+								</button>
+							) : (
+								<a href={cat.href} style="display:block; width:100%; padding:16px 18px; border-bottom:1px solid var(--color-surface-muted); font-size:14.5px; font-weight:600; color:var(--color-text); text-decoration:none; box-sizing:border-box;">{cat.name}</a>
+							)
+						)}
+					</div>
+				</div>
+				<div id="cat-drawer-level1" hidden>
+					<div style="display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--color-surface-muted); flex-shrink:0;">
+						<button type="button" id="cat-drawer-back" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; background:transparent; border:none; cursor:pointer; flex-shrink:0;">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="var(--color-text)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+						</button>
+						<span id="cat-drawer-active-name" style="font-size:15px; font-weight:700; color:var(--color-text);"></span>
+					</div>
+					<div style="flex:1; overflow-y:auto;">
 						{megaCats.map((cat, i) => (
-							<div class="subcat-panel" data-idx={i}>
-								<div style="margin-bottom:14px;">
-									<div style="font-size:14.5px; font-weight:700; color:var(--color-text); margin-bottom:6px;">{cat.name}</div>
-									<div style="width:26px; height:2.5px; background:var(--color-primary); border-radius:99px;"></div>
-								</div>
-								<div style="display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; flex:1;">
-									{cat.instruments.map((instrument) => (
-										<a href={cat.href} style="display:inline-flex; align-items:center; padding:7px 13px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-surface-alt); font-size:12.5px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap;">
-											{instrument}
-										</a>
-									))}
-								</div>
-								<div style="border-top:1px solid var(--color-surface-muted); margin-top:12px; padding-top:12px;">
-									<a href={cat.href} style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--color-primary); text-decoration:none;">
-										Ver todo en {cat.name}
-										<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-									</a>
-								</div>
+							<div class="cat-drawer-sub-panel" data-idx={i} hidden>
+								{cat.instruments.map((item) => (
+									<a href={item.href} style="display:block; width:100%; padding:16px 18px; border-bottom:1px solid var(--color-surface-muted); font-size:14.5px; color:var(--color-text-soft); text-decoration:none; box-sizing:border-box;">{item.name}</a>
+								))}
 							</div>
 						))}
 					</div>
@@ -109,8 +142,11 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 			</div>
 
 			<!-- Buscador -->
-			<form action="/busqueda" style="position:relative; flex:1 1 260px; max-width:420px; min-width:190px; margin-left:12px;">
-				<input type="text" name="q" placeholder="Buscar productos, sordinas, soportes..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:13px; color:var(--color-text); background:white; outline:none;" />
+			<button id="mobile-search-toggle" class="bz-search-toggle" type="button" style="display:none; align-items:center; justify-content:center; width:36px; height:36px; background:var(--color-bg); border:none; border-radius:8px; cursor:pointer; flex-shrink:0;">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="var(--color-text)" stroke-width="2.2"></circle><path d="M21 21l-4.35-4.35" stroke="var(--color-text)" stroke-width="2.2" stroke-linecap="round"></path></svg>
+			</button>
+			<form action="/busqueda" class="bz-search-wrap" style="position:relative; flex:1 1 300px; max-width:480px; min-width:190px; z-index:300;">
+				<input type="text" name="q" placeholder="Buscar productos..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:14px; color:var(--color-text); background:white; outline:none;" />
 				<button type="submit" style="position:absolute; right:3px; top:50%; transform:translateY(-50%); width:32px; height:32px; background:transparent; color:var(--color-primary); border:none; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
 						<circle cx="11" cy="11" r="8" stroke="var(--color-primary)" stroke-width="2.2"></circle>
@@ -119,43 +155,26 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 				</button>
 			</form>
 
-			<div style="flex:1; min-width:0;"></div>
-
-			<!-- Servicios (mega menú) -->
-			<div class="serv-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0;">
-				<a href="/servicios" style="display:flex; align-items:center; gap:4px; padding:6px 8px; font-size:13px; font-weight:500; color:var(--color-text-strong); text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap;">
-					Servicios
-					<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--color-text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-				</a>
-				<div class="serv-panel" style="position:absolute; top:100%; left:0; width:300px; background:white; border:1px solid var(--color-border-faint); box-shadow:0 12px 28px rgba(0,0,0,0.09); z-index:300; border-radius:10px; overflow:hidden; padding:8px;">
-					<a href="/servicios" style="display:flex; align-items:flex-start; gap:12px; padding:11px 10px; border-radius:8px; text-decoration:none;">
-						<div style="width:36px; height:36px; border-radius:9px; background:var(--color-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-							<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="var(--color-primary)" stroke-width="1.6"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="var(--color-primary)" stroke-width="1.6"></polyline><line x1="12" y1="22.08" x2="12" y2="12" stroke="var(--color-primary)" stroke-width="1.6"></line></svg>
-						</div>
-						<div>
-							<div style="font-size:12.5px; font-weight:600; color:var(--color-text); margin-bottom:2px;">Impresión 3D</div>
-							<div style="font-size:11.5px; color:var(--color-text-muted); line-height:1.4;">Fabricación de piezas mediante impresión 3D</div>
-						</div>
-					</a>
-					<a href="/servicios" style="display:flex; align-items:flex-start; gap:12px; padding:11px 10px; border-radius:8px; text-decoration:none;">
-						<div style="width:36px; height:36px; border-radius:9px; background:var(--color-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-							<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke="var(--color-primary)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-						</div>
-						<div>
-							<div style="font-size:12.5px; font-weight:600; color:var(--color-text); margin-bottom:2px;">Trabajos de ingeniería</div>
-							<div style="font-size:11.5px; color:var(--color-text-muted); line-height:1.4;">Diseño CAD/CAE, escaneo 3D e ingeniería inversa</div>
-						</div>
-					</a>
-				</div>
+			<!-- Búsqueda a pantalla completa (mobile) -->
+			<div id="mobile-search-overlay" class="bz-search-fullscreen" hidden style="position:fixed; inset:0; z-index:400; background:white; display:flex; flex-direction:column;">
+				<form action="/busqueda" style="display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--color-surface-muted); flex-shrink:0;">
+					<button type="button" id="mobile-search-close" style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:transparent; border:none; cursor:pointer; flex-shrink:0;">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="var(--color-text)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+					</button>
+					<input type="text" name="q" placeholder="Buscar productos..." style="flex:1; width:100%; padding:10px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:15px; color:var(--color-text); outline:none;" />
+				</form>
 			</div>
-			<a href="/nosotros" style="padding:6px 8px; font-size:13px; font-weight:500; color:var(--color-text-strong); text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap; margin-left:2px;">Nosotros</a>
 
-			<div style="width:1px; height:20px; background:var(--color-border); flex-shrink:0; margin:0 2px;"></div>
+			<div class="bz-header-spacer" style="flex:1; min-width:0;"></div>
+
+			<a href="/nosotros" class="bz-nosotros" style="padding:6px 8px; font-size:14px; font-weight:500; color:var(--color-text-strong); text-decoration:none; border-radius:7px; flex-shrink:0; white-space:nowrap;">Nosotros</a>
+
+			<div class="bz-header-divider" style="width:1px; height:20px; background:var(--color-border); flex-shrink:0; margin:0 2px;"></div>
 
 			<!-- Contacto WhatsApp -->
-			<a href="https://wa.me/51950759032" target="_blank" rel="noopener" style="display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:8px; background:transparent; border:1px solid var(--color-border); flex-shrink:0; text-decoration:none; white-space:nowrap;">
+			<a href="https://wa.me/51950759032" target="_blank" rel="noopener" class="bz-wa-btn" style="display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:8px; background:transparent; border:1px solid var(--color-border); flex-shrink:0; text-decoration:none; white-space:nowrap;">
 				<WhatsAppIcon size={17} fill="var(--color-success)" />
-				<span style="font-size:13px; font-weight:600; color:var(--color-text-strong);">950 759 032</span>
+				<span class="bz-wa-text" style="font-size:13px; font-weight:600; color:var(--color-text-strong);">950 759 032</span>
 			</a>
 
 		</div>
@@ -163,45 +182,162 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 </div>
 
 <style>
-	/* Paneles flotantes: se abren con :hover, sin JS. */
-	.cat-trigger .cat-panel,
-	.serv-trigger .serv-panel {
+	/* Panel flotante de escritorio: se abre con :hover, sin JS. */
+	.cat-trigger .cat-panel {
 		opacity: 0;
 		visibility: hidden;
 		pointer-events: none;
 		transition: opacity 0.1s ease;
 	}
-	.cat-trigger:hover .cat-panel,
-	.serv-trigger:hover .serv-panel {
+	.cat-trigger:hover .cat-panel {
 		opacity: 1;
 		visibility: visible;
 		pointer-events: auto;
 	}
+	.cat-sidebar-item:hover {
+		background: var(--color-primary-light) !important;
+	}
+	.cat-sub-item:hover {
+		background: var(--color-primary-light) !important;
+		color: var(--color-primary) !important;
+		font-weight: 600 !important;
+	}
+	.bz-nosotros:hover {
+		background: var(--color-bg);
+		color: var(--color-primary);
+	}
+	.bz-wa-btn:hover {
+		background: var(--color-bg);
+		border-color: var(--color-border-muted);
+	}
 
-	/* Sub-categoría activa en el mega menú: por defecto la primera; al
-	   pasar el mouse por otro trigger, ese pasa a ser el activo.
-	   NOTA: asume un máximo de 4 categorías (mock actual). Cuando el menú
-	   pase a datos dinámicos desde Supabase, esto debería resolverse con
-	   un pequeño script cliente en vez de :has(). */
-	.subcat-panel { display: none; }
-	.subcat-panel[data-idx='0'] { display: flex; flex-direction: column; }
-	.subcat-trigger[data-idx='0'] { background: var(--color-border-faint); }
-	.subcat-trigger span { color: var(--color-text); font-weight: 600; }
-
-	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-panel { display: none; }
-	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-panel[data-idx='1'] { display: flex; flex-direction: column; }
-	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-trigger { background: transparent; }
-	.cat-panel:has(.subcat-trigger[data-idx='1']:hover) .subcat-trigger[data-idx='1'] { background: var(--color-border-faint); }
-
-	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-panel { display: none; }
-	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-trigger { background: transparent; }
-	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-trigger[data-idx='2'] { background: var(--color-border-faint); }
-	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) { width: 224px; }
-	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-content-wrap { display: none; }
-	.cat-panel:has(.subcat-trigger[data-idx='2']:hover) .subcat-list { border-right: none; }
-
-	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-panel { display: none; }
-	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-panel[data-idx='3'] { display: flex; flex-direction: column; }
-	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-trigger { background: transparent; }
-	.cat-panel:has(.subcat-trigger[data-idx='3']:hover) .subcat-trigger[data-idx='3'] { background: var(--color-border-faint); }
+	/* ===== Responsive ===== */
+	@media (max-width: 768px) {
+		.bz-header-row {
+			flex-wrap: wrap !important;
+			height: auto !important;
+			padding-top: 10px !important;
+			padding-bottom: 10px !important;
+			row-gap: 10px !important;
+			padding-left: 16px !important;
+			padding-right: 16px !important;
+			gap: 8px !important;
+			position: relative !important;
+			width: 100% !important;
+			box-sizing: border-box !important;
+		}
+		.bz-header-row .cat-trigger {
+			order: 1 !important;
+		}
+		.bz-header-row .bz-logo-link {
+			position: absolute !important;
+			left: 50% !important;
+			top: 10px !important;
+			transform: translateX(-50%) !important;
+		}
+		.bz-header-row .bz-header-spacer {
+			order: 3 !important;
+		}
+		.bz-header-row .bz-wa-btn {
+			display: none !important;
+		}
+		.bz-header-row .bz-search-wrap {
+			order: 5 !important;
+			flex-basis: 100% !important;
+			max-width: none !important;
+			min-width: 0 !important;
+		}
+		.bz-header-divider,
+		.bz-nosotros {
+			display: none !important;
+		}
+		.bz-cat-label {
+			display: none !important;
+		}
+		.bz-cat-btn {
+			padding: 9px !important;
+			background: var(--color-bg) !important;
+			border: none !important;
+		}
+		.bz-cat-btn svg {
+			width: 20px !important;
+			height: 20px !important;
+		}
+		.bz-search-wrap {
+			display: none !important;
+		}
+		.bz-search-toggle {
+			display: flex !important;
+			order: 4 !important;
+		}
+	}
+	@media (min-width: 769px) {
+		.bz-search-fullscreen,
+		#cat-drawer-overlay,
+		#cat-drawer-panel {
+			display: none !important;
+		}
+	}
+	@media (max-width: 768px) {
+		.cat-trigger:hover .cat-panel {
+			display: none !important;
+		}
+	}
 </style>
+
+<script>
+	function initHeader() {
+		const catTriggerBtn = document.getElementById('cat-trigger-btn');
+		const drawerOverlay = document.getElementById('cat-drawer-overlay');
+		const drawerPanel = document.getElementById('cat-drawer-panel');
+		const drawerClose = document.getElementById('cat-drawer-close');
+		const drawerLevel0 = document.getElementById('cat-drawer-level0');
+		const drawerLevel1 = document.getElementById('cat-drawer-level1');
+		const drawerBack = document.getElementById('cat-drawer-back');
+		const drawerActiveName = document.getElementById('cat-drawer-active-name');
+		const openSubButtons = document.querySelectorAll<HTMLButtonElement>('.cat-drawer-open-sub');
+		const subPanels = document.querySelectorAll<HTMLElement>('.cat-drawer-sub-panel');
+
+		function openDrawer() {
+			drawerOverlay?.removeAttribute('hidden');
+			drawerPanel?.removeAttribute('hidden');
+		}
+		function closeDrawer() {
+			drawerOverlay?.setAttribute('hidden', '');
+			drawerPanel?.setAttribute('hidden', '');
+			drawerLevel0?.removeAttribute('hidden');
+			drawerLevel1?.setAttribute('hidden', '');
+		}
+
+		catTriggerBtn?.addEventListener('click', () => {
+			if (window.matchMedia('(max-width: 768px)').matches) openDrawer();
+		});
+		drawerOverlay?.addEventListener('click', closeDrawer);
+		drawerClose?.addEventListener('click', closeDrawer);
+		drawerBack?.addEventListener('click', () => {
+			drawerLevel1?.setAttribute('hidden', '');
+			drawerLevel0?.removeAttribute('hidden');
+		});
+
+		openSubButtons.forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const idx = btn.dataset.idx;
+				const label = btn.querySelector('span')?.textContent ?? '';
+				if (drawerActiveName) drawerActiveName.textContent = label;
+				subPanels.forEach((panel) => {
+					panel.hidden = panel.dataset.idx !== idx;
+				});
+				drawerLevel0?.setAttribute('hidden', '');
+				drawerLevel1?.removeAttribute('hidden');
+			});
+		});
+
+		const mobileSearchToggle = document.getElementById('mobile-search-toggle');
+		const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+		const mobileSearchClose = document.getElementById('mobile-search-close');
+		mobileSearchToggle?.addEventListener('click', () => mobileSearchOverlay?.removeAttribute('hidden'));
+		mobileSearchClose?.addEventListener('click', () => mobileSearchOverlay?.setAttribute('hidden', ''));
+	}
+
+	initHeader();
+</script>

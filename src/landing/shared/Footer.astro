@@ -4,10 +4,10 @@
 <footer style="background:var(--color-navy-dark); margin-top:64px; padding:52px 0 28px;">
 	<div style="max-width:1200px; margin:0 auto; padding:0 32px;">
 
-		<div style="display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:40px; margin-bottom:44px;">
+		<div class="bz-footer-grid" style="display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:40px; margin-bottom:44px;">
 
 			<!-- Brand -->
-			<div>
+			<div class="bz-footer-brand">
 				<div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
 					<svg width="26" height="26" viewBox="0 0 30 30" fill="none">
 						<polygon points="15,1 28,8 28,22 15,29 2,22 2,8" fill="var(--color-primary-accent)"></polygon>
@@ -17,6 +17,10 @@
 					<span style="font-size:15px; font-weight:700; color:white; letter-spacing:0.01em;">BARZOL</span>
 				</div>
 				<p style="font-size:13px; color:rgba(255,255,255,0.55); line-height:1.65; margin-bottom:12px;">Accesorios musicales innovadores fabricados con tecnología de impresión 3D. Productos exclusivos y patentados.</p>
+				<a href="/nosotros" class="bz-footer-nosotros" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:white; text-decoration:none;">
+					Nosotros
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+				</a>
 			</div>
 
 			<!-- Contacto -->
@@ -46,6 +50,10 @@
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-1.01-.04z" stroke="rgba(255,255,255,0.6)" stroke-width="1.8"></path><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" stroke="rgba(255,255,255,0.6)" stroke-width="1.8" stroke-linejoin="round"></polygon></svg>
 						TikTok
 					</a>
+					<a href="#" style="display:flex; align-items:center; gap:9px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none;">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="rgba(255,255,255,0.6)" stroke-width="1.8"></rect><circle cx="12" cy="12" r="4.2" stroke="rgba(255,255,255,0.6)" stroke-width="1.8"></circle><circle cx="17.4" cy="6.6" r="1.1" fill="rgba(255,255,255,0.6)"></circle></svg>
+						Instagram
+					</a>
 				</div>
 			</div>
 
@@ -69,3 +77,24 @@
 
 	</div>
 </footer>
+
+<style>
+	.bz-footer-nosotros:hover {
+		color: rgba(255, 255, 255, 0.8);
+	}
+
+	@media (max-width: 768px) {
+		.bz-footer-grid {
+			grid-template-columns: 1fr 1fr !important;
+			gap: 28px !important;
+		}
+		.bz-footer-brand {
+			grid-column: 1 / -1 !important;
+		}
+	}
+	@media (max-width: 480px) {
+		.bz-footer-grid {
+			grid-template-columns: 1fr !important;
+		}
+	}
+</style>

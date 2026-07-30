@@ -35,17 +35,17 @@ const suggested = [
 	/>
 
 	<!-- PRODUCT DETAIL -->
-	<div style="max-width:1200px; margin:0 auto; padding:24px 32px 32px;">
-		<div style="display:grid; grid-template-columns:448px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
+	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:24px 32px 32px;">
+		<div class="bz-product-grid" style="display:grid; grid-template-columns:448px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
 
 			<!-- GALERÍA -->
-			<div style="display:flex; gap:12px; align-items:flex-start;">
-				<div style="display:flex; flex-direction:column; gap:10px;">
+			<div class="bz-gallery" style="display:flex; gap:12px; align-items:flex-start;">
+				<div class="bz-thumbs" style="display:flex; flex-direction:column; gap:10px;">
 					{[1, 2, 3, 4].map(() => (
-						<div style="width:80px; height:80px; background:var(--color-surface-muted); border-radius:8px; flex-shrink:0;"></div>
+						<div class="bz-thumb" style="width:80px; height:80px; background:var(--color-surface-muted); border-radius:8px; flex-shrink:0;"></div>
 					))}
 				</div>
-				<div style="width:448px; height:540px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
+				<div class="bz-main-img-wrap" style="width:448px; height:540px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
 					Foto principal del producto
 				</div>
 			</div>
@@ -101,7 +101,7 @@ const suggested = [
 	</div>
 
 	<!-- PRODUCTOS SUGERIDOS -->
-	<div style="max-width:1200px; margin:0 auto; padding:0 32px 64px;">
+	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px 64px;">
 		<div style="border-top:1px solid var(--color-border-soft); padding-top:40px;">
 			<ProductCarousel title="Más soportes de celular" products={suggested} />
 		</div>
@@ -115,5 +115,30 @@ const suggested = [
 	.product-cta-secondary:hover {
 		border-color: var(--color-primary);
 		color: var(--color-primary);
+	}
+
+	@media (max-width: 860px) {
+		.bz-product-grid {
+			grid-template-columns: 1fr !important;
+			gap: 24px !important;
+			padding: 18px !important;
+		}
+		.bz-gallery {
+			flex-direction: column-reverse !important;
+		}
+		.bz-main-img-wrap {
+			width: 100% !important;
+			height: auto !important;
+			aspect-ratio: 448 / 540 !important;
+		}
+		.bz-thumbs {
+			flex-direction: row !important;
+			overflow-x: auto !important;
+		}
+		.bz-thumb {
+			width: 64px !important;
+			height: 64px !important;
+			flex-shrink: 0;
+		}
 	}
 </style>

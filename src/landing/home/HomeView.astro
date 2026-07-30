@@ -32,13 +32,13 @@ const berp = [
 
 <PublicLayout title="Barzol — Accesorios musicales impresos en 3D">
 	<!-- HERO BANNER -->
-	<div style="position:relative; height:560px; overflow:hidden; background:linear-gradient(120deg,#0f1e46 0%,var(--color-primary) 100%);">
-		<div style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:20px 72px 0; z-index:10; max-width:720px;">
+	<div class="bz-hero" style="position:relative; height:560px; overflow:hidden; background:linear-gradient(120deg,#0f1e46 0%,var(--color-primary) 100%);">
+		<div class="bz-hero-text" style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:20px 72px 0; z-index:10; max-width:720px;">
 			<div style="font-size:10px; font-weight:700; letter-spacing:0.16em; color:rgba(255,255,255,0.75); text-transform:uppercase; margin-bottom:14px; animation:fadeSlide 0.6s ease both; animation-delay:0.1s;">Barzol, Perú</div>
-			<h1 style="font-size:44px; font-weight:700; color:white; line-height:1.12; margin-bottom:16px; animation:fadeSlide 0.7s ease both; animation-delay:0.3s;">Accesorios exclusivos,<br /><span style="color:var(--color-primary-soft);">diseñados para tu instrumento</span></h1>
-			<p style="font-size:15px; color:rgba(255,255,255,0.82); margin-bottom:24px; line-height:1.7; max-width:420px; animation:fadeSlide 0.7s ease both; animation-delay:0.55s;">Diseñados con Ingeniería Inversa e Impresión 3D. Usados por bandas y orquestas en todo el Perú.</p>
-			<p style="font-size:12.5px; font-weight:500; color:rgba(255,255,255,0.75); margin-bottom:32px; animation:fadeSlide 0.7s ease both; animation-delay:0.7s;">Diseño exclusivo · Productos patentados · Envío nacional e internacional</p>
-			<div style="display:flex; gap:12px; align-items:center; animation:fadeSlide 0.7s ease both; animation-delay:0.8s;">
+			<h1 class="bz-hero-title" style="font-size:44px; font-weight:700; color:white; line-height:1.12; margin-bottom:16px; animation:fadeSlide 0.7s ease both; animation-delay:0.3s;">Accesorios exclusivos,<br /><span style="color:var(--color-primary-soft);">diseñados para tu instrumento</span></h1>
+			<p class="bz-hero-desc" style="font-size:15px; color:rgba(255,255,255,0.82); margin-bottom:24px; line-height:1.7; max-width:420px; animation:fadeSlide 0.7s ease both; animation-delay:0.55s;">Diseñados con Ingeniería Inversa e Impresión 3D. Usados por bandas y orquestas en todo el Perú.</p>
+			<p class="bz-hero-badges" style="font-size:12.5px; font-weight:500; color:rgba(255,255,255,0.75); margin-bottom:32px; animation:fadeSlide 0.7s ease both; animation-delay:0.7s;">Diseño exclusivo · Productos patentados · Envío nacional e internacional</p>
+			<div class="bz-hero-cta" style="display:flex; gap:12px; align-items:center; animation:fadeSlide 0.7s ease both; animation-delay:0.8s;">
 				<a href="/catalogo/soportes-para-celular" class="hero-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:13px 26px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-primary-rgb),0.4);">
 					Ver Productos
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -49,7 +49,7 @@ const berp = [
 	</div>
 
 	<!-- PRODUCT SECTIONS -->
-	<div style="max-width:1200px; margin:0 auto; padding:0 32px;">
+	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px;">
 		<div style="margin-top:48px;">
 			<ProductCarousel title="Soportes para celular" viewAllHref="/catalogo/soportes-para-celular" products={soportes} />
 		</div>
@@ -59,15 +59,15 @@ const berp = [
 
 	<!-- SERVICES -->
 	<div style="max-width:1200px; margin:52px auto 0; padding:0 32px;">
-		<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+		<div class="bz-services-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
 			<ServicePromoCard
-				title="Impresión 3D<br>personalizada"
-				href="/servicios"
+				title="Accesorios personalizados"
+				href="/servicios#servicios"
 				gradient="linear-gradient(135deg,#0d3b8c 0%,var(--color-primary) 60%,#2979ff 100%)"
 			/>
 			<ServicePromoCard
 				title="Trabajos de ingeniería"
-				href="/servicios"
+				href="/servicios#servicios"
 				gradient="linear-gradient(135deg,#7c2d12 0%,var(--color-orange) 55%,#f97316 100%)"
 			/>
 		</div>
@@ -80,5 +80,38 @@ const berp = [
 	}
 	.hero-cta-secondary:hover {
 		background: rgba(255, 255, 255, 0.25);
+	}
+
+	@media (max-width: 768px) {
+		.bz-hero {
+			height: 420px !important;
+		}
+		.bz-hero-text {
+			padding: 20px 20px 0 !important;
+			max-width: 100% !important;
+		}
+		.bz-hero-title {
+			font-size: 28px !important;
+			margin-bottom: 10px !important;
+		}
+		.bz-hero-desc {
+			font-size: 13px !important;
+			margin-bottom: 16px !important;
+		}
+		.bz-hero-badges {
+			display: none !important;
+		}
+		.bz-hero-cta a {
+			padding: 10px 16px !important;
+			font-size: 13px !important;
+		}
+		.bz-services-grid {
+			grid-template-columns: 1fr !important;
+		}
+	}
+	@media (max-width: 480px) {
+		.bz-hero {
+			height: 380px !important;
+		}
 	}
 </style>

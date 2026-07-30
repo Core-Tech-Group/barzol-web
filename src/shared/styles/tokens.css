@@ -18,6 +18,7 @@
 	--color-primary-border: #d3e3fa;
 	--color-primary-soft: #93c5fd;
 	--color-primary-accent: #4a82e0;
+	--color-primary-disabled: #93b4dd;
 
 	/* Marca — navy institucional (footer, hero "Nosotros"/"Servicios") */
 	--color-navy: #1e3560;
@@ -119,5 +120,16 @@ textarea {
 	to {
 		opacity: 1;
 		transform: translateY(0);
+	}
+}
+
+/* Utilidad responsive cruzada entre componentes/vistas (Header, Breadcrumb,
+   HomeView, CatalogoView, ...). Se define una sola vez aquí porque los
+   <style> de Astro son scoped por componente: si cada uno redeclarara esta
+   regla, tendríamos la misma media query repetida en varios archivos. */
+@media (max-width: 768px) {
+	.bz-section-wrap {
+		padding-left: 16px !important;
+		padding-right: 16px !important;
 	}
 }
