@@ -2,32 +2,38 @@
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCarousel from '@landing/producto/ProductCarousel.astro';
 import ServicePromoCard from './ServicePromoCard.astro';
+import { getHomeItems } from '@shared/lib/home/homeService';
+import { getProductos } from '@shared/lib/productos/productoService';
+import { getCategorias } from '@shared/lib/categorias/categoriaService';
 
-// TODO: datos mock — reemplazar por @shared/lib/productos/productoService
-// cuando se conecte Supabase.
-const soportes = [
-  { href: '/producto/soporte-celular-trompeta', nombre: 'Soporte de Celular Trompeta', precio: 160, precioOriginal: 180 },
-  { href: '/producto/soporte-celular-clarinete', nombre: 'Soporte de Celular Clarinete', precio: 175, precioOriginal: 200 },
-  { href: '/producto/soporte-celular-euphonium-frontal', nombre: 'Soporte de Celular Euphonium Frontal', precio: 185, precioOriginal: 210 },
-  { href: '/producto/soporte-celular-euphonium-recto', nombre: 'Soporte de Celular Euphonium Recto', precio: 185, precioOriginal: 210 },
-  { href: '/producto/soporte-celular-trombon-tudel-delgado', nombre: 'Soporte de Celular Trombón (Tudel Delgado)', precio: 170, precioOriginal: 195 },
-  { href: '/producto/soporte-celular-trombon-tudel-ancho', nombre: 'Soporte de Celular Trombón (Tudel Ancho)', precio: 170, precioOriginal: 195 },
-  { href: '/producto/soporte-celular-tuba-tudel-ancho', nombre: 'Soporte de Celular Tuba (Tudel Ancho)', precio: 200, precioOriginal: 230 },
-  { href: '/producto/soporte-celular-tuba-tudel-delgado', nombre: 'Soporte de Celular Tuba (Tudel Delgado)', precio: 200, precioOriginal: 230 },
-  { href: '/producto/soporte-celular-saxofon-alto', nombre: 'Soporte de Celular Saxofón Alto', precio: 160, precioOriginal: 180 },
-  { href: '/producto/soporte-celular-saxo-tenor', nombre: 'Soporte de Celular Saxo Tenor', precio: 165, precioOriginal: 190 },
-];
+// Adaptador: las secciones de productos del home (administradas en
+// /admin/inicio) referencian productos por id; acá se resuelven a la forma
+// que espera ProductCarousel (href/nombre/precio). Los banners de imagen no
+// se renderizan todavía en esta vista — el hero actual es estático, sin
+// slots de imagen — así que solo se muestran las secciones de tipo 'seccion'.
+const [homeItemsDb, productosDb, categoriasDb] = await Promise.all([getHomeItems(), getProductos(), getCategorias()]);
 
-const sordinas = [
-  { href: '/producto/sordina-trombon', nombre: 'Sordina de Trombón', precio: 130, precioOriginal: 150 },
-  { href: '/producto/sordina-trompeta', nombre: 'Sordina de Trompeta', precio: 98, precioOriginal: 120 },
-];
+const productById = new Map(productosDb.map((p) => [p.id, p]));
+const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
 
-const berp = [
-  { href: '/producto/berp-trombon', nombre: 'BERP para Trombón', precio: 120, precioOriginal: 140 },
-  { href: '/producto/berp-trompeta', nombre: 'BERP para Trompeta', precio: 110, precioOriginal: 130 },
-  { href: '/producto/berp-euphonium', nombre: 'BERP para Euphonium', precio: 130, precioOriginal: 150 },
-];
+const sections = homeItemsDb
+  .filter((it) => it.tipo === 'seccion' && it.visible)
+  .sort((a, b) => a.orden - b.orden)
+  .map((it) => {
+    const productos = it.productoIds.map((pid) => productById.get(pid)).filter((p): p is NonNullable<typeof p> => !!p);
+    // "Ver todo" solo tiene sentido si TODOS los productos de la sección son
+    // del mismo instrumento (categoría) — si la sección mezcla instrumentos
+    // (ej. "Soportes para celular" con productos de Trompeta, Clarinete...)
+    // no hay una única página de categoría a la que enlazar.
+    const categoriaIds = new Set(productos.map((p) => p.categoriaId));
+    const singleCategoria = categoriaIds.size === 1 ? categoryById.get([...categoriaIds][0] ?? '') : undefined;
+    return {
+      title: it.titulo ?? '',
+      viewAllHref: singleCategoria ? `/catalogo/${singleCategoria.slug}` : undefined,
+      products: productos.map((p) => ({ href: `/producto/${p.slug}`, nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined })),
+    };
+  })
+  .filter((s) => s.products.length > 0);
 ---
 
 <PublicLayout title="Barzol — Accesorios musicales impresos en 3D">
@@ -39,7 +45,7 @@ const berp = [
 			<p class="bz-hero-desc" style="font-size:15px; color:rgba(255,255,255,0.82); margin-bottom:24px; line-height:1.7; max-width:420px; animation:fadeSlide 0.7s ease both; animation-delay:0.55s;">Diseñados con Ingeniería Inversa e Impresión 3D. Usados por bandas y orquestas en todo el Perú.</p>
 			<p class="bz-hero-badges" style="font-size:12.5px; font-weight:500; color:rgba(255,255,255,0.75); margin-bottom:32px; animation:fadeSlide 0.7s ease both; animation-delay:0.7s;">Diseño exclusivo · Productos patentados · Envío nacional e internacional</p>
 			<div class="bz-hero-cta" style="display:flex; gap:12px; align-items:center; animation:fadeSlide 0.7s ease both; animation-delay:0.8s;">
-				<a href="/catalogo/soportes-para-celular" class="hero-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:13px 26px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-primary-rgb),0.4);">
+				<a href="/busqueda" class="hero-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:13px 26px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-primary-rgb),0.4);">
 					Ver Productos
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 				</a>
@@ -50,11 +56,11 @@ const berp = [
 
 	<!-- PRODUCT SECTIONS -->
 	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px;">
-		<div style="margin-top:48px;">
-			<ProductCarousel title="Soportes para celular" viewAllHref="/catalogo/soportes-para-celular" products={soportes} />
-		</div>
-		<ProductCarousel title="Sordinas" viewAllHref="/catalogo/sordinas" products={sordinas} />
-		<ProductCarousel title="BERP" viewAllHref="/catalogo/berp" products={berp} />
+		{sections.map((section, i) => (
+			<div style={i === 0 ? 'margin-top:48px;' : undefined}>
+				<ProductCarousel title={section.title} viewAllHref={section.viewAllHref} products={section.products} />
+			</div>
+		))}
 	</div>
 
 	<!-- SERVICES -->

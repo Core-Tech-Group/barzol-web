@@ -1,9 +1,42 @@
 ---
 import AdminLayout from '@admin/layout/AdminLayout.astro';
+import ProductsAdmin, { type AdminProduct } from './ProductsAdmin.tsx';
+import { getProductos, getVendors } from '@shared/lib/productos/productoService';
+import { getCategorias } from '@shared/lib/categorias/categoriaService';
+
+// Adaptador: toma la forma canónica de los servicios (alineada a
+// DATABASE_SCHEMA.md — ids normalizados, precios numéricos) y arma las props
+// que espera ProductsAdmin (nombres denormalizados, precios como texto).
+// Cuando se conecte Supabase solo cambia el cuerpo de los servicios; este
+// adaptador y la isla no se tocan.
+const [productosDb, categoriasDb, vendorsDb] = await Promise.all([getProductos(), getCategorias(), getVendors()]);
+
+const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
+const subcategoryById = new Map(categoriasDb.flatMap((c) => c.subcategorias.map((s) => [s.id, s] as const)));
+const vendorById = new Map(vendorsDb.map((v) => [v.id, v]));
+
+const categories = ['Todas', ...categoriasDb.map((c) => c.nombre)];
+const vendors = vendorsDb.map((v) => v.nombre);
+const instrumentsByCategory: Record<string, string[]> = Object.fromEntries(categoriasDb.map((c) => [c.nombre, c.subcategorias.map((s) => s.nombre)]));
+
+const products: AdminProduct[] = productosDb.map((p) => ({
+	id: p.id,
+	name: p.nombre,
+	category: p.categoriaId ? categoryById.get(p.categoriaId)?.nombre ?? '' : '',
+	instrument: p.subcategoriaId ? subcategoryById.get(p.subcategoriaId)?.nombre ?? '' : '',
+	vendor: vendorById.get(p.vendorId)?.nombre ?? '',
+	price: p.precio.toFixed(2),
+	originalPrice: p.precioOriginal != null ? p.precioOriginal.toFixed(2) : '',
+	description: p.descripcion,
+	keywords: p.keywords,
+	features: p.caracteristicas,
+	photos: [...p.fotos, ...Array(Math.max(0, 5 - p.fotos.length)).fill(null)].slice(0, 5) as (string | null)[],
+	statusLabel: p.publicado ? 'Publicado' : 'Borrador',
+	active: p.activo,
+	customizable: p.personalizable,
+}));
 ---
 
-<AdminLayout title="Admin · Productos — Barzol">
-	<main>
-		<h1>Gestión de productos</h1>
-	</main>
+<AdminLayout title="Admin · Productos — Barzol" active="productos">
+	<ProductsAdmin client:load initialProducts={products} categories={categories} instrumentsByCategory={instrumentsByCategory} vendors={vendors} />
 </AdminLayout>

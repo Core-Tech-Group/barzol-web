@@ -1,26 +1,176 @@
 ---
 import '@shared/styles/tokens.css';
 
-interface Props {
-  title?: string;
+interface NavItem {
+  key: string;
+  label: string;
+  href: string;
+  icon: 'grid' | 'home' | 'box' | 'tag' | 'image' | 'gear';
 }
 
-const { title = 'Admin — Barzol' } = Astro.props;
+interface Props {
+  title?: string;
+  /** Clave de la sección activa (resalta el link correspondiente del sidebar). */
+  active?: string;
+}
 
-// TODO: agregar aquí la navegación propia del panel (nav lateral/superior)
-// cuando se implemente el admin real. Por ahora es equivalente al antiguo
-// BaseLayout.astro, solo reubicado a su zona.
+const { title = 'Admin — Barzol', active = '' } = Astro.props;
+
+const navItems: NavItem[] = [
+  { key: 'dashboard', label: 'Resumen', href: '/admin', icon: 'grid' },
+  { key: 'inicio', label: 'Página de inicio', href: '/admin/inicio', icon: 'home' },
+  { key: 'productos', label: 'Productos', href: '/admin/productos', icon: 'box' },
+  { key: 'categorias', label: 'Categorías', href: '/admin/categorias', icon: 'tag' },
+  { key: 'galeria-accesorios', label: 'Galería: Accesorios personalizados', href: '/admin/galeria-accesorios', icon: 'image' },
+  { key: 'galeria-trabajos', label: 'Galería: Trabajos de ingeniería', href: '/admin/galeria-trabajos', icon: 'image' },
+  { key: 'configuracion', label: 'Configuración', href: '#', icon: 'gear' },
+];
 ---
 
 <html lang="es">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 	</head>
 	<body>
-		<slot />
+		<div style="height:100vh; display:flex; overflow:hidden;">
+
+			<!-- SIDEBAR -->
+			<div id="admin-sidebar" class="bz-admin-sidebar" style="width:240px; flex-shrink:0; height:100%; overflow-y:auto; background:linear-gradient(180deg,#0d2350 0%,var(--color-primary) 100%); display:flex; flex-direction:column; padding:24px 16px;">
+				<div style="padding:0 10px; margin-bottom:56px;">
+					<span style="font-size:16px; font-weight:700; color:white; letter-spacing:0.01em;">BARZOL</span>
+				</div>
+
+				<nav style="display:flex; flex-direction:column; gap:3px; flex:1;">
+					{navItems.map((item) => {
+						const isActive = item.key === active;
+						return (
+							<a
+								href={item.href}
+								data-admin-nav-link
+								data-href={item.href}
+								style={`display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color:${isActive ? 'white' : 'rgba(255,255,255,0.72)'}; background:${isActive ? 'rgba(255,255,255,0.14)' : 'transparent'}; text-decoration:none; font-size:13.5px; font-weight:${isActive ? '600' : '500'};`}
+							>
+								{item.icon === 'grid' && (
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"></rect><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"></rect><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"></rect><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"></rect></svg>
+								)}
+								{item.icon === 'home' && (
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 10l9-7 9 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 9v11a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+								)}
+								{item.icon === 'box' && (
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 7L12 3 4 7l8 4 8-4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M4 7v10l8 4 8-4V7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 11v10" stroke="currentColor" stroke-width="1.7"></path></svg>
+								)}
+								{item.icon === 'tag' && (
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"></rect><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"></rect><path d="M3 17h7M6.5 13.5v7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+								)}
+								{item.icon === 'image' && (
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.7"></rect><circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="1.5"></circle><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path></svg>
+								)}
+								{item.icon === 'gear' && (
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"></circle><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1.08 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path></svg>
+								)}
+								{item.label}
+							</a>
+						);
+					})}
+				</nav>
+
+				<a href="/admin/login" data-admin-nav-link data-href="/admin/login" style="display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color:rgba(255,255,255,0.6); text-decoration:none; font-size:13px; font-weight:500; margin-top:auto; margin-bottom:32px;">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16 17l5-5-5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M21 12H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+					Cerrar sesión
+				</a>
+			</div>
+
+			<!-- MAIN -->
+			<div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+				<slot />
+			</div>
+
+			<div id="admin-sidebar-overlay" class="bz-sidebar-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:590;"></div>
+		</div>
 	</body>
 </html>
+
+<style is:global>
+	.bz-hamburger-btn {
+		display: none;
+	}
+	.bz-sidebar-overlay {
+		display: none;
+	}
+	.bz-sidebar-overlay.bz-open {
+		display: block;
+	}
+	@media (max-width: 768px) {
+		.bz-admin-sidebar {
+			position: fixed !important;
+			top: 0 !important;
+			left: 0 !important;
+			height: 100vh !important;
+			z-index: 600 !important;
+			transform: translateX(-100%) !important;
+			transition: transform 0.25s ease;
+			box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18);
+		}
+		.bz-admin-sidebar.bz-sidebar-open {
+			transform: translateX(0) !important;
+		}
+		.bz-hamburger-btn {
+			display: flex !important;
+		}
+		.bz-topbar {
+			padding-left: 16px !important;
+			padding-right: 16px !important;
+		}
+		.bz-content-pad {
+			padding: 20px !important;
+		}
+	}
+	[data-admin-nav-link]:hover {
+		background: rgba(255, 255, 255, 0.08) !important;
+		color: white !important;
+	}
+</style>
+
+<script>
+	const sidebar = document.getElementById('admin-sidebar');
+	const overlay = document.getElementById('admin-sidebar-overlay');
+
+	function openSidebar() {
+		sidebar?.classList.add('bz-sidebar-open');
+		overlay?.classList.add('bz-open');
+	}
+	function closeSidebar() {
+		sidebar?.classList.remove('bz-sidebar-open');
+		overlay?.classList.remove('bz-open');
+	}
+
+	document.addEventListener('admin:toggle-sidebar', () => {
+		sidebar?.classList.contains('bz-sidebar-open') ? closeSidebar() : openSidebar();
+	});
+	overlay?.addEventListener('click', closeSidebar);
+
+	// Guard de "salir sin guardar": las islas de React que tengan una edición
+	// en curso deben mantener window.__adminHasUnsavedChanges en true. Si el usuario
+	// hace click en un link del sidebar mientras eso es true, no navegamos
+	// directo — le avisamos a la isla (evento admin:nav-request) para que
+	// muestre su propio modal de confirmación y decida si navega o no.
+	declare global {
+		interface Window {
+			__adminHasUnsavedChanges?: boolean;
+		}
+	}
+
+	document.querySelectorAll<HTMLAnchorElement>('[data-admin-nav-link]').forEach((link) => {
+		link.addEventListener('click', (e) => {
+			if (window.__adminHasUnsavedChanges) {
+				e.preventDefault();
+				const href = link.dataset.href || link.href;
+				document.dispatchEvent(new CustomEvent('admin:nav-request', { detail: { href } }));
+			}
+		});
+	});
+</script>

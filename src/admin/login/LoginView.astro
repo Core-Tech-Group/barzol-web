@@ -1,8 +1,16 @@
 ---
-import AdminLayout from '@admin/layout/AdminLayout.astro';
+import '@shared/styles/tokens.css';
 ---
 
-<AdminLayout title="Iniciar sesión — Admin Barzol">
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Iniciar sesión — Admin Barzol</title>
+	</head>
+	<body>
 	<div style="min-height:100vh; display:grid; grid-template-columns:1fr 1fr;">
 
 		<!-- Panel de marca -->
@@ -74,7 +82,8 @@ import AdminLayout from '@admin/layout/AdminLayout.astro';
 			</div>
 		</div>
 	</div>
-</AdminLayout>
+	</body>
+</html>
 
 <style>
 	.login-input:focus {

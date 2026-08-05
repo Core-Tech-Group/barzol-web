@@ -2,6 +2,7 @@
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
 import Pagination from './Pagination.astro';
+import { getProductos } from '@shared/lib/productos/productoService';
 
 interface Props {
   query?: string;
@@ -9,14 +10,12 @@ interface Props {
 
 const { query = '' } = Astro.props;
 
-// TODO: datos mock — reemplazar por una búsqueda real contra
-// @shared/lib/productos/productoService cuando se conecte Supabase.
-const results = [
-  { id: 1, nombre: 'Soporte de Celular Trompeta', precio: 160, precioOriginal: 180, isNew: false },
-  { id: 2, nombre: 'Soporte de Celular Trompeta XL', precio: 190, precioOriginal: 220, isNew: true },
-  { id: 3, nombre: 'Sordina de Trompeta', precio: 98, precioOriginal: 120, isNew: false },
-  { id: 4, nombre: 'BERP para Trompeta', precio: 110, precioOriginal: 130, isNew: false },
-];
+const productosDb = await getProductos();
+const q = query.trim().toLowerCase();
+const results = (q
+  ? productosDb.filter((p) => p.nombre.toLowerCase().includes(q) || p.keywords.toLowerCase().includes(q))
+  : productosDb
+).map((p) => ({ href: `/producto/${p.slug}`, nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
 ---
 
 <PublicLayout title={`Buscar "${query}" — Barzol`}>
@@ -43,10 +42,10 @@ const results = [
 	</div>
 
 	<!-- MAIN CONTENT -->
-	<div style="max-width:1200px; margin:0 auto; padding:24px 32px 64px; display:grid; grid-template-columns:220px 1fr; gap:28px; align-items:start;">
+	<div class="bz-search-main bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:24px 32px 64px; display:grid; grid-template-columns:220px 1fr; gap:28px; align-items:start;">
 
 		<!-- SIDEBAR FILTROS -->
-		<div style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
+		<div class="bz-search-sidebar" style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
 			<div style="font-size:14px; font-weight:700; color:var(--color-text); margin-bottom:18px; display:flex; align-items:center; justify-content:space-between;">
 				Filtros
 				<button type="button" style="font-size:11px; font-weight:500; color:var(--color-primary); background:none; border:none; cursor:pointer; ">Limpiar</button>
@@ -91,15 +90,9 @@ const results = [
 
 		<!-- RESULTS GRID -->
 		<div>
-			<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px;">
+			<div class="bz-search-results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
 				{results.map((p) => (
-					<ProductCard
-						href={`/producto/producto-${p.id}`}
-						nombre={p.nombre}
-						precio={p.precio}
-						precioOriginal={p.precioOriginal}
-						isNew={p.isNew}
-					/>
+					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} />
 				))}
 			</div>
 
@@ -107,3 +100,22 @@ const results = [
 		</div>
 	</div>
 </PublicLayout>
+
+<style>
+	@media (max-width: 860px) {
+		.bz-search-main {
+			grid-template-columns: 1fr !important;
+		}
+		.bz-search-sidebar {
+			position: static !important;
+		}
+		.bz-search-results-grid {
+			grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+		}
+	}
+	@media (max-width: 420px) {
+		.bz-search-results-grid {
+			gap: 10px !important;
+		}
+	}
+</style>

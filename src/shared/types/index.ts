@@ -1,25 +1,70 @@
+// Tipos de dominio compartidos entre landing/ y admin/. Reflejan el esquema
+// documentado en DATABASE_SCHEMA.md — ver ese archivo para el diagrama
+// entidad-relación completo. Estas son las formas "agregadas" que devuelven
+// los servicios (ej. Category ya trae sus subcategorías anidadas), no filas
+// crudas de tabla — esas viven en los *Mapper.ts de cada servicio.
+
+export interface Vendor {
+  id: string;
+  nombre: string;
+}
+
+export interface Subcategory {
+  id: string;
+  categoriaId: string;
+  nombre: string;
+  slug: string; // identifica el TIPO de accesorio (ej. "sordinas") — usado como sub-filtro dentro de la página de categoría, no como ruta propia
+  orden: number;
+}
+
 export interface Category {
   id: string;
   nombre: string;
-  slug: string;
-  imagenUrl: string | null;
+  slug: string; // única fuente de verdad de la navegación pública /catalogo/[slug] — debe reflejar exactamente lo administrado en /admin/categorias
+  orden: number;
+  subcategorias: Subcategory[];
 }
 
 export interface Product {
   id: string;
   nombre: string;
+  slug: string;
   descripcion: string;
+  keywords: string;
   precio: number;
-  categoriaId: string;
-  imagenUrl: string;
-  destacado: boolean;
-  disponible: boolean;
+  precioOriginal: number | null;
+  categoriaId: string | null; // nullable: hay accesorios genéricos sin instrumento asociado (ej. "Tope Protector de Vara")
+  subcategoriaId: string | null;
+  vendorId: string;
+  publicado: boolean;
+  activo: boolean;
+  personalizable: boolean;
   createdAt: string;
+  fotos: string[];
+  caracteristicas: string[];
 }
 
 export interface GalleryItem {
   id: string;
-  imagenUrl: string;
-  descripcion: string | null;
-  createdAt: string;
+  tipo: 'accesorios' | 'trabajos';
+  imagenUrl: string | null;
+  titulo: string;
+  orden: number;
+}
+
+export interface HomeHeroImage {
+  id: string;
+  imagenUrl: string | null;
+  orden: number;
+}
+
+export interface HomeItem {
+  id: string;
+  tipo: 'seccion' | 'banner';
+  titulo: string | null;
+  visible: boolean;
+  orden: number;
+  imagenUrl: string | null;
+  link: string | null;
+  productoIds: string[];
 }

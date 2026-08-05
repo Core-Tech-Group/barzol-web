@@ -1,0 +1,52 @@
+---
+import AdminLayout from '@admin/layout/AdminLayout.astro';
+import InicioAdmin, { type AllProduct, type HomeItem } from './InicioAdmin.tsx';
+import { getHeroImages, getHomeItems } from '@shared/lib/home/homeService';
+import { getProductos } from '@shared/lib/productos/productoService';
+import { getCategorias } from '@shared/lib/categorias/categoriaService';
+
+// Adaptador: toma la forma canónica de los servicios (alineada a
+// DATABASE_SCHEMA.md — home_items con productoIds normalizados) y arma las
+// props que espera InicioAdmin (productos referenciados por nombre, como en
+// el diseño original). Cuando se conecte Supabase solo cambia el cuerpo de
+// los servicios; este adaptador y la isla no se tocan.
+const [heroImagesDb, homeItemsDb, productosDb, categoriasDb] = await Promise.all([
+	getHeroImages(),
+	getHomeItems(),
+	getProductos(),
+	getCategorias(),
+]);
+
+const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
+const productById = new Map(productosDb.map((p) => [p.id, p]));
+
+const allProducts: AllProduct[] = productosDb.map((p) => ({
+	name: p.nombre,
+	category: p.categoriaId ? categoryById.get(p.categoriaId)?.nombre ?? '—' : '—',
+}));
+
+const items: HomeItem[] = homeItemsDb
+	.slice()
+	.sort((a, b) => a.orden - b.orden)
+	.map((it) =>
+		it.tipo === 'banner'
+			? { id: it.id, type: 'banner' as const, visible: it.visible, open: false, link: it.link ?? '', image: it.imagenUrl }
+			: {
+					id: it.id,
+					type: 'section' as const,
+					title: it.titulo ?? '',
+					visible: it.visible,
+					open: false,
+					products: it.productoIds.map((pid) => productById.get(pid)?.nombre).filter((n): n is string => !!n),
+				}
+	);
+
+const heroImages = heroImagesDb
+	.slice()
+	.sort((a, b) => a.orden - b.orden)
+	.map((h) => h.imagenUrl);
+---
+
+<AdminLayout title="Admin · Página de inicio — Barzol" active="inicio">
+	<InicioAdmin client:load initialItems={items} allProducts={allProducts} initialHeroImages={heroImages} />
+</AdminLayout>

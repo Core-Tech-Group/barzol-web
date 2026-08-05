@@ -1,9 +1,27 @@
 ---
 import AdminLayout from '@admin/layout/AdminLayout.astro';
+import CategoriesAdmin, { type AdminCategory } from './CategoriesAdmin.tsx';
+import { getCategorias } from '@shared/lib/categorias/categoriaService';
+
+// Adaptador: toma la forma canónica del servicio (alineada a
+// DATABASE_SCHEMA.md) y arma las props que espera CategoriesAdmin. Cuando se
+// conecte Supabase solo cambia el cuerpo del servicio; este adaptador y la
+// isla no se tocan.
+const categoriasDb = await getCategorias();
+
+const categories: AdminCategory[] = categoriasDb
+	.slice()
+	.sort((a, b) => a.orden - b.orden)
+	.map((c) => ({
+		id: c.id,
+		name: c.nombre,
+		subs: c.subcategorias
+			.slice()
+			.sort((a, b) => a.orden - b.orden)
+			.map((s) => ({ id: s.id, name: s.nombre })),
+	}));
 ---
 
-<AdminLayout title="Admin · Categorías — Barzol">
-	<main>
-		<h1>Gestión de categorías</h1>
-	</main>
+<AdminLayout title="Admin · Categorías — Barzol" active="categorias">
+	<CategoriesAdmin client:load initialCategories={categories} />
 </AdminLayout>

@@ -1,0 +1,24 @@
+---
+import AdminLayout from '@admin/layout/AdminLayout.astro';
+import GalleryAdmin, { type GalleryPhoto } from '@admin/shared/GalleryAdmin.tsx';
+import { getGaleria } from '@shared/lib/galeria/galeriaService';
+
+// Adaptador: toma la forma canónica del servicio (alineada a
+// DATABASE_SCHEMA.md) y arma las props que espera GalleryAdmin. Cuando se
+// conecte Supabase solo cambia el cuerpo del servicio; este adaptador y la
+// isla no se tocan.
+const galeriaDb = await getGaleria('accesorios');
+const photos: GalleryPhoto[] = galeriaDb
+	.slice()
+	.sort((a, b) => a.orden - b.orden)
+	.map((g) => ({ id: g.id, caption: g.titulo, image: g.imagenUrl }));
+---
+
+<AdminLayout title="Admin · Galería: Accesorios personalizados — Barzol" active="galeria-accesorios">
+	<GalleryAdmin
+		client:load
+		title="Galería: Accesorios personalizados"
+		saveConfirmMessage="Se actualizará la galería de accesorios personalizados del home."
+		initialPhotos={photos}
+	/>
+</AdminLayout>

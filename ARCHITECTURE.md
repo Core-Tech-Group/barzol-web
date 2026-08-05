@@ -108,7 +108,9 @@ src/
     │   ├── categorias/
     │   │   └── categoriaService.ts  # ÚNICA fuente de categorías — landing/shared/Header.astro también importa de aquí
     │   ├── galeria/
-    │   │   └── galeriaService.ts
+    │   │   └── galeriaService.ts    # ÚNICA fuente de galería — sirve ambas galerías del sitio, filtrable por `tipo`
+    │   ├── home/
+    │   │   └── homeService.ts       # ÚNICA fuente de la página de inicio (hero images + secciones/banners)
     │   ├── storage/
     │   │   └── r2Client.ts          # Cliente de Cloudflare R2
     │   ├── validation/
@@ -221,37 +223,9 @@ export interface ApiResponse<T> {
 }
 ```
 
-## Esquema de Base de Datos (borrador inicial)
+## Esquema de Base de Datos
 
-### `categorias`
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| nombre | text | |
-| slug | text | único |
-| imagen_url | text | referencia a R2, opcional |
-
-### `productos`
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| nombre | text | |
-| slug | text | único — usado en la URL pública `/producto/[slug]`, nunca el uuid |
-| descripcion | text | |
-| precio | numeric | |
-| categoria_id | uuid | FK → categorias.id |
-| imagen_url | text | referencia a R2 |
-| destacado | boolean | default false |
-| disponible | boolean | default true |
-| created_at | timestamp | |
-
-### `galeria`
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| imagen_url | text | referencia a R2 |
-| descripcion | text | opcional |
-| created_at | timestamp | |
+Ver [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md) — diagrama entidad-relación completo (con Mermaid) derivado de todas las pantallas del admin ya construidas (categorías de 2 niveles, fotos/características múltiples de producto, secciones+banners de la página de inicio, galería, configuración, perfil de admin). El borrador de 3 tablas que vivía antes en esta sección quedó obsoleto frente a la UI real y fue reemplazado por ese archivo.
 
 > Nota: las imágenes **nunca** se guardan como binarios en la base de datos ni en el repositorio — solo la URL apunta a Cloudflare R2.
 
@@ -290,3 +264,4 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Reestructuración por zonas | `ServicePromoCard.astro` ubicado en `landing/home/` (no estaba en la lista explícita) | Solo lo usa `HomeView.astro`; por la "regla de oro" pertenece a la carpeta de esa vista específica, no a `landing/shared/` |
 | Reestructuración por zonas | `Pagination.astro` se dejó en `landing/busqueda/` pero también lo importa `CatalogoView.astro` | Se siguió la instrucción explícita de ubicarlo en `busqueda/`; en sentido estricto, al usarlo 2 vistas debería vivir en `landing/shared/` — queda como ajuste pendiente a validar |
 | Reestructuración por zonas | `admin/layout/AdminLayout.astro` creado como equivalente funcional del antiguo `BaseLayout.astro` (sin nav propia todavía) | La reestructuración fue solo movimiento de archivos, sin agregar lógica/UI nueva; la nav real del admin queda como tarea aparte |
+| Panel admin completo | Esquema de base de datos movido a `DATABASE_SCHEMA.md`, con diagrama Mermaid completo (categorías de 2 niveles, fotos/características de producto, home_items unificado, galería, configuración, admin_profiles) | El borrador de 3 tablas original no reflejaba ninguna de las pantallas reales construidas en `admin/` (Productos, Categorías, Página de inicio, Galería) |
