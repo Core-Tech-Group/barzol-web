@@ -104,13 +104,19 @@ src/
     │   │   └── client.ts            # Conexión a Supabase/Postgres
     │   ├── productos/
     │   │   ├── productoService.ts   # ÚNICA fuente de productos (mock hoy, Supabase mañana)
-    │   │   └── productoMapper.ts
+    │   │   └── productoMapper.ts    # fila cruda de `product` (+ joins) → `Product` — sin usar hasta que exista la consulta real
     │   ├── categorias/
-    │   │   └── categoriaService.ts  # ÚNICA fuente de categorías — landing/shared/Header.astro también importa de aquí
+    │   │   ├── categoriaService.ts  # ÚNICA fuente de categorías — landing/shared/Header.astro también importa de aquí
+    │   │   └── categoriaMapper.ts   # filas de `category` (autorreferenciada) → árbol `Category[]` con subcategorías anidadas
     │   ├── galeria/
-    │   │   └── galeriaService.ts    # ÚNICA fuente de galería — sirve ambas galerías del sitio, filtrable por `tipo`
+    │   │   ├── galeriaService.ts    # ÚNICA fuente de galería — sirve ambas galerías del sitio, filtrable por `tipo`
+    │   │   └── galeriaMapper.ts     # fila cruda de `gallery_item` → `GalleryItem`
     │   ├── home/
-    │   │   └── homeService.ts       # ÚNICA fuente de la página de inicio (hero images + secciones/banners)
+    │   │   ├── homeService.ts       # ÚNICA fuente de la página de inicio (hero images + secciones/banners)
+    │   │   └── homeMapper.ts        # filas de `home_hero_image` / `home_item` (+ join `home_section_product`) → tipos de home
+    │   ├── configuracion/
+    │   │   ├── configuracionService.ts  # ÚNICA fuente de la configuración del sitio (WhatsApp, contacto, redes, banner de personalización) — tabla singleton
+    │   │   └── configuracionMapper.ts   # fila cruda de `site_configuration` → `Configuracion`
     │   ├── storage/
     │   │   └── r2Client.ts          # Cliente de Cloudflare R2
     │   ├── validation/
@@ -131,7 +137,9 @@ src/
 
 **Regla de datos mock:** todo dato de prueba vive en `shared/lib/[feature]/[feature]Service.ts`. Ninguna vista, layout o componente (incluido `landing/shared/Header.astro`) define arreglos de productos/categorías inline. Cuando se conecte Supabase, solo estos archivos de servicio cambian — el resto del proyecto no se toca.
 
-> **Estado actual (pendiente):** `landing/shared/Header.astro` todavía define su menú de categorías (`megaCats`) inline en vez de leerlo de `shared/lib/categorias/categoriaService`. Se dejó así intencionalmente durante la reestructuración de carpetas (que fue solo movimiento de archivos, sin tocar lógica) — queda como próxima tarea.
+**Patrón Row + Mapper (integración transparente con la DB futura):** cada `[feature]Service.ts` tiene un `[feature]Mapper.ts` hermano que ya documenta, hoy, sin conexión real: (1) la forma exacta de la fila cruda tal como la va a devolver Supabase (columnas `snake_case`, alineadas 1:1 con `DATABASE_SCHEMA.md`, incluidas las que vienen unidas por `join`) y (2) la función pura que convierte esa fila al tipo de `shared/types/index.ts` que ya consume el resto del proyecto. Estos archivos **no se importan desde ningún lado todavía** — son la especificación de la consulta real, escrita de antemano. El día que se conecte el ORM, el trabajo en cada servicio se reduce a reemplazar el arreglo mock por `consulta(...).then(mapper)`; ninguna vista, isla ni endpoint se toca porque la firma de cada función del servicio no cambia.
+
+> **Estado actual:** `landing/shared/Header.astro` ya lee su menú de categorías (`navCats`) desde `shared/lib/categorias/categoriaService` — no hay datos de categorías hardcodeados en el componente.
 
 **Alias de imports:** configurado en `tsconfig.json` (y espejado en `astro.config.mjs` → `vite.resolve.alias`, necesario para que Vite los resuelva en runtime) — `@/*` → `src/*`, `@landing/*` → `src/landing/*`, `@admin/*` → `src/admin/*`, `@shared/*` → `src/shared/*`. Ejemplo: `import { getProductos } from '@shared/lib/productos/productoService'`.
 

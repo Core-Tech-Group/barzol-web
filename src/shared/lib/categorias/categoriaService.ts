@@ -10,6 +10,9 @@ import type { Category } from '../../types';
 // TODO: reemplazar el arreglo mock por una consulta real (Supabase/Drizzle o
 // Prisma) cuando esté listo el ORM. La firma de cada función no cambia, así
 // que ningún consumidor (vistas, endpoints de pages/api/categorias) se toca.
+// Ver categoriaMapper.ts: ya documenta la forma de la fila cruda de la tabla
+// `category` (autorreferenciada) y la función que arma el árbol Category[]
+// con sus subcategorías anidadas — la consulta real solo tiene que llamarla.
 
 // Slugs de tipo de accesorio (subcategoría) — se repiten entre instrumentos
 // a propósito, identifican el TIPO sin ser una ruta propia.

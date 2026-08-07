@@ -6,6 +6,9 @@ import type { Product, Vendor } from '../../types';
 // TODO: reemplazar el arreglo mock por una consulta real (Supabase/Drizzle o
 // Prisma) cuando esté listo el ORM. La firma de cada función no cambia, así
 // que ningún consumidor (vistas, endpoints de pages/api/productos) se toca.
+// Ver productoMapper.ts: ya documenta la forma de la fila cruda de Supabase
+// y la función que la convierte a `Product` — la consulta real solo tiene
+// que llamarla.
 
 const vendors: Vendor[] = [{ id: 'vendor-barzol', nombre: 'BARZOL' }];
 

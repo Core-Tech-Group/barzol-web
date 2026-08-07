@@ -6,6 +6,9 @@ import type { HomeHeroImage, HomeItem } from '../../types';
 // TODO: reemplazar los arreglos mock por una consulta real (Supabase/Drizzle
 // o Prisma) cuando esté listo el ORM. La firma de cada función no cambia,
 // así que ningún consumidor (vistas de admin/landing) se toca.
+// Ver homeMapper.ts: ya documenta la forma de las filas crudas de
+// `home_hero_image` y `home_item` (con `home_section_product` unida por
+// join) y las funciones que las convierten a `HomeHeroImage`/`HomeItem`.
 const heroImages: HomeHeroImage[] = [
   { id: 'hero-1', imagenUrl: null, orden: 0 },
   { id: 'hero-2', imagenUrl: null, orden: 1 },

@@ -68,3 +68,18 @@ export interface HomeItem {
   link: string | null;
   productoIds: string[];
 }
+
+// Fila única (singleton) — respaldada por el backlog: "Admin > Configuración
+// > Panel de configuración" (issue #28), "Botón de WhatsApp: redirigir con
+// texto... predefinidos" (issue #5) y "Agregar banner que indique
+// personalización" + "Imagen del banner de personalización" (issues #21/#22).
+export interface Configuracion {
+  id: string;
+  whatsappNumero: string;
+  whatsappMensajePredefinido: string;
+  emailContacto: string;
+  instagramUrl: string | null;
+  facebookUrl: string | null;
+  direccion: string | null;
+  bannerPersonalizacionImagenUrl: string | null;
+}

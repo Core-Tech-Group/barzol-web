@@ -1,239 +1,364 @@
-# Barzol Web — Esquema de Base de Datos
+# Barzol Web — Esquema de Base de Datos (v9 — tablas en singular)
 
-Diagrama entidad-relación completo, derivado de todo lo construido en el panel de administración (Productos, Categorías, Página de inicio, Galería, Login). Reemplaza al borrador inicial de `ARCHITECTURE.md` § "Esquema de Base de Datos", que solo cubría 3 tablas básicas y no reflejaba la jerarquía de categorías de 2 niveles, las fotos/características múltiples de producto, ni la estructura de la página de inicio.
-
+Esquema definitivo, con nombres de tabla en singular (`product`, `category`, `vendor`...) en vez de plural. Motor: PostgreSQL (Supabase).
 Motor: PostgreSQL (Supabase). Imágenes: solo se guarda la URL (Cloudflare R2), nunca el binario. IDs: UUID en todas las tablas, por convención del proyecto.
-
 ## Diagrama
 
 ```mermaid
-%%{init: {'theme':'neutral'}}%%
 erDiagram
-    CATEGORIAS ||--o{ SUBCATEGORIAS : contiene
-    CATEGORIAS ||--o{ PRODUCTOS : clasifica
-    SUBCATEGORIAS |o--o{ PRODUCTOS : clasifica
-    VENDORS ||--o{ PRODUCTOS : provee
-    PRODUCTOS ||--o{ PRODUCTO_FOTOS : tiene
-    PRODUCTOS ||--o{ PRODUCTO_CARACTERISTICAS : tiene
-    PRODUCTOS ||--o{ HOME_SECCION_PRODUCTOS : aparece_en
-    HOME_ITEMS ||--o{ HOME_SECCION_PRODUCTOS : incluye
+    CATEGORY ||--o{ CATEGORY : parent_category
+    CATEGORY ||--o{ PRODUCT : classifies
+    PRODUCT ||--o{ PRODUCT_PHOTO : has
+    PRODUCT ||--o{ PRODUCT_FEATURE : has
+    PRODUCT ||--o{ HOME_SECTION_PRODUCT : appears_in
+    HOME_ITEM ||--o{ HOME_SECTION_PRODUCT : includes
+    VENDOR ||--o{ PRODUCT : supplies
 
-    CATEGORIAS {
-        uuid id PK
-        text nombre
-        int orden
+    VENDOR {
+        integer id PK
+        varchar(100) name
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+        uuid updated_by FK
     }
-    SUBCATEGORIAS {
-        uuid id PK
-        uuid categoria_id FK
-        text nombre
-        int orden
+
+    CATEGORY {
+        integer id PK
+        integer parent_category_id FK "nullable, self-reference"
+        varchar(30) code UK
+        varchar(120) name
+        int sort_order
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+        uuid updated_by FK
     }
-    VENDORS {
-        uuid id PK
-        text nombre
+    PRODUCT {
+        integer id PK
+        varchar(30) code UK
+        varchar(255) name
+        text description
+        varchar(500) keywords
+        numeric price
+        numeric original_price "nullable"
+        integer vendor_id FK
+        integer category_id FK "debe ser categoria hoja, sin subcategorias"
+        product_status status "enum: draft / published"
+        boolean is_active
+        boolean is_personalizable
+        int sort_order
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+        uuid updated_by FK
     }
-    PRODUCTOS {
-        uuid id PK
-        text nombre
-        text slug
-        text descripcion
-        text keywords
-        numeric precio
-        numeric precio_original "nullable"
-        uuid categoria_id FK "nullable"
-        uuid subcategoria_id FK "nullable"
-        uuid vendor_id FK
-        boolean publicado
-        boolean activo
-        boolean personalizable
-        timestamp created_at
-    }
-    PRODUCTO_FOTOS {
-        uuid id PK
-        uuid producto_id FK
+    PRODUCT_PHOTO {
+        integer id PK
+        integer product_id FK
         text url
-        int orden "hasta 5"
+        int sort_order "up to 5"
+        timestamptz created_at
+        uuid created_by FK
     }
-    PRODUCTO_CARACTERISTICAS {
-        uuid id PK
-        uuid producto_id FK
-        text texto
-        int orden
+    PRODUCT_FEATURE {
+        integer id PK
+        integer product_id FK
+        varchar(300) content
+        int sort_order
+        timestamptz created_at
+        uuid created_by FK
     }
-    GALERIA_ITEMS {
-        uuid id PK
-        text tipo "accesorios / trabajos"
-        text imagen_url
-        text titulo
-        int orden
+    GALLERY_ITEM {
+        integer id PK
+        gallery_item_type type "enum: accessories / projects"
+        text image_url
+        varchar(200) title
+        int sort_order
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+        uuid updated_by FK
     }
-    HOME_HERO_IMAGENES {
-        uuid id PK
-        text imagen_url
-        int orden "hasta 3"
+    HOME_HERO_IMAGE {
+        integer id PK
+        text image_url
+        int sort_order "up to 3"
+        timestamptz created_at
+        uuid created_by FK
     }
-    HOME_ITEMS {
-        uuid id PK
-        int tipo "0 = seccion, 1 = banner"
-        text titulo "nullable, solo seccion"
-        boolean visible
-        int orden
-        text imagen_url "nullable, solo banner"
-        text link "nullable, solo banner"
+    HOME_ITEM {
+        integer id PK
+        varchar(20) type "section / banner"
+        varchar(150) title "nullable, section only"
+        boolean is_visible
+        int sort_order
+        text image_url "nullable, banner only"
+        varchar(255) link "nullable, banner only"
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+        uuid updated_by FK
     }
-    HOME_SECCION_PRODUCTOS {
-        uuid id PK
-        uuid home_item_id FK
-        uuid producto_id FK
-        int orden
+    HOME_SECTION_PRODUCT {
+        integer id PK
+        integer home_item_id FK
+        integer product_id FK
+        int sort_order
+        timestamptz created_at
+        uuid created_by FK
     }
-    CONFIGURACION_SITIO {
-        uuid id PK "fila unica"
-        text whatsapp_numero
-        text email_contacto
-        text instagram_url "nullable"
-        text facebook_url "nullable"
-        text direccion "nullable"
+    SITE_CONFIGURATION {
+        integer id PK "single row"
+        varchar(20) whatsapp_number
+        varchar(300) whatsapp_message_template "mensaje predefinido del boton de WhatsApp"
+        varchar(255) contact_email
+        varchar(150) instagram_url "nullable"
+        varchar(150) facebook_url "nullable"
+        varchar(300) address "nullable"
+        text personalization_banner_image_url "nullable, banner de personalizacion"
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+        uuid updated_by FK
     }
-    ADMIN_PROFILES {
-        uuid id PK "= auth.users.id de Supabase"
-        text nombre
-        text rol
+    ADMIN_PROFILE {
+        uuid id PK "exception: = auth.users.id from Supabase"
+        varchar(50) username UK "nullable, para login sin email real"
+        varchar(100) name
+        varchar(30) role
+        timestamptz created_at
+        timestamptz updated_at
     }
 ```
 
-> `ADMIN_PROFILES` no tiene flechas de relación propias porque solo extiende `auth.users` de Supabase Auth (login del panel) — su `id` es el mismo `id` de `auth.users`, no una FK independiente representable en este diagrama.
+> **`admin_profile.id` sigue siendo la única excepción** a "todo id numérico" — es el mismo `id` de `auth.users` de Supabase Auth (siempre UUID). Por eso `created_by` / `updated_by` en el resto de tablas también son UUID.
 
-## Detalle por dominio
+## Tablas y columnas
 
-### Categorías — origen: [`CategoriesAdmin.tsx`](src/admin/categorias/CategoriesAdmin.tsx)
-
-Árbol de 2 niveles: **categoría** = instrumento (Trompeta, Clarinete...), **subcategoría** = tipo de accesorio (Soporte de celular, Sordina, BERP...).
-
-**`categorias`**
-| Campo | Tipo | Notas |
+### `category` — autorreferenciada, profundidad libre
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| nombre | text | |
-| orden | int | posición para drag-and-drop en el admin |
+| id | integer | PK, identity |
+| parent_category_id | integer | FK → `category.id`, nullable, `ON DELETE CASCADE` |
+| code | varchar(30) | único, estable — base del path de navegación |
+| name | varchar(120) | texto visible al usuario |
+| sort_order | int | posición relativa a `parent_category_id` |
+| is_active | boolean | default `true` |
+| created_at / updated_at / created_by / updated_by | — | auditoría |
 
-**`subcategorias`**
-| Campo | Tipo | Notas |
+### `vendor`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| categoria_id | uuid | FK → `categorias.id`, `ON DELETE CASCADE` (al borrar categoría se borran sus subcategorías, como ya advierte el modal de confirmación) |
-| nombre | text | |
-| orden | int | |
+| id | integer | PK, identity |
+| name | varchar(100) | nombre comercial de la marca/proveedor |
+| created_at / updated_at / created_by / updated_by | — | auditoría |
 
-### Productos — origen: [`ProductsAdmin.tsx`](src/admin/productos/ProductsAdmin.tsx)
-
-**`vendors`**
-| Campo | Tipo | Notas |
+### `product`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| nombre | text | ej. `BARZOL` — hoy es un único vendor fijo en el mock (`ProductosView.astro`), pero ya se maneja como lista seleccionable en el admin |
+| id | integer | PK, identity |
+| code | varchar(30) | único — código corto tipo SKU |
+| name | varchar(255) | |
+| description | text | puede ser un párrafo largo, sin límite práctico |
+| keywords | varchar(500) | búsqueda interna |
+| price | numeric(10,2) | |
+| original_price | numeric(10,2) | nullable — precio tachado |
+| vendor_id | integer | FK → `vendor.id` |
+| category_id | integer | FK → `category.id`. **Regla de negocio:** debe apuntar a una categoría "hoja" (sin subcategorías propias) — no se puede asignar un producto a una categoría intermedia. Esto no se puede validar con un `CHECK` simple en SQL (requiere consultar si la categoría tiene hijos), así que se aplica con un trigger `BEFORE INSERT/UPDATE` o validación en el backend antes de guardar |
+| status | `product_status` (enum) | `draft` \| `published`. Ver definición del tipo abajo |
+| is_active | boolean | visible/oculto, independiente de `status` |
+| is_personalizable | boolean | |
+| sort_order | int | orden del producto dentro de su categoría — ya no es ambiguo porque cada producto tiene una sola categoría |
+| created_at / updated_at / created_by / updated_by | — | auditoría |
 
-**`productos`**
-| Campo | Tipo | Notas |
+### `product_photo`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| nombre | text | |
-| slug | text | único, usado en `/producto/[slug]` |
-| descripcion | text | |
-| keywords | text | términos de búsqueda internos |
-| precio | numeric | |
-| precio_original | numeric | nullable — precio tachado cuando hay descuento |
-| categoria_id | uuid | FK → `categorias.id`, nullable (accesorios genéricos sin instrumento asociado, ej. "Tope Protector de Vara") |
-| subcategoria_id | uuid | FK → `subcategorias.id`, nullable (hay productos sin subcategoría, ej. "Soporte de Celular Saxo Tenor") |
-| vendor_id | uuid | FK → `vendors.id` |
-| publicado | boolean | `true` = Publicado, `false` = Borrador |
-| activo | boolean | visible/oculto en la tienda, independiente de `publicado` |
-| personalizable | boolean | |
-| created_at | timestamp | |
+| id | integer | PK, identity |
+| product_id | integer | FK → `product.id`, `ON DELETE CASCADE` |
+| url | text | referencia a R2 — URLs firmadas pueden traer tokens largos, se deja sin límite |
+| sort_order | int | `sort_order = 0` es la foto principal |
+| created_at / created_by | — | auditoría |
 
-**`producto_fotos`** (hasta 5 por producto, reordenables)
-| Campo | Tipo | Notas |
+### `product_feature`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| producto_id | uuid | FK → `productos.id`, `ON DELETE CASCADE` |
-| url | text | referencia a R2 |
-| orden | int | la de `orden = 0` es la foto principal |
+| id | integer | PK, identity |
+| product_id | integer | FK → `product.id`, `ON DELETE CASCADE` |
+| content | varchar(300) | un bullet, no un párrafo — nombre elegido para no chocar con el tipo de dato `text` |
+| sort_order | int | |
+| created_at / created_by | — | auditoría |
 
-**`producto_caracteristicas`** (lista de bullets del producto, reordenable)
-| Campo | Tipo | Notas |
+### `gallery_item`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| producto_id | uuid | FK → `productos.id`, `ON DELETE CASCADE` |
-| texto | text | |
-| orden | int | |
+| id | integer | PK, identity |
+| type | `gallery_item_type` (enum) | `accessories` \| `projects`. Ver definición del tipo abajo |
+| image_url | text | referencia a R2 — URLs firmadas pueden traer tokens largos |
+| title | varchar(200) | caption bajo la foto |
+| sort_order | int | reordenable, independiente por `type` |
+| created_at / updated_at / created_by / updated_by | — | auditoría |
 
-### Galería — origen: [`GalleryAdmin.tsx`](src/admin/shared/GalleryAdmin.tsx)
-
-Una sola tabla sirve a las dos galerías del sitio (Accesorios personalizados y Trabajos de ingeniería), distinguidas por `tipo`.
-
-**`galeria_items`**
-| Campo | Tipo | Notas |
+### `home_hero_image`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| tipo | text/enum | `accesorios` \| `trabajos` |
-| imagen_url | text | referencia a R2 |
-| titulo | text | caption mostrado bajo la foto |
-| orden | int | reordenable por drag-and-drop, independiente por `tipo` |
+| id | integer | PK, identity |
+| image_url | text | referencia a R2 |
+| sort_order | int | 0, 1, 2 |
+| created_at / created_by | — | auditoría |
 
-### Página de inicio — origen: [`InicioAdmin.tsx`](src/admin/inicio/InicioAdmin.tsx)
-
-La más compleja: 3 imágenes hero fijas + una lista unificada y reordenable de **secciones de productos** y **banners** intercalados.
-
-**`home_hero_imagenes`** (máx. 3 filas)
-| Campo | Tipo | Notas |
+### `home_item`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| imagen_url | text | referencia a R2 |
-| orden | int | 0, 1, 2 |
+| id | integer | PK, identity |
+| type | varchar(20) | `section` \| `banner` |
+| title | varchar(150) | nullable — solo `section`, títulos de sección son frases cortas |
+| is_visible | boolean | |
+| sort_order | int | orden combinado entre secciones y banners |
+| image_url | text | nullable — solo `banner`, URLs firmadas pueden ser largas |
+| link | varchar(255) | nullable — solo `banner` |
+| created_at / updated_at / created_by / updated_by | — | auditoría |
 
-**`home_items`** (secciones y banners en una sola tabla reordenable, como en la UI)
-| Campo | Tipo | Notas |
+### `home_section_product` (tabla puente)
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| tipo | int | `0` = sección, `1` = banner |
-| titulo | text | nullable — solo aplica a `seccion` |
-| visible | boolean | toggle Visible/Oculta del admin |
-| orden | int | orden combinado entre secciones y banners |
-| imagen_url | text | nullable — solo aplica a `banner` |
-| link | text | nullable — solo aplica a `banner`, ruta interna opcional |
+| id | integer | PK, identity |
+| home_item_id | integer | FK → `home_item.id` (`type = 'section'`), `ON DELETE CASCADE` |
+| product_id | integer | FK → `product.id` |
+| sort_order | int | |
+| created_at / created_by | — | auditoría |
 
-**`home_seccion_productos`** (tabla puente: qué productos aparecen en cada sección, y en qué orden)
-| Campo | Tipo | Notas |
+### `site_configuration` (singleton)
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| home_item_id | uuid | FK → `home_items.id` (`tipo = 'seccion'`), `ON DELETE CASCADE` |
-| producto_id | uuid | FK → `productos.id` |
-| orden | int | orden del producto dentro de esa sección |
+| id | integer | PK, identity |
+| whatsapp_number | varchar(20) | |
+| whatsapp_message_template | varchar(300) | mensaje predefinido con el que se abre la conversación al tocar el botón de WhatsApp flotante (backlog: "Botón de WhatsApp: redirigir con texto e imagen predefinidos") |
+| contact_email | varchar(255) | máximo real permitido por RFC 5321 |
+| instagram_url | varchar(150) | nullable — acotado al patrón real de URL de perfil |
+| facebook_url | varchar(150) | nullable — acotado al patrón real de URL de perfil |
+| address | varchar(300) | nullable — direcciones en Perú suelen llevar referencia adicional |
+| personalization_banner_image_url | text | nullable — imagen del banner que indica que el producto es personalizable (backlog: "Agregar banner que indique personalización" / "Imagen del banner de personalización") |
+| created_at / updated_at / created_by / updated_by | — | auditoría |
 
-### Configuración — pendiente de traer del diseño, columnas inferidas de la tarjeta "Configuración" del dashboard (`Contacto, WhatsApp y redes`)
-
-**`configuracion_sitio`** (tabla singleton — siempre una sola fila)
-| Campo | Tipo | Notas |
+### `admin_profile`
+| Columna | Tipo | Notas |
 |---|---|---|
-| id | uuid | PK |
-| whatsapp_numero | text | usado por `WhatsAppButton.astro` |
-| email_contacto | text | |
-| instagram_url | text | nullable |
-| facebook_url | text | nullable |
-| direccion | text | nullable |
+| id | **uuid** | PK — excepción, igual a `auth.users.id` |
+| username | varchar(50) | nullable, único. Solo se usa si el login es por usuario simple en vez de email real (ver nota abajo) |
+| name | varchar(100) | |
+| role | varchar(30) | |
+| created_at / updated_at | — | auditoría (sin `created_by`/`updated_by`: es la tabla origen) |
 
-### Autenticación del admin — origen: [`LoginView.astro`](src/admin/login/LoginView.astro), pendiente de conectar a Supabase Auth
+## Convenciones de nombres (actualizadas a inglés)
 
-**`admin_profiles`** (extiende `auth.users` de Supabase, no la reemplaza)
-| Campo | Tipo | Notas |
+| Elemento | Convención | Ejemplos |
 |---|---|---|
-| id | uuid | PK, igual a `auth.users.id` |
-| nombre | text | mostrado en el badge del sidebar (hoy hardcodeado como "Administrador") |
-| rol | text | por si en el futuro hay más de un tipo de usuario admin |
+| Tabla | `snake_case`, singular, inglés | `product`, `category`, `product_photo` |
+| Tabla puente | `<table_a_singular>_<table_b_singular>` | `home_section_product` |
+| Tabla singleton | singular (ya alineada con la convención general) | `site_configuration` |
+| PK | siempre `id` | `id BIGINT GENERATED ALWAYS AS IDENTITY` |
+| FK simple | `<referenced_table_singular>_id` | `product_id`, `category_id` |
+| FK autorreferenciada | `parent_<table_singular>_id` | `parent_category_id` |
+| Booleanos | prefijo `is_` o `has_` | `is_active`, `is_visible`, `is_personalizable` |
+| Auditoría de fecha | `created_at`, `updated_at` (`timestamptz`) | — |
+| Auditoría de usuario | `created_by`, `updated_by` (`uuid`, FK → `admin_profile.id`) | — |
+| Identificador estable | `code` | en `category` y `product`, para no depender del `name` al armar rutas |
+| Slug público | no se guarda | se calcula al vuelo desde `name` en tablas con página propia (`product`) — ver nota sobre URL |
+| Texto corto/acotado | `varchar(n)` | nombres, códigos, emails, teléfonos, valores de enum — cualquier campo con largo máximo predecible |
+| Texto sin límite práctico | `text` | descripciones largas y URLs firmadas de R2 (pueden traer tokens extensos en el query string) |
 
-## Notas de migración (mock → Supabase)
+## Nota sobre `vendor` (agregada tras confirmar múltiples marcas/proveedores)
 
-- Todo el estado que hoy vive en `useState` de las islas React (`ProductsAdmin`, `CategoriesAdmin`, `InicioAdmin`, `GalleryAdmin`) es exactamente lo que estas tablas deben persistir — los tipos TypeScript de cada isla (`AdminProduct`, `AdminCategory`, `HomeItem`, `GalleryPhoto`) ya son, en la práctica, el contrato de la API.
-- Cuando se conecte Supabase, solo cambian los archivos `shared/lib/[feature]/[feature]Service.ts` (ver `ARCHITECTURE.md` § Estructura de Carpetas) — ninguna vista ni isla debería tocarse.
-- Los botones "Guardar cambios" de cada página admin ya delimitan exactamente qué operación de escritura dispara cada tabla (marcada con comentarios `// TODO: reemplazar por @shared/lib/...` en el código).
+El campo `vendor` (texto libre) de la v5 se reemplaza por `vendor_id`, FK a la nueva tabla `vendor`. Motivo: al manejar varias marcas, un campo de texto libre genera inconsistencias (`"Barzol"` vs `"BARZOL"` vs `"barzol "` se tratarían como 3 valores distintos al filtrar o agrupar).
+
+Se mantiene deliberadamente mínima: solo `id` y `name` (más auditoría, por convención del esquema). Si más adelante necesitas mostrar logo de marca, sitio web, o "ver más de esta marca" en la ficha de producto, se pueden agregar esas columnas después sin romper nada, ya que el resto del esquema solo depende de `vendor_id`.
+
+El formulario de producto en el admin debe cambiar el campo de texto libre `vendor` por un select de `vendor` (idealmente con opción de "crear proveedor nuevo" inline, igual que se sugiere para categorías).
+
+## Nota sobre `product.category_id` (revertido a 1 sola categoría por producto)
+
+Se elimina `product_categories` (muchos a muchos). Cada producto vuelve a tener **una sola** `category_id`, con una regla adicional: debe ser una categoría de último nivel (sin subcategorías propias) — nunca una categoría intermedia como "Accesorios".
+
+**Trade-off aceptado conscientemente:** con esto, un producto ya no puede pertenecer simultáneamente a, por ejemplo, `Sordinas` y `Trompeta`. El filtro cruzado "ver todo lo de Trompeta" (sordinas + soportes + lo que sea, todo compatible con ese instrumento) **ya no es posible con este modelo**, salvo que en el futuro se agregue el instrumento como un atributo/etiqueta aparte del árbol de categorías — la alternativa que se descartó antes en la conversación. Queda documentado aquí para que la decisión no se pierda de vista más adelante si el negocio la vuelve a necesitar.
+
+**Cómo validar la regla "solo categorías hoja":** un `CHECK` de columna no puede consultar si `category_id` tiene hijos en la misma tabla `category`. Dos formas de aplicarlo:
+- **Trigger de base de datos** (`BEFORE INSERT OR UPDATE ON product`) que verifique `NOT EXISTS (SELECT 1 FROM category WHERE parent_category_id = NEW.category_id)`.
+- **Validación en el backend**, antes de guardar — más simple de mantener, pero depende de que todo el código pase siempre por esa capa (un trigger es más seguro porque protege incluso ante escrituras directas a la base de datos).
+
+## Nota sobre `product.status` (enum nativo en vez de varchar)
+
+Se define como tipo `ENUM` nativo de PostgreSQL en vez de `varchar` con `CHECK`, aprovechando que Supabase genera automáticamente el tipo TypeScript correspondiente (autocompletado en el admin, sin valores inválidos posibles).
+
+**Definición del tipo:**
+```sql
+CREATE TYPE product_status AS ENUM ('draft', 'published');
+```
+
+**Cómo se agrega un estado nuevo más adelante** (ej. `agotado`, identificado como el más probable dado que manejas stock físico):
+```sql
+ALTER TYPE product_status ADD VALUE 'agotado';
+```
+Nota: el valor nuevo no se puede usar en la misma transacción en la que se agrega (limitación de Postgres) — en la práctica esto no afecta nada, solo hay que correr el `ALTER TYPE` como paso separado antes de empezar a usarlo.
+
+**Se deja fuera de esta versión** (no se agrega `agotado` todavía): quedó identificado como el estado más probable a futuro, pero no se incluye hasta que sea una necesidad real del negocio, para no anticipar reglas de UI (badges, filtros) que aún no existen.
+
+## Nota sobre login del admin (email real o usuario simple)
+
+**Principio clave: la contraseña nunca se guarda en ninguna tabla de este esquema, en ningún escenario.** Su almacenamiento (hash + salt) lo maneja por completo Supabase Auth en su tabla interna `auth.users` (columna `encrypted_password`, no expuesta vía API). No se crea columna `password` en `admin_profile` bajo ninguna circunstancia.
+
+**Escenario A — login con email real:**
+Flujo directo, sin pasos intermedios: el formulario de login llama a `supabase.auth.signInWithPassword({ email, password })`. Supabase valida internamente contra su hash. No requiere el campo `username`.
+
+**Escenario B — login con usuario simple (ej. `admin`, no un email):**
+Supabase Auth exige un email como identificador interno — no se puede evitar, es parte de cómo está construido el servicio. Se resuelve así:
+1. Al crear el admin, se le asigna un **email sintético interno** que nunca se usa para enviar correos (ej. `admin@barzol.internal`) — ese es el email real registrado en `auth.users`.
+2. El `username` visible (lo que el admin escribe para entrar) se guarda en `admin_profile.username`.
+3. Flujo de login: el usuario escribe su `username` → la app hace una consulta pública de solo lectura a `admin_profile` para obtener el email sintético asociado → se llama a `signInWithPassword` con ese email + la contraseña ingresada.
+
+Este paso 3 es seguro porque el "email interno" no protege nada por sí mismo — la seguridad completa sigue recayendo en la contraseña, validada exclusivamente por Supabase.
+
+**Ambos escenarios pueden convivir:** un admin puede tener `username` lleno (login simple) y otro puede dejarlo `NULL` y usar su email real — por eso el campo es nullable.
+
+## Nota sobre `gallery_item.type` (enum, por consistencia con `product.status`)
+
+Igual que `product.status`, se define como `ENUM` nativo en vez de `varchar` — no por una ganancia de velocidad real (con el volumen de una tabla de galería administrada a mano, la diferencia de performance es inmedible), sino por **validación a nivel de base de datos** y para aprovechar el **autocompletado de TypeScript** que Supabase genera automáticamente a partir de tipos enum.
+
+```sql
+CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects');
+```
+
+## Nota sobre optimización de espacio (plan gratuito de Supabase, 500 MB)
+
+**Cambio aplicado: `bigint` → `integer` en todas las PK y FK del esquema** (excepto `admin_profile.id`, `created_by`, `updated_by`, que siguen en `uuid` por estar atados a `auth.users` de Supabase). `integer` ocupa la mitad que `bigint` (4 bytes vs 8) y soporta más de 2,100 millones de filas — muy por encima de lo que este catálogo va a necesitar.
+
+**Lo que ya estaba bien y es lo que realmente importa:** ninguna tabla guarda binarios (imágenes, PDFs) — todo son URLs a Cloudflare R2. Esta es, con diferencia, la decisión de mayor impacto en espacio: una sola foto de producto puede pesar 1-3 MB si se guardara como binario; guardar solo su URL pesa unos 100-200 bytes. Con esto, es muy difícil que este proyecto se acerque a los 500 MB solo por datos de catálogo, incluso con miles de productos.
+
+**Recomendaciones adicionales, de menor impacto pero sin costo de implementarlas:**
+- Evitar índices innecesarios: cada `UNIQUE` y cada FK ya crea un índice automáticamente — no agregar índices manuales salvo que una consulta específica lo necesite (cada índice extra también ocupa espacio en disco).
+- Si en algún momento decides limpiar datos viejos (ej. productos dados de baja hace mucho), un `DELETE` real libera espacio; un simple `is_active = false` no lo hace, porque la fila sigue existiendo.
+
+**Lo que NO vale la pena optimizar más:** los tamaños de `varchar` que ya definimos (150, 255, 300, etc.) no reservan espacio fijo en Postgres — a diferencia de otros motores, un `varchar(255)` con un valor de 10 caracteres ocupa lo que pesan esos 10 caracteres, no los 255. Reducir esos números no ahorra espacio real, solo limita la validación.
+
+## Nota sobre la URL del producto (`slug` calculado + `id` guardado)
+
+La URL pública del producto combina un slug con el `id` en un solo segmento, con el id al final:
+
+```
+/product/sordina-recta-trompeta-89898
+```
+
+**Diferencia clave respecto a versiones anteriores de esta nota: el slug ya NO es una columna en `product`.** Se calcula al vuelo, en el momento de generar cualquier URL (listados, ficha de producto, sitemap), a partir de `product.name` — no se guarda en la base de datos.
+
+**Por qué no guardarlo:**
+- **`id`** es quien garantiza la permanencia y unicidad de la URL — el slug ya no cumple ese rol, es puramente decorativo/SEO
+- Calcular el slug es una operación de texto liviana (minúsculas, sin tildes, espacios por guiones) — el costo de recalcularlo en cada lectura es insignificante para el volumen de este catálogo
+- Evita que quede desactualizado: si `name` cambia y alguien olvida regenerar un slug guardado, la URL mostraría un texto que ya no coincide con el producto actual. Al calcularlo siempre desde `name` en el momento, **nunca puede desincronizarse** — `name` es la única fuente de verdad
+
+**Cómo se arma y se lee (lógica de aplicación, no de base de datos):**
+1. En cualquier lugar donde se necesite el link de un producto, se genera el slug al vuelo desde `name` y se concatena con el `id`
+2. Al recibir una visita a `/product/sordina-recta-trompeta-89898`, el backend extrae el último bloque de dígitos (`89898`) y busca directo por `id` — el resto del texto se ignora para la búsqueda, solo se usa para mostrar la URL
+
+**En el formulario del admin:** no hay ningún campo de slug que mostrar ni editar — no existe como dato, se genera automáticamente en el momento de construir cada link.

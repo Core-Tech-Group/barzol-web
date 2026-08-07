@@ -7,6 +7,8 @@ import type { GalleryItem } from '../../types';
 // TODO: reemplazar el arreglo mock por una consulta real (Supabase/Drizzle o
 // Prisma) cuando esté listo el ORM. La firma de cada función no cambia, así
 // que ningún consumidor (vistas, endpoint de pages/api/galeria) se toca.
+// Ver galeriaMapper.ts: ya documenta la forma de la fila cruda de
+// `gallery_item` y la función que la convierte a `GalleryItem`.
 const galeria: GalleryItem[] = [
   { id: 'gal-acc-1', tipo: 'accesorios', imagenUrl: null, titulo: 'Soporte grabado con nombre', orden: 0 },
   { id: 'gal-acc-2', tipo: 'accesorios', imagenUrl: null, titulo: 'BERP personalizado en trombón', orden: 1 },

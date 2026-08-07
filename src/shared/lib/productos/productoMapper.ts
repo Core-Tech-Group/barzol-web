@@ -11,7 +11,7 @@ export interface ProductoRow {
   keywords: string;
   precio: number;
   precio_original: number | null;
-  categoria_id: string;
+  categoria_id: string | null; // nullable: accesorios genéricos sin instrumento asociado
   subcategoria_id: string | null;
   vendor_id: string;
   publicado: boolean;
