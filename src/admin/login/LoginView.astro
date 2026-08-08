@@ -112,9 +112,6 @@ import '@shared/styles/tokens.css';
 </style>
 
 <script>
-	// TODO: reemplazar por Supabase Auth real (ver ARCHITECTURE.md — Autenticación
-	// del Admin). Por ahora es un mock: siempre falla tras una espera simulada,
-	// igual que el prototipo original.
 	const form = document.getElementById('login-form') as HTMLFormElement;
 	const usernameInput = document.getElementById('login-username') as HTMLInputElement;
 	const passwordInput = document.getElementById('login-password') as HTMLInputElement;
@@ -153,19 +150,37 @@ import '@shared/styles/tokens.css';
 		eyeOff.style.display = showing ? 'none' : '';
 	});
 
-	form.addEventListener('submit', (e) => {
+	form.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		if (submitBtn.disabled) return;
 
 		submitBtn.disabled = true;
 		spinner.style.display = '';
 		submitLabel.textContent = 'Ingresando...';
+		clearError();
 
-		setTimeout(() => {
+		try {
+			const res = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ username: usernameInput.value.trim(), password: passwordInput.value }),
+			});
+			const body = await res.json();
+
+			if (!res.ok || !body.success) {
+				spinner.style.display = 'none';
+				submitLabel.textContent = 'Iniciar sesión';
+				errorBox.hidden = false;
+				updateSubmitState();
+				return;
+			}
+
+			window.location.href = '/admin';
+		} catch {
 			spinner.style.display = 'none';
 			submitLabel.textContent = 'Iniciar sesión';
 			errorBox.hidden = false;
 			updateSubmitState();
-		}, 900);
+		}
 	});
 </script>

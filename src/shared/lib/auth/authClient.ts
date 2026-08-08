@@ -1,0 +1,44 @@
+import { createServerClient } from '@supabase/ssr';
+import type { AstroCookies } from 'astro';
+
+// Dominio del email sintético interno (ver DATABASE_SCHEMA.md § Nota sobre
+// login del admin, Escenario B). El admin nunca ve ni usa este email — solo
+// escribe su `username`. Se arma como `${username}@ADMIN_EMAIL_DOMAIN` tanto
+// al crear el usuario en Supabase Auth como al iniciar sesión, así que no
+// hace falta guardarlo en ningún lado ni consultarlo — es 100% determinístico.
+export const ADMIN_EMAIL_DOMAIN = 'barzol.internal';
+
+export function usernameToSyntheticEmail(username: string): string {
+  return `${username.trim().toLowerCase()}@${ADMIN_EMAIL_DOMAIN}`;
+}
+
+function parseCookieHeader(header: string): { name: string; value: string }[] {
+  if (!header) return [];
+  return header.split(';').map((pair) => {
+    const idx = pair.indexOf('=');
+    if (idx === -1) return { name: pair.trim(), value: '' };
+    return { name: pair.slice(0, idx).trim(), value: decodeURIComponent(pair.slice(idx + 1).trim()) };
+  });
+}
+
+// Cliente de Supabase con sesión persistida en cookies (no en localStorage,
+// que no existe en SSR) — necesario para que /admin/** y las rutas de
+// escritura de /api/** puedan saber, en cada request, si hay un admin logueado.
+export function createSupabaseServerClient(request: Request, cookies: AstroCookies) {
+  const url = import.meta.env.BARZOL_SUPABASE_URL;
+  const anonKey = import.meta.env.BARZOL_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error('Faltan BARZOL_SUPABASE_URL / BARZOL_SUPABASE_ANON_KEY. Copiá .env.example a .env y completá los valores del proyecto de Supabase.');
+  }
+
+  return createServerClient(url, anonKey, {
+    cookies: {
+      getAll: () => parseCookieHeader(request.headers.get('cookie') ?? ''),
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+}

@@ -2,6 +2,7 @@
 
 Esquema definitivo, con nombres de tabla en singular (`product`, `category`, `vendor`...) en vez de plural. Motor: PostgreSQL (Supabase).
 Motor: PostgreSQL (Supabase). Imágenes: solo se guarda la URL (Cloudflare R2), nunca el binario. IDs: UUID en todas las tablas, por convención del proyecto.
+
 ## Diagrama
 
 ```mermaid
@@ -26,7 +27,7 @@ erDiagram
     CATEGORY {
         integer id PK
         integer parent_category_id FK "nullable, self-reference"
-        varchar(30) code UK
+        integer code UK
         varchar(120) name
         int sort_order
         boolean is_active
@@ -37,7 +38,7 @@ erDiagram
     }
     PRODUCT {
         integer id PK
-        varchar(30) code UK
+        integer code UK
         varchar(255) name
         text description
         varchar(500) keywords
@@ -112,12 +113,10 @@ erDiagram
     SITE_CONFIGURATION {
         integer id PK "single row"
         varchar(20) whatsapp_number
-        varchar(300) whatsapp_message_template "mensaje predefinido del boton de WhatsApp"
         varchar(255) contact_email
         varchar(150) instagram_url "nullable"
         varchar(150) facebook_url "nullable"
         varchar(300) address "nullable"
-        text personalization_banner_image_url "nullable, banner de personalizacion"
         timestamptz created_at
         timestamptz updated_at
         uuid created_by FK
@@ -142,7 +141,7 @@ erDiagram
 |---|---|---|
 | id | integer | PK, identity |
 | parent_category_id | integer | FK → `category.id`, nullable, `ON DELETE CASCADE` |
-| code | varchar(30) | único, estable — base del path de navegación |
+| code | integer | único, numérico — pensado para escribirse/escanearse fácil en inventario, ya no interviene en la url (eso lo resuelve `id`) |
 | name | varchar(120) | texto visible al usuario |
 | sort_order | int | posición relativa a `parent_category_id` |
 | is_active | boolean | default `true` |
@@ -159,7 +158,7 @@ erDiagram
 | Columna | Tipo | Notas |
 |---|---|---|
 | id | integer | PK, identity |
-| code | varchar(30) | único — código corto tipo SKU |
+| code | integer | único — código numérico corto tipo SKU, fácil de anotar/escanear en inventario |
 | name | varchar(255) | |
 | description | text | puede ser un párrafo largo, sin límite práctico |
 | keywords | varchar(500) | búsqueda interna |
@@ -235,12 +234,10 @@ erDiagram
 |---|---|---|
 | id | integer | PK, identity |
 | whatsapp_number | varchar(20) | |
-| whatsapp_message_template | varchar(300) | mensaje predefinido con el que se abre la conversación al tocar el botón de WhatsApp flotante (backlog: "Botón de WhatsApp: redirigir con texto e imagen predefinidos") |
 | contact_email | varchar(255) | máximo real permitido por RFC 5321 |
 | instagram_url | varchar(150) | nullable — acotado al patrón real de URL de perfil |
 | facebook_url | varchar(150) | nullable — acotado al patrón real de URL de perfil |
 | address | varchar(300) | nullable — direcciones en Perú suelen llevar referencia adicional |
-| personalization_banner_image_url | text | nullable — imagen del banner que indica que el producto es personalizable (backlog: "Agregar banner que indique personalización" / "Imagen del banner de personalización") |
 | created_at / updated_at / created_by / updated_by | — | auditoría |
 
 ### `admin_profile`
@@ -265,7 +262,7 @@ erDiagram
 | Booleanos | prefijo `is_` o `has_` | `is_active`, `is_visible`, `is_personalizable` |
 | Auditoría de fecha | `created_at`, `updated_at` (`timestamptz`) | — |
 | Auditoría de usuario | `created_by`, `updated_by` (`uuid`, FK → `admin_profile.id`) | — |
-| Identificador estable | `code` | en `category` y `product`, para no depender del `name` al armar rutas |
+| Identificador de negocio | `code` (integer) | en `category` y `product` — código numérico corto para uso interno/inventario, independiente de `id` (que es el que arma la url) |
 | Slug público | no se guarda | se calcula al vuelo desde `name` en tablas con página propia (`product`) — ver nota sobre URL |
 | Texto corto/acotado | `varchar(n)` | nombres, códigos, emails, teléfonos, valores de enum — cualquier campo con largo máximo predecible |
 | Texto sin límite práctico | `text` | descripciones largas y URLs firmadas de R2 (pueden traer tokens extensos en el query string) |
@@ -362,3 +359,11 @@ La URL pública del producto combina un slug con el `id` en un solo segmento, co
 2. Al recibir una visita a `/product/sordina-recta-trompeta-89898`, el backend extrae el último bloque de dígitos (`89898`) y busca directo por `id` — el resto del texto se ignora para la búsqueda, solo se usa para mostrar la URL
 
 **En el formulario del admin:** no hay ningún campo de slug que mostrar ni editar — no existe como dato, se genera automáticamente en el momento de construir cada link.
+
+## Nota sobre `code` (numérico, independiente de la URL)
+
+`category.code` y `product.code` pasan de `varchar(30)` a `integer`. La razón ya **no** es para armar la URL (eso lo resuelve `id`, como quedó documentado arriba) — es para uso interno: más rápido de escribir y escanear en inventario que un código alfanumérico.
+
+**Cómo se genera:** es independiente del `id` interno de la tabla (que Postgres asigna automáticamente) — `code` se puede asignar con su propia secuencia numérica de negocio (ej. empezando en 1000, para diferenciarlo visualmente de otros números del sistema), y sigue siendo editable por el admin si alguna vez hace falta corregirlo, a diferencia de `id`.
+
+**No se agrega `alt_text`** en esta versión — queda pendiente para una futura iteración del esquema.

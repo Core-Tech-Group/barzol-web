@@ -78,7 +78,7 @@ const navItems: NavItem[] = [
 					})}
 				</nav>
 
-				<a href="/admin/login" data-admin-nav-link data-href="/admin/login" style="display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color:rgba(255,255,255,0.6); text-decoration:none; font-size:13px; font-weight:500; margin-top:auto; margin-bottom:32px;">
+				<a id="admin-logout-link" href="/admin/login" data-href="/admin/login" style="display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color:rgba(255,255,255,0.6); text-decoration:none; font-size:13px; font-weight:500; margin-top:auto; margin-bottom:32px;">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16 17l5-5-5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M21 12H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
 					Cerrar sesión
 				</a>
@@ -171,6 +171,17 @@ const navItems: NavItem[] = [
 				const href = link.dataset.href || link.href;
 				document.dispatchEvent(new CustomEvent('admin:nav-request', { detail: { href } }));
 			}
+		});
+	});
+
+	document.getElementById('admin-logout-link')?.addEventListener('click', (e) => {
+		e.preventDefault();
+		if (window.__adminHasUnsavedChanges) {
+			document.dispatchEvent(new CustomEvent('admin:nav-request', { detail: { href: '/admin/login' } }));
+			return;
+		}
+		fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+			window.location.href = '/admin/login';
 		});
 	});
 </script>

@@ -1,0 +1,312 @@
+[
+  {
+    "code": 5000,
+    "name": "Soporte de Celular Trompeta",
+    "instrumento": "Trompeta",
+    "subcategoria_codigo": 2000,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 160,
+    "original_price": 180,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5001,
+    "name": "Soporte de Celular Clarinete",
+    "instrumento": "Clarinete",
+    "subcategoria_codigo": 2003,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 175,
+    "original_price": 200,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5002,
+    "name": "Soporte de Celular Euphonium Frontal",
+    "instrumento": "Euphonium",
+    "subcategoria_codigo": 2004,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 185,
+    "original_price": 210,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5003,
+    "name": "Soporte de Celular Euphonium Recto",
+    "instrumento": "Euphonium",
+    "subcategoria_codigo": 2004,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 185,
+    "original_price": 210,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5004,
+    "name": "Soporte de Celular Trombón (Tudel Delgado)",
+    "instrumento": "Trombón",
+    "subcategoria_codigo": 2006,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 170,
+    "original_price": 195,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5005,
+    "name": "Soporte de Celular Trombón (Tudel Ancho)",
+    "instrumento": "Trombón",
+    "subcategoria_codigo": 2006,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 170,
+    "original_price": 195,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5006,
+    "name": "Soporte de Celular Tuba (Tudel Ancho)",
+    "instrumento": "Tuba",
+    "subcategoria_codigo": 2010,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 200,
+    "original_price": 230,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5007,
+    "name": "Soporte de Celular Tuba (Tudel Delgado)",
+    "instrumento": "Tuba",
+    "subcategoria_codigo": 2010,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 200,
+    "original_price": 230,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5008,
+    "name": "Soporte de Celular Saxofón Alto",
+    "instrumento": "Saxofón",
+    "subcategoria_codigo": 2011,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 160,
+    "original_price": 180,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5009,
+    "name": "Soporte de Celular Saxo Tenor",
+    "instrumento": "Saxo",
+    "subcategoria_codigo": 2012,
+    "description": "Incorpora un mejor ángulo de inclinación, mayor versatilidad y una posición de lectura más cómoda para evitar distracciones.",
+    "keywords": "",
+    "price": 165,
+    "original_price": 190,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Permite sujetar el celular de forma segura al instrumento.",
+      "Ideal para visualizar partituras, pistas musicales o referencias mientras tocas.",
+      "Brinda mayor comodidad durante las presentaciones.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5010,
+    "name": "Sordina para Trombón",
+    "instrumento": "Trombón",
+    "subcategoria_codigo": 2007,
+    "description": "Reduce el volumen del instrumento manteniendo la calidad del sonido, ideal para ensayos y espacios reducidos.",
+    "keywords": "",
+    "price": 210,
+    "original_price": null,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Fabricada a medida para el instrumento.",
+      "Material ligero y resistente.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5011,
+    "name": "Sordina para Trompeta",
+    "instrumento": "Trompeta",
+    "subcategoria_codigo": 2001,
+    "description": "Reduce el volumen del instrumento manteniendo la calidad del sonido, ideal para ensayos y espacios reducidos.",
+    "keywords": "",
+    "price": 190,
+    "original_price": null,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Fabricada a medida para el instrumento.",
+      "Material ligero y resistente.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5012,
+    "name": "Tope Protector de Vara",
+    "instrumento": "Trombón",
+    "subcategoria_codigo": 2009,
+    "description": "Protege la vara del instrumento frente a golpes y desgaste durante el uso diario.",
+    "keywords": "",
+    "price": 95,
+    "original_price": null,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": false,
+    "features": [
+      "Ajuste seguro y firme.",
+      "Resistente al uso prolongado."
+    ]
+  },
+  {
+    "code": 5013,
+    "name": "BERP para Trombón",
+    "instrumento": "Trombón",
+    "subcategoria_codigo": 2008,
+    "description": "Accesorio de práctica para desarrollar resistencia y técnica de embocadura.",
+    "keywords": "",
+    "price": 180,
+    "original_price": null,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Compatible con el instrumento indicado.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5014,
+    "name": "BERP para Trompeta",
+    "instrumento": "Trompeta",
+    "subcategoria_codigo": 2002,
+    "description": "Accesorio de práctica para desarrollar resistencia y técnica de embocadura.",
+    "keywords": "",
+    "price": 175,
+    "original_price": null,
+    "vendor": "BARZOL",
+    "status": "published",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Compatible con el instrumento indicado.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  },
+  {
+    "code": 5015,
+    "name": "BERP para Euphonium",
+    "instrumento": "Euphonium",
+    "subcategoria_codigo": 2005,
+    "description": "Accesorio de práctica para desarrollar resistencia y técnica de embocadura.",
+    "keywords": "",
+    "price": 185,
+    "original_price": null,
+    "vendor": "BARZOL",
+    "status": "draft",
+    "is_active": true,
+    "is_personalizable": true,
+    "features": [
+      "Compatible con el instrumento indicado.",
+      "Personalización disponible (nombre, logo o detalle especial) — bajo pedido."
+    ]
+  }
+]

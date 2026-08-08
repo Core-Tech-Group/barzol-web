@@ -6,10 +6,22 @@ import type { Category, Subcategory } from '../../types';
 export interface CategoryRow {
   id: string;
   parent_category_id: string | null;
-  code: string;
+  code: number; // numérico, uso interno/inventario — ya NO es el slug público
   name: string;
   sort_order: number;
   is_active: boolean;
+}
+
+// `category.code` es un número de inventario, no un texto de ruta — el slug
+// público se calcula desde `name` (no se persiste, igual que en `product`).
+function slugify(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 // Recibe TODAS las filas activas de `category` (una sola consulta) y arma el
@@ -24,17 +36,19 @@ export function mapCategoryRowsToCategories(rows: CategoryRow[]): Category[] {
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((root) => ({
       id: root.id,
+      codigo: root.code,
       nombre: root.name,
-      slug: root.code,
+      slug: slugify(root.name),
       orden: root.sort_order,
       subcategorias: children
         .filter((c) => c.parent_category_id === root.id)
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((c): Subcategory => ({
           id: c.id,
+          codigo: c.code,
           categoriaId: c.parent_category_id as string,
           nombre: c.name,
-          slug: c.code,
+          slug: slugify(c.name),
           orden: c.sort_order,
         })),
     }));

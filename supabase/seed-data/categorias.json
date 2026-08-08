@@ -1,0 +1,64 @@
+[
+  {
+    "codigo": 1000,
+    "nombre": "Trompeta",
+    "sort_order": 0,
+    "subcategorias": [
+      { "codigo": 2000, "nombre": "Soporte de celular", "sort_order": 0 },
+      { "codigo": 2001, "nombre": "Sordina", "sort_order": 1 },
+      { "codigo": 2002, "nombre": "BERP", "sort_order": 2 }
+    ]
+  },
+  {
+    "codigo": 1001,
+    "nombre": "Clarinete",
+    "sort_order": 1,
+    "subcategorias": [
+      { "codigo": 2003, "nombre": "Soporte de celular", "sort_order": 0 }
+    ]
+  },
+  {
+    "codigo": 1002,
+    "nombre": "Euphonium",
+    "sort_order": 2,
+    "subcategorias": [
+      { "codigo": 2004, "nombre": "Soporte de celular", "sort_order": 0 },
+      { "codigo": 2005, "nombre": "BERP", "sort_order": 1 }
+    ]
+  },
+  {
+    "codigo": 1003,
+    "nombre": "Trombón",
+    "sort_order": 3,
+    "subcategorias": [
+      { "codigo": 2006, "nombre": "Soporte de celular", "sort_order": 0 },
+      { "codigo": 2007, "nombre": "Sordina", "sort_order": 1 },
+      { "codigo": 2008, "nombre": "BERP", "sort_order": 2 },
+      { "codigo": 2009, "nombre": "Protector de vara", "sort_order": 3 }
+    ]
+  },
+  {
+    "codigo": 1004,
+    "nombre": "Tuba",
+    "sort_order": 4,
+    "subcategorias": [
+      { "codigo": 2010, "nombre": "Soporte de celular", "sort_order": 0 }
+    ]
+  },
+  {
+    "codigo": 1005,
+    "nombre": "Saxofón",
+    "sort_order": 5,
+    "subcategorias": [
+      { "codigo": 2011, "nombre": "Soporte de celular", "sort_order": 0 }
+    ]
+  },
+  {
+    "codigo": 1006,
+    "nombre": "Saxo",
+    "sort_order": 6,
+    "subcategorias": [
+      { "codigo": 2012, "nombre": "Soporte de celular", "sort_order": 0 }
+    ]
+  }
+]

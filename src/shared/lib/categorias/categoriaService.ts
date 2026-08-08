@@ -1,4 +1,6 @@
+import { supabase } from '../db/client';
 import type { Category } from '../../types';
+import { mapCategoryRowsToCategories, type CategoryRow } from './categoriaMapper';
 
 // ÚNICA fuente de categorías del proyecto (ver ARCHITECTURE.md § Regla de
 // datos mock). landing/shared/Header.astro y todas las vistas de admin deben
@@ -6,88 +8,35 @@ import type { Category } from '../../types';
 // navegación pública /catalogo/[slug] usa exactamente estas categorías
 // (instrumentos), las mismas que se administran en /admin/categorias — no
 // una taxonomía alternativa.
-//
-// TODO: reemplazar el arreglo mock por una consulta real (Supabase/Drizzle o
-// Prisma) cuando esté listo el ORM. La firma de cada función no cambia, así
-// que ningún consumidor (vistas, endpoints de pages/api/categorias) se toca.
-// Ver categoriaMapper.ts: ya documenta la forma de la fila cruda de la tabla
-// `category` (autorreferenciada) y la función que arma el árbol Category[]
-// con sus subcategorías anidadas — la consulta real solo tiene que llamarla.
 
-// Slugs de tipo de accesorio (subcategoría) — se repiten entre instrumentos
-// a propósito, identifican el TIPO sin ser una ruta propia.
-const SLUG_SOPORTE = 'soportes-para-celular';
-const SLUG_SORDINA = 'sordinas';
-const SLUG_BERP = 'berp';
+async function fetchCategoryRows(): Promise<CategoryRow[]> {
+  const { data, error } = await supabase
+    .from('category')
+    .select('id, parent_category_id, code, name, sort_order, is_active')
+    .order('sort_order');
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: String(r.id),
+    parent_category_id: r.parent_category_id === null ? null : String(r.parent_category_id),
+    code: r.code,
+    name: r.name,
+    sort_order: r.sort_order,
+    is_active: r.is_active,
+  }));
+}
 
-const categorias: Category[] = [
-  {
-    id: 'cat-trompeta',
-    nombre: 'Trompeta',
-    slug: 'trompeta',
-    orden: 0,
-    subcategorias: [
-      { id: 'sub-trompeta-soporte', categoriaId: 'cat-trompeta', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 },
-      { id: 'sub-trompeta-sordina', categoriaId: 'cat-trompeta', nombre: 'Sordina', slug: SLUG_SORDINA, orden: 1 },
-      { id: 'sub-trompeta-berp', categoriaId: 'cat-trompeta', nombre: 'BERP', slug: SLUG_BERP, orden: 2 },
-    ],
-  },
-  {
-    id: 'cat-clarinete',
-    nombre: 'Clarinete',
-    slug: 'clarinete',
-    orden: 1,
-    subcategorias: [{ id: 'sub-clarinete-soporte', categoriaId: 'cat-clarinete', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 }],
-  },
-  {
-    id: 'cat-euphonium',
-    nombre: 'Euphonium',
-    slug: 'euphonium',
-    orden: 2,
-    subcategorias: [
-      { id: 'sub-euphonium-soporte', categoriaId: 'cat-euphonium', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 },
-      { id: 'sub-euphonium-berp', categoriaId: 'cat-euphonium', nombre: 'BERP', slug: SLUG_BERP, orden: 1 },
-    ],
-  },
-  {
-    id: 'cat-trombon',
-    nombre: 'Trombón',
-    slug: 'trombon',
-    orden: 3,
-    subcategorias: [
-      { id: 'sub-trombon-soporte', categoriaId: 'cat-trombon', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 },
-      { id: 'sub-trombon-sordina', categoriaId: 'cat-trombon', nombre: 'Sordina', slug: SLUG_SORDINA, orden: 1 },
-      { id: 'sub-trombon-berp', categoriaId: 'cat-trombon', nombre: 'BERP', slug: SLUG_BERP, orden: 2 },
-    ],
-  },
-  {
-    id: 'cat-tuba',
-    nombre: 'Tuba',
-    slug: 'tuba',
-    orden: 4,
-    subcategorias: [{ id: 'sub-tuba-soporte', categoriaId: 'cat-tuba', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 }],
-  },
-  {
-    id: 'cat-saxofon',
-    nombre: 'Saxofón',
-    slug: 'saxofon',
-    orden: 5,
-    subcategorias: [{ id: 'sub-saxofon-soporte', categoriaId: 'cat-saxofon', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 }],
-  },
-  {
-    id: 'cat-saxo',
-    nombre: 'Saxo',
-    slug: 'saxo',
-    orden: 6,
-    subcategorias: [{ id: 'sub-saxo-soporte', categoriaId: 'cat-saxo', nombre: 'Soporte de celular', slug: SLUG_SOPORTE, orden: 0 }],
-  },
-];
+// Exportado para que productoService.ts pueda derivar Product.categoriaId
+// (instrumento) a partir de la subcategoría hoja guardada en product.category_id.
+export async function getCategoryRowsForProductMapper(): Promise<CategoryRow[]> {
+  return fetchCategoryRows();
+}
 
 export async function getCategorias(): Promise<Category[]> {
-  return categorias;
+  return mapCategoryRowsToCategories(await fetchCategoryRows());
 }
 
 export async function getCategoriaById(id: string): Promise<Category | null> {
+  const categorias = await getCategorias();
   return categorias.find((c) => c.id === id) ?? null;
 }
 

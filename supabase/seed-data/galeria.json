@@ -1,0 +1,8 @@
+[
+  { "type": "accessories", "image_url": "REEMPLAZAR_URL_IMAGEN", "title": "Soporte grabado con nombre", "sort_order": 0 },
+  { "type": "accessories", "image_url": "REEMPLAZAR_URL_IMAGEN", "title": "BERP personalizado en trombón", "sort_order": 1 },
+  { "type": "accessories", "image_url": "REEMPLAZAR_URL_IMAGEN", "title": "Sordina con logo de banda", "sort_order": 2 },
+  { "type": "projects", "image_url": "REEMPLAZAR_URL_IMAGEN", "title": "Escaneo 3D de pieza original", "sort_order": 0 },
+  { "type": "projects", "image_url": "REEMPLAZAR_URL_IMAGEN", "title": "Diseño CAD/CAE de repuesto", "sort_order": 1 },
+  { "type": "projects", "image_url": "REEMPLAZAR_URL_IMAGEN", "title": "Pieza reconstruida por ingeniería inversa", "sort_order": 2 }
+]

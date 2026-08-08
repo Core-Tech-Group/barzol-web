@@ -1,0 +1,32 @@
+[
+  {
+    "type": "section",
+    "title": "Soportes para celular",
+    "is_visible": true,
+    "sort_order": 0,
+    "productos_codigo": [5000, 5001, 5002, 5004, 5006]
+  },
+  {
+    "type": "banner",
+    "title": null,
+    "is_visible": true,
+    "sort_order": 1,
+    "image_url": null,
+    "link": null,
+    "productos_codigo": []
+  },
+  {
+    "type": "section",
+    "title": "Sordinas",
+    "is_visible": true,
+    "sort_order": 2,
+    "productos_codigo": [5010, 5011]
+  },
+  {
+    "type": "section",
+    "title": "BERP",
+    "is_visible": true,
+    "sort_order": 3,
+    "productos_codigo": [5013, 5014, 5015]
+  }
+]

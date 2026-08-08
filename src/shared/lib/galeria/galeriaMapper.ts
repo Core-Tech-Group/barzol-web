@@ -5,7 +5,7 @@ export interface GalleryItemRow {
   id: string;
   type: 'accessories' | 'projects';
   image_url: string | null;
-  title: string;
+  title: string | null;
   sort_order: number;
 }
 
@@ -19,7 +19,7 @@ export function mapGalleryItemRowToGalleryItem(row: GalleryItemRow): GalleryItem
     id: row.id,
     tipo: TYPE_TO_TIPO[row.type],
     imagenUrl: row.image_url,
-    titulo: row.title,
+    titulo: row.title ?? '',
     orden: row.sort_order,
   };
 }
