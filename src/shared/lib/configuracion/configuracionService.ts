@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { Configuracion } from '../../types';
 import { mapSiteConfigurationRowToConfiguracion } from './configuracionMapper';
 
@@ -8,7 +8,7 @@ import { mapSiteConfigurationRowToConfiguracion } from './configuracionMapper';
 // hardcodeados en Header.astro, Footer.astro y WhatsAppButton.astro.
 
 export async function getConfiguracion(): Promise<Configuracion> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('site_configuration')
     .select('id, whatsapp_number, contact_email, instagram_url, facebook_url, address')
     .limit(1)

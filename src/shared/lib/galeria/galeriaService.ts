@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { GalleryItem } from '../../types';
 import { mapGalleryItemRowToGalleryItem, type GalleryItemRow } from './galeriaMapper';
 
@@ -12,7 +12,7 @@ const TIPO_TO_TYPE: Record<GalleryItem['tipo'], GalleryItemRow['type']> = {
 };
 
 export async function getGaleria(tipo?: GalleryItem['tipo']): Promise<GalleryItem[]> {
-  let query = supabase.from('gallery_item').select('id, type, image_url, title, sort_order').order('sort_order');
+  let query = getSupabase().from('gallery_item').select('id, type, image_url, title, sort_order').order('sort_order');
   if (tipo) query = query.eq('type', TIPO_TO_TYPE[tipo]);
   const { data, error } = await query;
   if (error) throw error;

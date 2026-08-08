@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { Product, Vendor } from '../../types';
 import { mapProductoRowToProduct, type ProductoRow } from './productoMapper';
 import { getCategoryRowsForProductMapper } from '../categorias/categoriaService';
@@ -30,7 +30,7 @@ function toProductoRow(r: any): ProductoRow {
 
 export async function getProductos(): Promise<Product[]> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase.from('product').select(PRODUCT_SELECT),
+    getSupabase().from('product').select(PRODUCT_SELECT),
     getCategoryRowsForProductMapper(),
   ]);
   if (error) throw error;
@@ -39,7 +39,7 @@ export async function getProductos(): Promise<Product[]> {
 
 export async function getProductoById(id: string): Promise<Product | null> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase.from('product').select(PRODUCT_SELECT).eq('id', Number(id)).maybeSingle(),
+    getSupabase().from('product').select(PRODUCT_SELECT).eq('id', Number(id)).maybeSingle(),
     getCategoryRowsForProductMapper(),
   ]);
   if (error) throw error;
@@ -47,7 +47,7 @@ export async function getProductoById(id: string): Promise<Product | null> {
 }
 
 export async function getVendors(): Promise<Vendor[]> {
-  const { data, error } = await supabase.from('vendor').select('id, name').order('name');
+  const { data, error } = await getSupabase().from('vendor').select('id, name').order('name');
   if (error) throw error;
   return (data ?? []).map((r) => ({ id: String(r.id), nombre: r.name }));
 }

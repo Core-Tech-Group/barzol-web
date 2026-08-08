@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { Category } from '../../types';
 import { mapCategoryRowsToCategories, type CategoryRow } from './categoriaMapper';
 
@@ -10,7 +10,7 @@ import { mapCategoryRowsToCategories, type CategoryRow } from './categoriaMapper
 // una taxonomía alternativa.
 
 async function fetchCategoryRows(): Promise<CategoryRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('category')
     .select('id, parent_category_id, code, name, sort_order, is_active')
     .order('sort_order');

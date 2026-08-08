@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { HomeHeroImage, HomeItem } from '../../types';
 import { mapHomeHeroImageRowToHomeHeroImage, mapHomeItemRowToHomeItem } from './homeMapper';
 
@@ -6,7 +6,7 @@ import { mapHomeHeroImageRowToHomeHeroImage, mapHomeItemRowToHomeItem } from './
 // unificada y reordenable de secciones de productos y banners.
 
 export async function getHeroImages(): Promise<HomeHeroImage[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('home_hero_image')
     .select('id, image_url, sort_order')
     .order('sort_order');
@@ -15,7 +15,7 @@ export async function getHeroImages(): Promise<HomeHeroImage[]> {
 }
 
 export async function getHomeItems(): Promise<HomeItem[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('home_item')
     .select('id, type, title, is_visible, sort_order, image_url, link, home_section_product(product_id, sort_order)')
     .order('sort_order');
