@@ -2,8 +2,8 @@
 dist/
 # generated types
 .astro/
-# cloudflare local cache
-.wrangler/
+# vercel local cache y salida del adaptador
+.vercel/
 
 # dependencies
 node_modules/

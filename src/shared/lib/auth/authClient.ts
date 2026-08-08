@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import type { AstroCookies } from 'astro';
+import { requireServerEnv } from '@shared/lib/env/serverEnv';
 
 // Dominio del email sintético interno (ver DATABASE_SCHEMA.md § Nota sobre
 // login del admin, Escenario B). El admin nunca ve ni usa este email — solo
@@ -25,13 +26,11 @@ function parseCookieHeader(header: string): { name: string; value: string }[] {
 // que no existe en SSR) — necesario para que /admin/** y las rutas de
 // escritura de /api/** puedan saber, en cada request, si hay un admin logueado.
 export function createSupabaseServerClient(request: Request, cookies: AstroCookies) {
-  const url = import.meta.env.BARZOL_SUPABASE_URL;
-  const anonKey = import.meta.env.BARZOL_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
-    throw new Error('Faltan BARZOL_SUPABASE_URL / BARZOL_SUPABASE_ANON_KEY. Copiá .env.example a .env y completá los valores del proyecto de Supabase.');
-  }
+  // Ver la nota en `shared/lib/db/client.ts`: la lectura va por `requireServerEnv`
+  // y no por `import.meta.env.X`, que Vite congela en build time.
+  const env = requireServerEnv(['BARZOL_SUPABASE_URL', 'BARZOL_SUPABASE_ANON_KEY']);
 
-  return createServerClient(url, anonKey, {
+  return createServerClient(env.BARZOL_SUPABASE_URL, env.BARZOL_SUPABASE_ANON_KEY, {
     cookies: {
       getAll: () => parseCookieHeader(request.headers.get('cookie') ?? ''),
       setAll: (cookiesToSet) => {

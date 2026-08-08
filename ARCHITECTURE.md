@@ -18,14 +18,31 @@ Sitio web tipo catálogo para Barzol: home, catálogo de productos por categorí
 | Almacenamiento de imágenes | Cloudflare R2 (plan Free) |
 | ORM | Drizzle o Prisma (a definir) |
 | Validación de datos | Zod |
-| Hosting | Cloudflare Pages (plan Free) |
-| Modo de renderizado | `output: 'server'` + `@astrojs/cloudflare` (requerido por el admin: POST/PUT/DELETE no funcionan en modo estático puro) |
+| Hosting | Vercel (plan Hobby) |
+| Modo de renderizado | `output: 'server'` + `@astrojs/vercel` (requerido por el admin: POST/PUT/DELETE no funcionan en modo estático puro) |
 | Dominio | Registrador a definir (~S/. 40-70/año) |
 | Color primario de marca | `#1e4d8c` |
 
 ### Justificación de costos
 
 Presupuesto anual acordado: S/. 160-330. Con este stack, el único gasto real es el dominio (~S/. 40-70/año); hosting, base de datos e imágenes corren en planes gratuitos. Ver sección [Riesgos y mitigaciones](#riesgos-y-mitigaciones).
+
+### Variables de entorno
+
+Todas las variables son **de servidor**: al no llevar el prefijo `PUBLIC_`, Astro no las incluye en el bundle del navegador. Renombrar cualquiera a `PUBLIC_*` filtraría el secreto al cliente.
+
+Se leen **siempre** con `requireServerEnv()` / `readServerEnv()` de `shared/lib/env/serverEnv.ts`, nunca con `import.meta.env.BARZOL_*` directo. El motivo no es estilístico: Vite sustituye cada acceso `import.meta.env.X` por su valor **de build time**, y si la variable no estaba definida en ese momento deja `undefined` fijo en el bundle. Con un patrón como `if (!url) throw ...` eso pliega la condición en un `throw` incondicional y elimina el resto como código muerto — el despliegue falla en cada request aunque Vercel tenga las variables bien cargadas. `serverEnv` consulta también `process.env`, que en Vercel sí refleja el valor en runtime.
+
+| Variable | Uso |
+|---|---|
+| `BARZOL_SUPABASE_URL` / `BARZOL_SUPABASE_ANON_KEY` | Cliente de datos y sesión del admin |
+| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | Reservada — saltar RLS; hoy sin uso |
+| `BARZOL_R2_ACCOUNT_ID` | Deriva el endpoint S3: `https://<id>.r2.cloudflarestorage.com` |
+| `BARZOL_R2_ACCESS_KEY` / `BARZOL_R2_SECRET_KEY` | Credenciales S3 del token de R2 |
+| `BARZOL_R2_BUCKET_NAME` | Bucket de multimedia (`barzol-web`) |
+| `BARZOL_R2_PUBLIC_URL` | Base pública de lectura, sin barra final |
+
+En local viven en `.env` (ignorado por git); en producción, en Vercel → Project Settings → Environment Variables. `.env.example` es la plantilla y sí se versiona.
 
 ## Estructura de Carpetas
 
@@ -54,8 +71,10 @@ src/
 │       ├── categorias/
 │       │   ├── index.ts
 │       │   └── [id].ts
-│       └── galeria/
-│           └── index.ts
+│       ├── galeria/
+│       │   └── index.ts
+│       └── media/
+│           └── firma.ts        # POST — URL prefirmada para subir a R2 (no recibe el archivo)
 │
 ├── landing/                      # TODO lo del visitante — una carpeta por vista, nada más entra aquí
 │   ├── layout/
@@ -117,10 +136,17 @@ src/
     │   ├── configuracion/
     │   │   ├── configuracionService.ts  # ÚNICA fuente de la configuración del sitio (WhatsApp, contacto, redes, banner de personalización) — tabla singleton
     │   │   └── configuracionMapper.ts   # fila cruda de `site_configuration` → `Configuracion`
-    │   ├── storage/
-    │   │   └── r2Client.ts          # Cliente de Cloudflare R2
+    │   ├── env/
+    │   │   └── serverEnv.ts         # ÚNICA lectura de variables de entorno del servidor
+    │   ├── storage/                 # Cloudflare R2 — una responsabilidad por archivo
+    │   │   ├── r2Config.ts          # Resuelve y cachea las 5 variables BARZOL_R2_*
+    │   │   ├── r2Client.ts          # Instancia S3Client (region 'auto') sobre esa config
+    │   │   ├── mediaKey.ts          # Funciones puras: sanea el nombre y arma la clave del objeto
+    │   │   └── r2Presign.ts         # Firma la subida directa navegador → R2
     │   ├── validation/
-    │   │   └── [entidad]Schema.ts   # Schemas de Zod, uno por entidad
+    │   │   ├── [entidad]Schema.ts   # Schemas de Zod, uno por entidad
+    │   │   ├── mediaSchema.ts       # Allow-list de MIME + límites de tamaño de la subida
+    │   │   └── zodError.ts          # ZodError → texto de `ApiResponse.message`
     │   └── errors/
     │       └── apiError.ts          # Manejo de errores centralizado
     ├── styles/
@@ -191,7 +217,20 @@ src/
 - **Ubicación:** un schema por entidad en `shared/lib/validation/[entidad]Schema.ts` (ej. `productoSchema.ts`).
 - **Regla:** todo `Request` que llega a `pages/api/**` se valida contra su schema de Zod antes de tocar `shared/lib/[feature]/[feature]Service.ts`. Si la validación falla, se responde con el formato de error definido abajo — el endpoint nunca llega al service con datos sin validar.
 
-> **Estado actual:** no implementado todavía. `pages/api/**` sigue devolviendo `ApiResponse<T>` sin pasar por Zod — pendiente para cuando se conecte Supabase.
+> **Estado actual:** parcial. Zod ya está instalado y `POST /api/media/firma` valida contra `mediaSchema.ts` antes de tocar nada, devolviendo 400 con el detalle por campo (formateado por `zodError.ts`). Los endpoints de productos, categorías y galería siguen pasando el body sin validar — pendiente.
+
+### Storage de multimedia (Cloudflare R2)
+
+Las subidas van **directas del navegador a R2** mediante URL prefirmada; el archivo nunca atraviesa el servidor. Dos razones: las funciones serverless de Vercel topan alrededor de 4.5 MB de cuerpo de request, y proxear la transferencia consumiría tiempo de ejecución por cada MB.
+
+Flujo: el admin pide firma a `POST /api/media/firma` (protegido por el middleware) → el endpoint valida carpeta, nombre, MIME y tamaño → devuelve `{ key, uploadUrl, publicUrl, expiresIn }` → el navegador hace `PUT` contra `uploadUrl` → se guarda `publicUrl` en Supabase.
+
+Reglas que sostienen el diseño:
+
+- **`ContentType` y `ContentLength` van dentro del comando firmado**, no solo validados antes. Eso los ata a la firma y R2 rechaza con 403 un PUT que declare una cosa y suba otra. Sin esto el límite de tamaño sería decorativo.
+- **Allow-list de MIME, nunca deny-list.** `image/svg+xml` queda fuera a propósito: un SVG servido desde nuestro dominio público es un XSS almacenado.
+- **La carpeta es un enum cerrado** (`productos` | `galeria` | `home`) y el nombre de archivo se sanea descartando cualquier componente de ruta, así que no se puede escribir fuera del prefijo previsto.
+- **La clave lleva un UUID por delante del nombre** — en R2 un PUT sobre una clave existente sobrescribe sin avisar.
 
 ## Manejo de Errores
 
@@ -244,6 +283,8 @@ Ver [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md) — diagrama entidad-relación co
 | Pausa por inactividad (Supabase Free) | Sin actividad 7 días | Ping automático diario (ej. cron-job.org, gratis) para mantener la BD activa |
 | Salto de costo al superar plan gratis | Crecimiento de datos/tráfico | ORM (Drizzle/Prisma) para poder migrar de proveedor de BD sin reescribir código |
 | Pérdida de imágenes en cada deploy | Sistema de archivos no persistente en algunos hosts | Imágenes siempre en R2, nunca en `/public` del repo |
+| Factura sorpresa por egress de imágenes | Tráfico de salida al servir multimedia | R2 no cobra egress (esa es la ventaja frente a S3). El riesgo real es el egress de Vercel si las imágenes se sirvieran desde el dominio del sitio — por eso se sirven desde la URL pública del bucket, no proxeadas |
+| Build de producción que arranca roto | Variables leídas con `import.meta.env`, congeladas en build time | Lectura obligatoria vía `shared/lib/env/serverEnv.ts`, que consulta `process.env` en runtime. Ver Changelog |
 | Cómputo compartido más lento (Supabase Free) | Recursos compartidos entre proyectos | Aceptable para el volumen de tráfico esperado; reevaluar si el catálogo crece mucho |
 
 ## Decisiones Clave
@@ -273,3 +314,9 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Reestructuración por zonas | `Pagination.astro` se dejó en `landing/busqueda/` pero también lo importa `CatalogoView.astro` | Se siguió la instrucción explícita de ubicarlo en `busqueda/`; en sentido estricto, al usarlo 2 vistas debería vivir en `landing/shared/` — queda como ajuste pendiente a validar |
 | Reestructuración por zonas | `admin/layout/AdminLayout.astro` creado como equivalente funcional del antiguo `BaseLayout.astro` (sin nav propia todavía) | La reestructuración fue solo movimiento de archivos, sin agregar lógica/UI nueva; la nav real del admin queda como tarea aparte |
 | Panel admin completo | Esquema de base de datos movido a `DATABASE_SCHEMA.md`, con diagrama Mermaid completo (categorías de 2 niveles, fotos/características de producto, home_items unificado, galería, configuración, admin_profiles) | El borrador de 3 tablas original no reflejaba ninguna de las pantallas reales construidas en `admin/` (Productos, Categorías, Página de inicio, Galería) |
+| Perfil Vercel + R2 (2026-08-08) | Hosting migrado de Cloudflare Pages a **Vercel**: `@astrojs/vercel` reemplaza a `@astrojs/cloudflare`, se eliminan `wrangler.jsonc`, la dependencia `wrangler` y el script `generate-types` | Decisión del equipo. Astro admite un solo adaptador activo, así que mantener ambos habría exigido duplicar la ruta de storage (binding nativo en workerd vs. API S3 en Node) y verificar dos builds por release |
+| Perfil Vercel + R2 (2026-08-08) | Las subidas a R2 usan **URL prefirmada** (navegador → R2 directo) en vez de proxy por el servidor | El límite de ~4.5 MB de cuerpo en funciones serverless de Vercel deja fuera fotos de catálogo y video; además el proxy cobraría tiempo de función por cada MB transferido |
+| Perfil Vercel + R2 (2026-08-08) | R2 se consume por **API S3** (`@aws-sdk/client-s3`) y no por binding nativo | Fuera de workerd no existen los bindings de Cloudflare. La API S3 es la vía soportada desde cualquier runtime Node |
+| Perfil Vercel + R2 (2026-08-08) | Toda variable de entorno se lee por `shared/lib/env/serverEnv.ts`; queda **prohibido** `import.meta.env.BARZOL_*` directo | Vite congela esos accesos en build time. Se detectó que `db/client.ts` compilaba a un `throw` incondicional con el `createClient` eliminado como código muerto: el sitio habría fallado en cada request en producción con las variables correctamente cargadas |
+| Perfil Vercel + R2 (2026-08-08) | `ContentType` y `ContentLength` se incluyen en el comando firmado | Atarlos a la firma hace que R2 rechace (403) un PUT que no coincida con lo declarado. Verificado contra el bucket real |
+| Perfil Vercel + R2 (2026-08-08) | `image/svg+xml` excluido de la allow-list de subida | Un SVG servido desde el dominio público del bucket es un vector de XSS almacenado |
