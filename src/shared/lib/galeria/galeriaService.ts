@@ -1,4 +1,5 @@
 import { supabase } from '../db/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GalleryItem } from '../../types';
 import { mapGalleryItemRowToGalleryItem, type GalleryItemRow } from './galeriaMapper';
 
@@ -21,8 +22,40 @@ export async function getGaleria(tipo?: GalleryItem['tipo']): Promise<GalleryIte
   );
 }
 
-export async function addGaleriaItem(
-  data: Omit<GalleryItem, 'id'>
-): Promise<GalleryItem> {
-  throw new Error('Not implemented');
+export interface GaleriaWriteInput {
+  tipo: GalleryItem['tipo'];
+  titulo: string;
+  imagenUrl: string;
+  orden: number;
+}
+
+export async function createGaleriaItem(
+  supabaseAuth: SupabaseClient,
+  input: GaleriaWriteInput
+): Promise<{ id: string }> {
+  const { data, error } = await supabaseAuth
+    .from('gallery_item')
+    .insert({ type: TIPO_TO_TYPE[input.tipo], title: input.titulo, image_url: input.imagenUrl, sort_order: input.orden })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return { id: String(data.id) };
+}
+
+export async function updateGaleriaItem(
+  supabaseAuth: SupabaseClient,
+  id: string,
+  input: GaleriaWriteInput
+): Promise<{ id: string }> {
+  const { error } = await supabaseAuth
+    .from('gallery_item')
+    .update({ type: TIPO_TO_TYPE[input.tipo], title: input.titulo, image_url: input.imagenUrl, sort_order: input.orden })
+    .eq('id', Number(id));
+  if (error) throw error;
+  return { id };
+}
+
+export async function deleteGaleriaItem(supabaseAuth: SupabaseClient, id: string): Promise<void> {
+  const { error } = await supabaseAuth.from('gallery_item').delete().eq('id', Number(id));
+  if (error) throw error;
 }

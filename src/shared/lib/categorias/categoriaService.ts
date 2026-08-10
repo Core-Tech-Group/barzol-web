@@ -1,4 +1,5 @@
 import { supabase } from '../db/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Category } from '../../types';
 import { mapCategoryRowsToCategories, type CategoryRow } from './categoriaMapper';
 
@@ -40,19 +41,60 @@ export async function getCategoriaById(id: string): Promise<Category | null> {
   return categorias.find((c) => c.id === id) ?? null;
 }
 
+// Escritura: category y subcategory son la MISMA tabla (autorreferenciada) —
+// una subcategoría es, para efectos de escritura, una fila de `category` con
+// parentId apuntando a otra. `code` no se manda: lo asigna la secuencia
+// `category_code_seq` (DEFAULT de la columna, ver supabase/schema.sql).
+//
+// Requiere el cliente autenticado (no el `supabase` anónimo de arriba) — las
+// policies de RLS de escritura exigen `auth.uid()` en `admin_profile`. Lo
+// arma cada endpoint de /api/categorias/** a partir de la cookie de sesión.
+export interface CategoriaWriteInput {
+  nombre: string;
+  parentId: string | null;
+  orden: number;
+}
+
 export async function createCategoria(
-  data: Omit<Category, 'id'>
-): Promise<Category> {
-  throw new Error('Not implemented');
+  supabaseAuth: SupabaseClient,
+  input: CategoriaWriteInput
+): Promise<{ id: string }> {
+  const { data, error } = await supabaseAuth
+    .from('category')
+    .insert({
+      name: input.nombre,
+      parent_category_id: input.parentId ? Number(input.parentId) : null,
+      sort_order: input.orden,
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return { id: String(data.id) };
 }
 
 export async function updateCategoria(
+  supabaseAuth: SupabaseClient,
   id: string,
-  data: Partial<Omit<Category, 'id'>>
-): Promise<Category> {
-  throw new Error('Not implemented');
+  input: CategoriaWriteInput
+): Promise<{ id: string }> {
+  const { error } = await supabaseAuth
+    .from('category')
+    .update({
+      name: input.nombre,
+      parent_category_id: input.parentId ? Number(input.parentId) : null,
+      sort_order: input.orden,
+    })
+    .eq('id', Number(id));
+  if (error) throw error;
+  return { id };
 }
 
-export async function deleteCategoria(id: string): Promise<void> {
-  throw new Error('Not implemented');
+export async function deleteCategoria(supabaseAuth: SupabaseClient, id: string): Promise<void> {
+  const { error } = await supabaseAuth.from('category').delete().eq('id', Number(id));
+  if (error) {
+    if (error.code === '23503') {
+      throw new Error('No se puede eliminar: hay productos asignados a esta categoría (o a alguna de sus subcategorías).');
+    }
+    throw error;
+  }
 }

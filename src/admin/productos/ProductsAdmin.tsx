@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
+import Toast from '@admin/shared/Toast.tsx';
+import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
+import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
 
 export interface AdminProduct {
   id: string;
@@ -101,6 +104,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   // null = cerrado, -1 = creando nuevo, >=0 = editando products[index]
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  // Vista previa local del archivo elegido (blob: URL, solo para mostrar en
+  // esta sesión de edición) — lo que se guarda de verdad es el nombre del
+  // archivo (editDraft.photos[i]), nunca el contenido en base64.
+  const [photoPreviews, setPhotoPreviews] = useState<Record<number, string>>({});
   const [showValidation, setShowValidation] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<'cat' | 'sub' | null>(null);
   const [catSearchQuery, setCatSearchQuery] = useState('');
@@ -109,6 +116,27 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   const [delConfirmIndex, setDelConfirmIndex] = useState(-1);
   const [navConfirmOpen, setNavConfirmOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [savingMessage, setSavingMessage] = useState('Guardando producto...');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const errorTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const msg = consumeSuccessMessage();
+    if (msg) {
+      setSuccessMsg(msg);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  }, []);
+
+  function showError(message: string) {
+    clearTimeout(errorTimer.current);
+    setErrorMsg(message);
+    errorTimer.current = setTimeout(() => setErrorMsg(null), 3600);
+  }
 
   const dragPhoto = useRef<{ from: number } | null>(null);
   const [overPhoto, setOverPhoto] = useState<number | null>(null);
@@ -153,13 +181,22 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
   // ---------- Acciones sobre productos ----------
 
+  function resetPhotoPreviews() {
+    setPhotoPreviews((prev) => {
+      Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+      return {};
+    });
+  }
+
   function openEdit(i: number) {
+    resetPhotoPreviews();
     setEditDraft(draftFromProduct(products[i]));
     setEditIndex(i);
     setShowValidation(false);
   }
 
   function openNewProduct() {
+    resetPhotoPreviews();
     const firstCat = categories.find((c) => c !== 'Todas') || '';
     setEditDraft(emptyDraft(firstCat, instrumentsByCategory, vendors[0] || 'BARZOL'));
     setEditIndex(-1);
@@ -167,13 +204,33 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   }
 
   function closeEdit() {
+    if (saving) return;
+    resetPhotoPreviews();
     setEditIndex(null);
     setEditDraft(null);
     setShowValidation(false);
     setOpenDropdown(null);
   }
 
-  function saveEdit() {
+  function draftToWriteInput(draft: EditDraft, cleanFeatures: string[]) {
+    return {
+      nombre: draft.name.trim(),
+      categoriaNombre: draft.category,
+      subcategoriaNombre: draft.instrument || null,
+      vendorNombre: draft.vendor,
+      precio: Number(draft.price),
+      precioOriginal: draft.originalPrice.trim() ? Number(draft.originalPrice) : null,
+      descripcion: draft.description,
+      keywords: draft.keywords,
+      caracteristicas: cleanFeatures,
+      fotos: draft.photos.filter((p): p is string => !!p),
+      publicado: draft.statusLabel === 'Publicado',
+      activo: draft.active,
+      personalizable: draft.customizable,
+    };
+  }
+
+  async function saveEdit() {
     if (!editDraft) return;
     const needsPhoto = editDraft.statusLabel === 'Publicado' && editDraft.active;
     const hasPhoto = editDraft.photos.some(Boolean);
@@ -195,42 +252,77 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     }
 
     const cleanFeatures = editDraft.features.filter((f) => f.trim().length > 0);
+    const payload = draftToWriteInput(editDraft, cleanFeatures);
+    const isNew = editIndex === -1;
+    const url = isNew ? '/api/productos' : `/api/productos/${products[editIndex as number].id}`;
 
-    if (editIndex === -1) {
-      const newProduct: AdminProduct = {
-        id: 'p' + Date.now(),
-        ...editDraft,
-        features: cleanFeatures,
-      };
-      setProducts((prev) => [...prev, newProduct]);
-    } else if (editIndex !== null) {
-      setProducts((prev) =>
-        prev.map((p, i) => (i === editIndex ? { ...p, ...editDraft, features: cleanFeatures } : p))
-      );
+    setSaving(true);
+    setSavingMessage('Guardando producto...');
+    try {
+      const res = await fetch(url, {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo guardar el producto.');
+      window.__adminHasUnsavedChanges = false;
+      queueSuccessMessage(isNew ? 'Producto creado exitosamente' : 'Producto actualizado exitosamente');
+      window.location.reload();
+    } catch (e) {
+      setSaving(false);
+      showError((e as Error).message);
     }
-    closeEdit();
   }
 
   function toggleActive(i: number) {
     setProducts((prev) => prev.map((p, idx) => (idx === i ? { ...p, active: !p.active } : p)));
   }
 
-  function confirmDuplicate() {
+  async function confirmDuplicate() {
     if (dupConfirmIndex < 0) return;
-    setProducts((prev) => {
-      const src = prev[dupConfirmIndex];
-      const copy: AdminProduct = { ...src, id: 'p' + Date.now(), name: src.name + ' (copia)', statusLabel: 'Borrador', features: [...src.features], photos: [...src.photos] };
-      const next = [...prev];
-      next.splice(dupConfirmIndex + 1, 0, copy);
-      return next;
-    });
-    setDupConfirmIndex(-1);
+    const src = products[dupConfirmIndex];
+    const draft = draftFromProduct(src);
+    draft.name = src.name + ' (copia)';
+    draft.statusLabel = 'Borrador';
+    const payload = draftToWriteInput(draft, draft.features);
+
+    setSaving(true);
+    setSavingMessage('Duplicando producto...');
+    try {
+      const res = await fetch('/api/productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo duplicar el producto.');
+      queueSuccessMessage('Producto duplicado exitosamente');
+      window.location.reload();
+    } catch (e) {
+      setSaving(false);
+      showError((e as Error).message);
+    } finally {
+      setDupConfirmIndex(-1);
+    }
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (delConfirmIndex < 0) return;
-    setProducts((prev) => prev.filter((_, idx) => idx !== delConfirmIndex));
-    setDelConfirmIndex(-1);
+    const target = products[delConfirmIndex];
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/productos/${target.id}`, { method: 'DELETE' });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo eliminar el producto.');
+      queueSuccessMessage('Producto eliminado exitosamente');
+      window.location.reload();
+    } catch (e) {
+      setDeleting(false);
+      showError((e as Error).message);
+    } finally {
+      setDelConfirmIndex(-1);
+    }
   }
 
   function confirmNavigate() {
@@ -238,33 +330,46 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     if (pendingHref) window.location.href = pendingHref;
   }
 
-  // ---------- Fotos: drag & drop nativo + input file con preview local ----------
+  // ---------- Fotos: se elige el archivo del escritorio (para que el admin
+  // vea una vista previa real), pero lo que se guarda es solo el NOMBRE del
+  // archivo — nunca el contenido en base64. Eso es lo que volvía pesado cada
+  // guardado; se resuelve del todo recién cuando se conecte R2 (ahí este
+  // nombre se reemplaza por la URL real que devuelva la subida). ----------
 
-  function readFileAsDataURL(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  function handlePhotoFile(index: number, file: File | null) {
+    if (!file) return;
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoPreviews((prev) => {
+      const old = prev[index];
+      if (old) URL.revokeObjectURL(old);
+      return { ...prev, [index]: previewUrl };
     });
-  }
-
-  async function handlePhotosSelected(files: FileList | null) {
-    if (!files || !editDraft) return;
-    const emptyIndexes = editDraft.photos.map((p, i) => (p === null ? i : -1)).filter((i) => i >= 0);
-    const toRead = Array.from(files).slice(0, emptyIndexes.length);
-    const urls = await Promise.all(toRead.map(readFileAsDataURL));
     setEditDraft((d) => {
       if (!d) return d;
       const photos = [...d.photos];
-      urls.forEach((url, k) => {
-        photos[emptyIndexes[k]] = url;
-      });
+      photos[index] = file.name;
       return { ...d, photos };
     });
   }
 
+  // Botón de arriba: elegir varias fotos de una — llena los espacios vacíos
+  // en orden, una llamada a handlePhotoFile por archivo.
+  function handlePhotosSelected(files: FileList | null) {
+    if (!files || !editDraft) return;
+    const emptyIndexes = editDraft.photos.map((p, i) => (p === null ? i : -1)).filter((i) => i >= 0);
+    Array.from(files)
+      .slice(0, emptyIndexes.length)
+      .forEach((file, k) => handlePhotoFile(emptyIndexes[k], file));
+  }
+
   function removePhoto(index: number) {
+    setPhotoPreviews((prev) => {
+      const old = prev[index];
+      if (old) URL.revokeObjectURL(old);
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
     setEditDraft((d) => {
       if (!d) return d;
       const photos = [...d.photos];
@@ -274,6 +379,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   }
 
   function swapPhotos(a: number, b: number) {
+    setPhotoPreviews((prev) => ({ ...prev, [a]: prev[b], [b]: prev[a] }));
     setEditDraft((d) => {
       if (!d) return d;
       const photos = [...d.photos];
@@ -585,6 +691,33 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
         </div>
       </div>
 
+      {(saving || deleting) && <SavingOverlay message={deleting ? 'Eliminando producto...' : savingMessage} />}
+
+      {successMsg && (
+        <Toast
+          message={successMsg}
+          background="var(--color-success)"
+          icon={
+            <Icon size={16}>
+              <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </Icon>
+          }
+        />
+      )}
+
+      {errorMsg && (
+        <Toast
+          message={errorMsg}
+          background="var(--color-danger)"
+          icon={
+            <Icon size={16}>
+              <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
+              <path d="M12 8v5M12 16h.01" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </Icon>
+          }
+        />
+      )}
+
       {/* MODAL: SALIR SIN GUARDAR */}
       {navConfirmOpen && (
         <ConfirmModal
@@ -692,75 +825,91 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                     Subir fotos
                   </label>
                 </div>
-                <div style={{ display: 'flex', gap: 10, rowGap: 12, flexWrap: 'wrap' }}>
-                  {editDraft.photos.map((photo, i) => (
-                    <div
-                      key={i}
-                      draggable={!!photo}
-                      onDragStart={() => {
-                        if (photo) dragPhoto.current = { from: i };
-                      }}
-                      onDragEnter={(e) => {
-                        if (dragPhoto.current) {
+                <div style={{ display: 'flex', gap: 12, rowGap: 16, flexWrap: 'wrap' }}>
+                  {editDraft.photos.map((photo, i) => {
+                    const preview = photoPreviews[i];
+                    return (
+                      <div
+                        key={i}
+                        draggable={!!photo}
+                        onDragStart={() => {
+                          if (photo) dragPhoto.current = { from: i };
+                        }}
+                        onDragEnter={(e) => {
+                          if (dragPhoto.current) {
+                            e.preventDefault();
+                            setOverPhoto(i);
+                          }
+                        }}
+                        onDragOver={(e) => {
+                          if (dragPhoto.current) e.preventDefault();
+                        }}
+                        onDrop={(e) => {
                           e.preventDefault();
-                          setOverPhoto(i);
-                        }
-                      }}
-                      onDragOver={(e) => {
-                        if (dragPhoto.current) e.preventDefault();
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (dragPhoto.current && dragPhoto.current.from !== i) {
-                          swapPhotos(dragPhoto.current.from, i);
-                        }
-                        dragPhoto.current = null;
-                        setOverPhoto(null);
-                      }}
-                      onDragEnd={() => {
-                        dragPhoto.current = null;
-                        setOverPhoto(null);
-                      }}
-                      style={{
-                        position: 'relative',
-                        width: 100,
-                        height: 100,
-                        flexShrink: 0,
-                        borderRadius: 8,
-                        outline: overPhoto === i ? '2px solid var(--color-primary)' : 'none',
-                        outlineOffset: 2,
-                        cursor: photo ? 'grab' : 'default',
-                        background: 'var(--color-surface-muted)',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {photo ? (
-                        <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      ) : (
-                        <label style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-faint)', fontSize: 10, textAlign: 'center', padding: 4 }}>
-                          <input type="file" accept="image/*" hidden onChange={(e) => handlePhotosSelected(e.target.files)} />
-                          {i === 0 ? 'Foto principal' : `Foto ${i + 1}`}
-                        </label>
-                      )}
-                      <div style={{ position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 5, background: 'rgba(17,24,39,0.65)', color: 'white', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                        {i + 1}
-                      </div>
-                      {photo && (
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(i)}
-                          title="Quitar foto"
-                          style={{ position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 5, background: 'rgba(17,24,39,0.65)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                          if (dragPhoto.current && dragPhoto.current.from !== i) {
+                            swapPhotos(dragPhoto.current.from, i);
+                          }
+                          dragPhoto.current = null;
+                          setOverPhoto(null);
+                        }}
+                        onDragEnd={() => {
+                          dragPhoto.current = null;
+                          setOverPhoto(null);
+                        }}
+                        style={{ width: 130, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
+                      >
+                        <div
+                          style={{
+                            position: 'relative',
+                            width: 130,
+                            height: 100,
+                            borderRadius: 8,
+                            outline: overPhoto === i ? '2px solid var(--color-primary)' : 'none',
+                            outlineOffset: 2,
+                            cursor: photo ? 'grab' : 'default',
+                            background: 'var(--color-surface-muted)',
+                            overflow: 'hidden',
+                          }}
                         >
-                          <Icon size={10}>
-                            <path d="M6 6l12 12M18 6L6 18" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-                          </Icon>
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                          {preview ? (
+                            <label style={{ width: '100%', height: '100%', display: 'block', cursor: 'pointer' }}>
+                              <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
+                              <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            </label>
+                          ) : photo ? (
+                            <label style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 10.5, fontWeight: 600, textAlign: 'center', padding: 6, overflowWrap: 'anywhere' }}>
+                              <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
+                              {photo}
+                            </label>
+                          ) : (
+                            <label style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-faint)', fontSize: 10, textAlign: 'center', padding: 4 }}>
+                              <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
+                              {i === 0 ? 'Foto principal' : `Foto ${i + 1}`}
+                            </label>
+                          )}
+                          <div style={{ position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 5, background: 'rgba(17,24,39,0.65)', color: 'white', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                            {i + 1}
+                          </div>
+                          {photo && (
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(i)}
+                              title="Quitar foto"
+                              style={{ position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 5, background: 'rgba(17,24,39,0.65)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                            >
+                              <Icon size={10}>
+                                <path d="M6 6l12 12M18 6L6 18" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+                              </Icon>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 6 }}>La foto 1 es la principal. Arrastra las fotos para reordenar.</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 10 }}>
+                  La foto 1 es la principal. Arrastra las tarjetas para reordenar. Por ahora se guarda el nombre del archivo, no la imagen — la subida real se conecta más adelante con R2.
+                </div>
                 {showValidation && editDraft.statusLabel === 'Publicado' && editDraft.active && !editDraft.photos.some(Boolean) && (
                   <div style={{ fontSize: 11, color: 'var(--color-danger)', fontWeight: 600, marginTop: 4 }}>Un producto publicado y activo necesita al menos 1 foto</div>
                 )}
@@ -1099,11 +1248,11 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
             </div>
 
             <div style={{ display: 'flex', gap: 10, padding: '18px 22px', borderTop: '1px solid var(--color-border-faint)', flexShrink: 0 }}>
-              <button type="button" onClick={closeEdit} style={{ flex: 1, padding: 11, borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'white', color: 'var(--color-text-soft)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={closeEdit} disabled={saving} style={{ flex: 1, padding: 11, borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'white', color: 'var(--color-text-soft)', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
                 Cancelar
               </button>
-              <button type="button" onClick={saveEdit} style={{ flex: 1, padding: 11, borderRadius: 8, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
-                Guardar cambios
+              <button type="button" onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: 11, borderRadius: 8, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 13.5, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.75 : 1 }}>
+                {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </div>

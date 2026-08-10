@@ -16,19 +16,21 @@ export const GET: APIRoute = async ({ params }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ params, request }) => {
+// El cliente autenticado ya lo armó y validó el middleware — se reusa desde
+// locals en vez de crear uno nuevo y volver a autenticar.
+export const PUT: APIRoute = async ({ params, request, locals }) => {
   try {
     const body = await request.json();
-    const categoria = await updateCategoria(params.id!, body);
+    const categoria = await updateCategoria(locals.supabase!, params.id!, body);
     return jsonResponse(categoria);
   } catch (error) {
     return errorResponse((error as Error).message);
   }
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
-    await deleteCategoria(params.id!);
+    await deleteCategoria(locals.supabase!, params.id!);
     return jsonResponse(null);
   } catch (error) {
     return errorResponse((error as Error).message);

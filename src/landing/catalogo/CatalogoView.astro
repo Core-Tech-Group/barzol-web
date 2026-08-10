@@ -5,6 +5,7 @@ import ProductCard from '@landing/producto/ProductCard.astro';
 import Pagination from '@landing/busqueda/Pagination.astro';
 import { getProductos } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
+import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 interface Props {
   categoria?: string;
@@ -24,7 +25,7 @@ const matched = categoriaActual ? productosDb.filter((p) => p.categoriaId === ca
 // Sub-filtro por tipo de accesorio (subcategoría) dentro del instrumento.
 const instrumentos = ['Todos', ...(categoriaActual?.subcategorias.map((s) => s.nombre) ?? [])];
 
-const products = matched.map((p) => ({ id: p.id, href: `/producto/${p.slug}`, nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
+const products = matched.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
 ---
 
 <PublicLayout title={`${categoryName} — Barzol`}>

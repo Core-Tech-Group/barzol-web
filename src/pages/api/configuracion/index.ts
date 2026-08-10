@@ -1,23 +1,24 @@
 import type { APIRoute } from 'astro';
 import { jsonResponse, errorResponse } from '@shared/api/apiResponse';
-import { getGaleria, createGaleriaItem } from '@shared/lib/galeria/galeriaService';
+import { getConfiguracion, updateConfiguracion } from '@shared/lib/configuracion/configuracionService';
 
 export const GET: APIRoute = async () => {
   try {
-    const galeria = await getGaleria();
-    return jsonResponse(galeria);
+    const configuracion = await getConfiguracion();
+    return jsonResponse(configuracion);
   } catch (error) {
     return errorResponse((error as Error).message);
   }
 };
 
+// Nunca hay POST: site_configuration es singleton, la fila ya existe.
 // El cliente autenticado ya lo armó y validó el middleware — se reusa desde
 // locals en vez de crear uno nuevo y volver a autenticar.
-export const POST: APIRoute = async ({ request, locals }) => {
+export const PUT: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
-    const item = await createGaleriaItem(locals.supabase!, body);
-    return jsonResponse(item, 201);
+    const configuracion = await updateConfiguracion(locals.supabase!, body);
+    return jsonResponse(configuracion);
   } catch (error) {
     return errorResponse((error as Error).message);
   }

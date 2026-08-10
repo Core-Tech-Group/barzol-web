@@ -24,14 +24,22 @@ function parseCookieHeader(header: string): { name: string; value: string }[] {
 // Cliente de Supabase con sesión persistida en cookies (no en localStorage,
 // que no existe en SSR) — necesario para que /admin/** y las rutas de
 // escritura de /api/** puedan saber, en cada request, si hay un admin logueado.
-export function createSupabaseServerClient(request: Request, cookies: AstroCookies) {
+//
+// Es async y llama a `auth.getUser()` antes de devolver el cliente: sin esto,
+// el cliente recién creado arma sus consultas `.from(...)` usando solo la
+// anon key (sin el token del usuario), así que `auth.uid()` sale NULL del
+// lado de Postgres y CUALQUIER escritura choca contra RLS ("new row violates
+// row-level security policy") aunque la policy y la sesión estén bien —
+// `getUser()` es lo que sincroniza la sesión leída de las cookies con los
+// headers que usa el resto del cliente.
+export async function createSupabaseServerClient(request: Request, cookies: AstroCookies) {
   const url = import.meta.env.BARZOL_SUPABASE_URL;
   const anonKey = import.meta.env.BARZOL_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
     throw new Error('Faltan BARZOL_SUPABASE_URL / BARZOL_SUPABASE_ANON_KEY. Copiá .env.example a .env y completá los valores del proyecto de Supabase.');
   }
 
-  return createServerClient(url, anonKey, {
+  const client = createServerClient(url, anonKey, {
     cookies: {
       getAll: () => parseCookieHeader(request.headers.get('cookie') ?? ''),
       setAll: (cookiesToSet) => {
@@ -41,4 +49,7 @@ export function createSupabaseServerClient(request: Request, cookies: AstroCooki
       },
     },
   });
+
+  await client.auth.getUser();
+  return client;
 }

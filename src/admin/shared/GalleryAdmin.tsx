@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
+import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
+import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
 
 export interface GalleryPhoto {
   id: string;
@@ -12,6 +14,7 @@ interface Props {
   title: string;
   saveConfirmMessage: string;
   initialPhotos: GalleryPhoto[];
+  tipo: 'accesorios' | 'trabajos';
 }
 
 // ---------- Iconos ----------
@@ -37,25 +40,21 @@ function DragHandleIcon() {
   );
 }
 
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 // ---------- Componente principal ----------
 
-export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos }: Props) {
+export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos, tipo }: Props) {
   const [photos, setPhotos] = useState<GalleryPhoto[]>(initialPhotos);
 
   const [dirty, setDirty] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorToastMsg, setErrorToastMsg] = useState('Completa los títulos vacíos antes de guardar');
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
-  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [opsDone, setOpsDone] = useState(0);
+  // Vista previa local del archivo elegido (blob: URL, por id de foto) —
+  // lo que se guarda de verdad es el nombre del archivo, no el contenido.
+  const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>({});
 
   const [delConfirmIndex, setDelConfirmIndex] = useState(-1);
 
@@ -72,7 +71,6 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
   }
 
   const errorToastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const savedToastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     window.__adminHasUnsavedChanges = dirty;
@@ -91,6 +89,15 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
     }
     document.addEventListener('admin:nav-request', handler);
     return () => document.removeEventListener('admin:nav-request', handler);
+  }, []);
+
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  useEffect(() => {
+    const msg = consumeSuccessMessage();
+    if (msg) {
+      setSuccessMsg(msg);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
   }, []);
 
   function markDirty() {
@@ -112,16 +119,32 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
     markDirty();
   }
 
-  async function handleImageSelected(id: string, files: FileList | null) {
-    const file = files?.[0];
+  // Se elige el archivo del escritorio (para que el admin vea una vista
+  // previa real), pero lo que se guarda es solo el NOMBRE del archivo —
+  // nunca el contenido en base64. Se resuelve del todo cuando se conecte R2
+  // (ahí este nombre se reemplaza por la URL real que devuelva la subida).
+  function handlePhotoFile(id: string, file: File | null) {
     if (!file) return;
-    const url = await readFileAsDataURL(file);
-    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image: url } : p)));
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoPreviews((prev) => {
+      const old = prev[id];
+      if (old) URL.revokeObjectURL(old);
+      return { ...prev, [id]: previewUrl };
+    });
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image: file.name } : p)));
     markDirty();
   }
 
   function confirmDeletePhoto() {
     if (delConfirmIndex < 0) return;
+    const target = photos[delConfirmIndex];
+    setPhotoPreviews((prev) => {
+      const old = prev[target.id];
+      if (old) URL.revokeObjectURL(old);
+      const next = { ...prev };
+      delete next[target.id];
+      return next;
+    });
     setPhotos((prev) => prev.filter((_, i) => i !== delConfirmIndex));
     markDirty();
     setDelConfirmIndex(-1);
@@ -143,10 +166,12 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
   }
 
   function requestSaveConfirm() {
-    const hasEmpty = photos.some((p) => !p.caption.trim());
+    const hasEmptyCaption = photos.some((p) => !p.caption.trim());
+    const hasMissingImage = photos.some((p) => !p.image);
     clearTimeout(errorToastTimer.current);
-    if (hasEmpty) {
+    if (hasEmptyCaption || hasMissingImage) {
       setShowValidation(true);
+      setErrorToastMsg(hasMissingImage ? 'Falta subir una foto en alguna tarjeta' : 'Completa los títulos vacíos antes de guardar');
       setShowErrorToast(true);
       errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 2800);
       return;
@@ -156,13 +181,50 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
     setSaveConfirmOpen(true);
   }
 
-  function confirmSaveChanges() {
-    // TODO: reemplazar por @shared/lib/galeria/galeriaService cuando se conecte Supabase.
-    clearTimeout(savedToastTimer.current);
+  async function apiCall(url: string, method: string, body?: unknown) {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || 'Error al guardar la galería.');
+    setOpsDone((n) => n + 1);
+    return json.data;
+  }
+
+  async function confirmSaveChanges() {
     setSaveConfirmOpen(false);
-    setShowSavedToast(true);
-    setDirty(false);
-    savedToastTimer.current = setTimeout(() => setShowSavedToast(false), 2200);
+    setSaving(true);
+    setOpsDone(0);
+    try {
+      for (let i = 0; i < photos.length; i++) {
+        const p = photos[i];
+        const payload = { tipo, titulo: p.caption.trim(), imagenUrl: p.image, orden: i };
+        if (p.id.startsWith('new-')) {
+          await apiCall('/api/galeria', 'POST', payload);
+        } else {
+          await apiCall(`/api/galeria/${p.id}`, 'PUT', payload);
+        }
+      }
+
+      const currentIds = new Set(photos.filter((p) => !p.id.startsWith('new-')).map((p) => p.id));
+      for (const before of initialPhotos) {
+        if (!currentIds.has(before.id)) {
+          await apiCall(`/api/galeria/${before.id}`, 'DELETE');
+        }
+      }
+
+      window.__adminHasUnsavedChanges = false;
+      queueSuccessMessage('Galería guardada exitosamente');
+      window.location.reload();
+    } catch (e) {
+      setSaving(false);
+      clearTimeout(errorToastTimer.current);
+      setErrorToastMsg((e as Error).message);
+      setShowErrorToast(true);
+      errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 3600);
+    }
   }
 
   return (
@@ -211,21 +273,41 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
             <button
               type="button"
               onClick={requestSaveConfirm}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--color-primary)', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer' }}
+              disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--color-primary)', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
             >
               <Icon size={15}>
                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
                 <path d="M17 21v-8H7v8M7 3v5h8" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
               </Icon>
-              Guardar cambios
+              {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </div>
         </div>
       </div>
 
+      {saving && (
+        <SavingOverlay
+          message="Guardando galería..."
+          detail={opsDone > 0 ? `${opsDone} ${opsDone === 1 ? 'cambio guardado' : 'cambios guardados'}...` : undefined}
+        />
+      )}
+
+      {successMsg && (
+        <Toast
+          message={successMsg}
+          background="var(--color-success)"
+          icon={
+            <Icon size={16}>
+              <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </Icon>
+          }
+        />
+      )}
+
       {showErrorToast && (
         <Toast
-          message="Completa los títulos vacíos antes de guardar"
+          message={errorToastMsg}
           background="var(--color-danger)"
           icon={
             <Icon size={16}>
@@ -235,18 +317,6 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
           }
         />
       )}
-      {showSavedToast && (
-        <Toast
-          message="Cambios guardados"
-          background="#111827"
-          icon={
-            <Icon size={16}>
-              <path d="M20 6L9 17l-5-5" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </Icon>
-          }
-        />
-      )}
-
       {/* CONTENT */}
       <div className="bz-content-pad" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
@@ -258,6 +328,7 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
             {photos.map((p, i) => {
               const captionHasError = showValidation && !p.caption.trim();
               const isOver = overIndex === i;
+              const preview = photoPreviews[p.id];
               return (
                 <div
                   key={p.id}
@@ -280,14 +351,19 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
                   style={{ background: isOver ? 'var(--color-primary-light)' : 'white', border: '1px solid var(--color-border-soft)', borderRadius: 12, overflow: 'hidden', transition: 'background 0.12s' }}
                 >
                   <div style={{ position: 'relative' }}>
-                    {p.image ? (
+                    {preview ? (
                       <label style={{ width: '100%', height: 170, display: 'block', cursor: 'pointer' }}>
-                        <input type="file" accept="image/*" hidden onChange={(e) => handleImageSelected(p.id, e.target.files)} />
-                        <img src={p.image} alt="" style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+                        <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(p.id, e.target.files?.[0] ?? null)} />
+                        <img src={preview} alt="" style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+                      </label>
+                    ) : p.image ? (
+                      <label style={{ width: '100%', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--color-surface-muted)', color: 'var(--color-text-muted)', fontSize: 12, fontWeight: 600, textAlign: 'center', padding: 10, overflowWrap: 'anywhere' }}>
+                        <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(p.id, e.target.files?.[0] ?? null)} />
+                        {p.image}
                       </label>
                     ) : (
                       <label style={{ width: '100%', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--color-surface-muted)', color: 'var(--color-text-faint)', fontSize: 12 }}>
-                        <input type="file" accept="image/*" hidden onChange={(e) => handleImageSelected(p.id, e.target.files)} />
+                        <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(p.id, e.target.files?.[0] ?? null)} />
                         Subir foto
                       </label>
                     )}
@@ -307,7 +383,7 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos 
                       </Icon>
                     </button>
                   </div>
-                  <div style={{ padding: '12px 14px 14px' }}>
+                  <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <input
                       type="text"
                       value={p.caption}

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
+import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
+import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
 
 export interface AdminSubcategory {
   id: string;
@@ -54,8 +56,10 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
   const [dirty, setDirty] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorToastMsg, setErrorToastMsg] = useState('Completa los nombres vacíos antes de guardar');
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
-  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [opsDone, setOpsDone] = useState(0);
 
   const [delConfirmIndex, setDelConfirmIndex] = useState(-1);
   const [subDelConfirm, setSubDelConfirm] = useState<{ catId: string; subId: string; name: string } | null>(null);
@@ -80,7 +84,6 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
   }
 
   const errorToastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const savedToastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Puente con el sidebar (fuera de esta isla): mientras haya cambios sin
   // guardar avisamos vía window global para que AdminLayout intercepte los
@@ -109,6 +112,15 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
     const el = document.querySelector<HTMLInputElement>(`[data-cat-edit-input="${editingCatId}"]`);
     el?.scrollIntoView({ block: 'center' });
   }, [editingCatId]);
+
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  useEffect(() => {
+    const msg = consumeSuccessMessage();
+    if (msg) {
+      setSuccessMsg(msg);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  }, []);
 
   function markDirty() {
     setDirty(true);
@@ -235,6 +247,7 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
     clearTimeout(errorToastTimer.current);
     if (hasEmpty) {
       setShowValidation(true);
+      setErrorToastMsg('Completa los nombres vacíos antes de guardar');
       setShowErrorToast(true);
       errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 2800);
       return;
@@ -244,13 +257,103 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
     setSaveConfirmOpen(true);
   }
 
-  function confirmSaveChanges() {
-    // TODO: reemplazar por @shared/lib/categorias/categoriaService cuando se conecte Supabase.
-    clearTimeout(savedToastTimer.current);
+  async function apiCall(url: string, method: string, body?: unknown) {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || 'Error al guardar categorías.');
+    setOpsDone((n) => n + 1);
+    return json.data;
+  }
+
+  async function confirmSaveChanges() {
     setSaveConfirmOpen(false);
-    setShowSavedToast(true);
-    setDirty(false);
-    savedToastTimer.current = setTimeout(() => setShowSavedToast(false), 2200);
+    setSaving(true);
+    setOpsDone(0);
+    try {
+      // "¿es nueva?" se decide comparando contra initialCategories (la lista
+      // que vino del servidor, nunca se modifica) — NO contra la bandera
+      // `isNew` de cada fila: el editor de nombre inline (commitCatName /
+      // commitSubName, ya existía antes de este CRUD) la apaga apenas se
+      // termina de escribir el nombre, mucho antes de que la fila se guarde
+      // de verdad. Confiar en esa bandera mandaba un PUT a un id
+      // "new-<timestamp>-<n>" que nunca existió en la base.
+      const initialCatIds = new Set(initialCategories.map((c) => c.id));
+      const initialSubIds = new Set(initialCategories.flatMap((c) => c.subs.map((s) => s.id)));
+
+      // 1) Categorías raíz: crear las nuevas primero (necesitamos su id real
+      // para poder crear subcategorías que le apunten como padre) y
+      // actualizar SOLO las existentes que realmente cambiaron (nombre u
+      // orden) — no todas, para no tocar (ni mandar `updated_at`) filas que
+      // el usuario ni siquiera abrió.
+      const realIdOf = new Map<string, string>();
+      for (let i = 0; i < categories.length; i++) {
+        const cat = categories[i];
+        if (!initialCatIds.has(cat.id)) {
+          const created = await apiCall('/api/categorias', 'POST', { nombre: cat.name, parentId: null, orden: i });
+          realIdOf.set(cat.id, created.id);
+        } else {
+          realIdOf.set(cat.id, cat.id);
+          const beforeIndex = initialCategories.findIndex((c) => c.id === cat.id);
+          const before = initialCategories[beforeIndex];
+          const changed = before.name !== cat.name || beforeIndex !== i;
+          if (changed) {
+            await apiCall(`/api/categorias/${cat.id}`, 'PUT', { nombre: cat.name, parentId: null, orden: i });
+          }
+        }
+      }
+
+      // 2) Categorías eliminadas (las que ya no están en el estado actual).
+      const currentCatIds = new Set(categories.filter((c) => initialCatIds.has(c.id)).map((c) => c.id));
+      for (const before of initialCategories) {
+        if (!currentCatIds.has(before.id)) {
+          await apiCall(`/api/categorias/${before.id}`, 'DELETE');
+        }
+      }
+
+      // 3) Subcategorías: crear/actualizar (usando el id REAL del padre) solo
+      // las que cambiaron de nombre, orden o categoría padre.
+      for (const cat of categories) {
+        const parentRealId = realIdOf.get(cat.id)!;
+        for (let j = 0; j < cat.subs.length; j++) {
+          const sub = cat.subs[j];
+          if (!initialSubIds.has(sub.id)) {
+            await apiCall('/api/categorias', 'POST', { nombre: sub.name, parentId: parentRealId, orden: j });
+          } else {
+            const beforeParent = initialCategories.find((c) => c.subs.some((s) => s.id === sub.id))!;
+            const beforeIndex = beforeParent.subs.findIndex((s) => s.id === sub.id);
+            const before = beforeParent.subs[beforeIndex];
+            const changed = before.name !== sub.name || beforeIndex !== j || beforeParent.id !== cat.id;
+            if (changed) {
+              await apiCall(`/api/categorias/${sub.id}`, 'PUT', { nombre: sub.name, parentId: parentRealId, orden: j });
+            }
+          }
+        }
+      }
+
+      // 4) Subcategorías eliminadas.
+      const currentSubIds = new Set(categories.flatMap((c) => c.subs.filter((s) => initialSubIds.has(s.id)).map((s) => s.id)));
+      for (const before of initialCategories) {
+        for (const sub of before.subs) {
+          if (!currentSubIds.has(sub.id)) {
+            await apiCall(`/api/categorias/${sub.id}`, 'DELETE');
+          }
+        }
+      }
+
+      window.__adminHasUnsavedChanges = false;
+      queueSuccessMessage('Categorías guardadas exitosamente');
+      window.location.reload();
+    } catch (e) {
+      setSaving(false);
+      clearTimeout(errorToastTimer.current);
+      setErrorToastMsg((e as Error).message);
+      setShowErrorToast(true);
+      errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 3600);
+    }
   }
 
   return (
@@ -297,21 +400,41 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
             <button
               type="button"
               onClick={requestSaveConfirm}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--color-primary)', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer' }}
+              disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--color-primary)', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
             >
               <Icon size={15}>
                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
                 <path d="M17 21v-8H7v8M7 3v5h8" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
               </Icon>
-              Guardar cambios
+              {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </div>
         </div>
       </div>
 
+      {saving && (
+        <SavingOverlay
+          message="Guardando categorías..."
+          detail={opsDone > 0 ? `${opsDone} ${opsDone === 1 ? 'cambio guardado' : 'cambios guardados'}...` : undefined}
+        />
+      )}
+
+      {successMsg && (
+        <Toast
+          message={successMsg}
+          background="var(--color-success)"
+          icon={
+            <Icon size={16}>
+              <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </Icon>
+          }
+        />
+      )}
+
       {showErrorToast && (
         <Toast
-          message="Completa los nombres vacíos antes de guardar"
+          message={errorToastMsg}
           background="var(--color-danger)"
           icon={
             <Icon size={16}>
@@ -321,18 +444,6 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
           }
         />
       )}
-      {showSavedToast && (
-        <Toast
-          message="Cambios guardados"
-          background="#111827"
-          icon={
-            <Icon size={16}>
-              <path d="M20 6L9 17l-5-5" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </Icon>
-          }
-        />
-      )}
-
       {/* CONTENT */}
       <div className="bz-content-pad" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 560, margin: '0 auto' }}>

@@ -3,25 +3,23 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import Breadcrumb from '@landing/shared/Breadcrumb.astro';
 import ProductCarousel from './ProductCarousel.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
+import type { Product } from '@shared/types';
 import { getProductos } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
+import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 interface Props {
-  slug?: string;
+  producto: Product;
 }
 
-const { slug } = Astro.props;
+// El lookup por `code` + el redirect si no existe pasan por la página
+// (src/pages/producto/[slugCode].astro) — `Astro.redirect()` solo corta la
+// respuesta de verdad quien lo llama es el nivel de página/ruta, no un
+// componente anidado como este.
+const { producto } = Astro.props;
 
 const [productosDb, categoriasDb] = await Promise.all([getProductos(), getCategorias()]);
 const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
-
-const producto = productosDb.find((p) => p.slug === slug);
-
-// No existe una página 404 propia todavía en el proyecto — redirige al home
-// en vez de a una ruta inexistente.
-if (!producto) {
-  return Astro.redirect('/');
-}
 
 const nombre = producto.nombre;
 const precio = producto.precio;
@@ -38,7 +36,7 @@ const suggested = categoria
   ? productosDb
       .filter((p) => p.id !== producto.id && p.categoriaId === categoria.id)
       .slice(0, 4)
-      .map((p) => ({ href: `/producto/${p.slug}`, nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }))
+      .map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }))
   : [];
 ---
 

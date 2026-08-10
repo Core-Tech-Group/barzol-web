@@ -3,6 +3,7 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
 import Pagination from './Pagination.astro';
 import { getProductos } from '@shared/lib/productos/productoService';
+import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 interface Props {
   query?: string;
@@ -15,7 +16,7 @@ const q = query.trim().toLowerCase();
 const results = (q
   ? productosDb.filter((p) => p.nombre.toLowerCase().includes(q) || p.keywords.toLowerCase().includes(q))
   : productosDb
-).map((p) => ({ href: `/producto/${p.slug}`, nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
+).map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
 ---
 
 <PublicLayout title={`Buscar "${query}" — Barzol`}>

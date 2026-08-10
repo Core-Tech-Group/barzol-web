@@ -1,0 +1,19 @@
+---
+import AdminLayout from '@admin/layout/AdminLayout.astro';
+import ConfiguracionAdmin from './ConfiguracionAdmin.tsx';
+import { getConfiguracion } from '@shared/lib/configuracion/configuracionService';
+
+const c = await getConfiguracion();
+
+const configuracion = {
+	whatsappNumero: c.whatsappNumero,
+	emailContacto: c.emailContacto,
+	instagramUrl: c.instagramUrl ?? '',
+	facebookUrl: c.facebookUrl ?? '',
+	direccion: c.direccion ?? '',
+};
+---
+
+<AdminLayout title="Admin · Configuración — Barzol" active="configuracion">
+	<ConfiguracionAdmin client:load initialConfiguracion={configuracion} />
+</AdminLayout>

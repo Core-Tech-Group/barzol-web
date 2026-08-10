@@ -11,10 +11,12 @@ export const GET: APIRoute = async () => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+// El cliente autenticado ya lo armó y validó el middleware — se reusa desde
+// locals en vez de crear uno nuevo y volver a autenticar.
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
-    const categoria = await createCategoria(body);
+    const categoria = await createCategoria(locals.supabase!, body);
     return jsonResponse(categoria, 201);
   } catch (error) {
     return errorResponse((error as Error).message);

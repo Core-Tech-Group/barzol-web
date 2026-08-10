@@ -5,6 +5,7 @@ import ServicePromoCard from './ServicePromoCard.astro';
 import { getHomeItems } from '@shared/lib/home/homeService';
 import { getProductos } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
+import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 // Adaptador: las secciones de productos del home (administradas en
 // /admin/inicio) referencian productos por id; acá se resuelven a la forma
@@ -30,7 +31,7 @@ const sections = homeItemsDb
     return {
       title: it.titulo ?? '',
       viewAllHref: singleCategoria ? `/catalogo/${singleCategoria.slug}` : undefined,
-      products: productos.map((p) => ({ href: `/producto/${p.slug}`, nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined })),
+      products: productos.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined })),
     };
   })
   .filter((s) => s.products.length > 0);

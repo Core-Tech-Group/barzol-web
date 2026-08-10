@@ -1,4 +1,5 @@
 import { supabase } from '../db/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Configuracion } from '../../types';
 import { mapSiteConfigurationRowToConfiguracion } from './configuracionMapper';
 
@@ -17,8 +18,31 @@ export async function getConfiguracion(): Promise<Configuracion> {
   return mapSiteConfigurationRowToConfiguracion({ ...data, id: String(data.id) });
 }
 
+// `site_configuration` es singleton (índice único que fuerza 1 sola fila) —
+// esta función SIEMPRE hace UPDATE de la fila existente, nunca INSERT.
 export async function updateConfiguracion(
-  data: Partial<Omit<Configuracion, 'id'>>
+  supabaseAuth: SupabaseClient,
+  data: Partial<{
+    whatsappNumero: string;
+    emailContacto: string;
+    instagramUrl: string | null;
+    facebookUrl: string | null;
+    direccion: string | null;
+  }>
 ): Promise<Configuracion> {
-  throw new Error('Not implemented');
+  const current = await getConfiguracion();
+
+  const { error } = await supabaseAuth
+    .from('site_configuration')
+    .update({
+      whatsapp_number: data.whatsappNumero,
+      contact_email: data.emailContacto,
+      instagram_url: data.instagramUrl,
+      facebook_url: data.facebookUrl,
+      address: data.direccion,
+    })
+    .eq('id', Number(current.id));
+  if (error) throw error;
+
+  return getConfiguracion();
 }

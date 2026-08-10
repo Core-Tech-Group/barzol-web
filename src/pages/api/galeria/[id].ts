@@ -1,28 +1,14 @@
 import type { APIRoute } from 'astro';
 import { jsonResponse, errorResponse } from '@shared/api/apiResponse';
-import {
-  getProductoById,
-  updateProducto,
-  deleteProducto,
-} from '@shared/lib/productos/productoService';
-
-export const GET: APIRoute = async ({ params }) => {
-  try {
-    const producto = await getProductoById(params.id!);
-    if (!producto) return errorResponse('Producto no encontrado', 404);
-    return jsonResponse(producto);
-  } catch (error) {
-    return errorResponse((error as Error).message);
-  }
-};
+import { updateGaleriaItem, deleteGaleriaItem } from '@shared/lib/galeria/galeriaService';
 
 // El cliente autenticado ya lo armó y validó el middleware — se reusa desde
 // locals en vez de crear uno nuevo y volver a autenticar.
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   try {
     const body = await request.json();
-    const producto = await updateProducto(locals.supabase!, params.id!, body);
-    return jsonResponse(producto);
+    const item = await updateGaleriaItem(locals.supabase!, params.id!, body);
+    return jsonResponse(item);
   } catch (error) {
     return errorResponse((error as Error).message);
   }
@@ -30,7 +16,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
-    await deleteProducto(locals.supabase!, params.id!);
+    await deleteGaleriaItem(locals.supabase!, params.id!);
     return jsonResponse(null);
   } catch (error) {
     return errorResponse((error as Error).message);

@@ -9,7 +9,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return errorResponse('Usuario y contraseña son obligatorios.', 400);
     }
 
-    const supabase = createSupabaseServerClient(request, cookies);
+    const supabase = await createSupabaseServerClient(request, cookies);
     const { error } = await supabase.auth.signInWithPassword({
       email: usernameToSyntheticEmail(String(username)),
       password: String(password),

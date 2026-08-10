@@ -1,25 +1,24 @@
 -- =========================================================
--- Barzol Web — DDL completo
+-- Barzol Web — DDL completo (v21)
 -- Motor: PostgreSQL (Supabase)
--- Orden de ejecución: de arriba hacia abajo, respeta dependencias
 -- =========================================================
- 
- 
+
+
 -- =========================================================
 -- 1. TIPOS ENUM
 -- =========================================================
- 
+
 CREATE TYPE product_status AS ENUM ('draft', 'published');
 -- Para agregar un estado nuevo más adelante (ej. 'agotado'):
 --   ALTER TYPE product_status ADD VALUE 'agotado';
- 
+
 CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects');
- 
- 
+
+
 -- =========================================================
 -- 2. FUNCIÓN COMPARTIDA: auto-actualizar updated_at
 -- =========================================================
- 
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -27,14 +26,14 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
- 
- 
+
+
 -- =========================================================
 -- 3. ADMIN_PROFILE
 -- Extiende auth.users de Supabase (no la reemplaza).
 -- id es UUID por excepción: debe coincidir con auth.users.id
 -- =========================================================
- 
+
 CREATE TABLE admin_profile (
     id            uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username      varchar(50) UNIQUE,              -- nullable: solo si el login es por usuario simple
@@ -43,16 +42,16 @@ CREATE TABLE admin_profile (
     created_at    timestamptz NOT NULL DEFAULT now(),
     updated_at    timestamptz NOT NULL DEFAULT now()
 );
- 
+
 CREATE TRIGGER trg_admin_profile_updated_at
     BEFORE UPDATE ON admin_profile
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
- 
+
+
 -- =========================================================
 -- 4. VENDOR
 -- =========================================================
- 
+
 CREATE TABLE vendor (
     id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name          varchar(100) NOT NULL,
@@ -61,21 +60,24 @@ CREATE TABLE vendor (
     created_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
     updated_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 CREATE TRIGGER trg_vendor_updated_at
     BEFORE UPDATE ON vendor
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
- 
+
+
 -- =========================================================
 -- 5. CATEGORY
 -- Autorreferenciada — árbol de profundidad libre
+-- code autogenerado por secuencia (una sola, sin rango por nivel)
 -- =========================================================
- 
+
+CREATE SEQUENCE category_code_seq START 1000;
+
 CREATE TABLE category (
     id                  integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     parent_category_id  integer REFERENCES category(id) ON DELETE CASCADE,
-    code                integer NOT NULL UNIQUE,     -- numérico, uso interno/inventario
+    code                integer NOT NULL UNIQUE DEFAULT nextval('category_code_seq'),
     name                varchar(120) NOT NULL,
     sort_order          int NOT NULL DEFAULT 0,
     is_active           boolean NOT NULL DEFAULT true,
@@ -84,24 +86,30 @@ CREATE TABLE category (
     created_by          uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
     updated_by          uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
+ALTER SEQUENCE category_code_seq OWNED BY category.code;
+
 CREATE INDEX idx_category_parent ON category(parent_category_id);
- 
+
 CREATE TRIGGER trg_category_updated_at
     BEFORE UPDATE ON category
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
- 
+
+
 -- =========================================================
 -- 6. PRODUCT
 -- category_id debe apuntar a una categoría "hoja" (sin subcategorías)
 -- vendor_id / category_id usan RESTRICT: no se puede borrar una marca
 -- o categoría mientras tenga productos asociados
+-- code autogenerado por secuencia
+-- SIN sort_order (se quitó — no aplica con una sola categoría por producto)
 -- =========================================================
- 
+
+CREATE SEQUENCE product_code_seq START 5000;
+
 CREATE TABLE product (
     id                 integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    code               integer NOT NULL UNIQUE,      -- numérico, uso interno/inventario
+    code               integer NOT NULL UNIQUE DEFAULT nextval('product_code_seq'),
     name               varchar(255) NOT NULL,
     description        text,
     keywords           varchar(500),
@@ -112,21 +120,22 @@ CREATE TABLE product (
     status             product_status NOT NULL DEFAULT 'draft',
     is_active          boolean NOT NULL DEFAULT true,
     is_personalizable  boolean NOT NULL DEFAULT false,
-    sort_order         int NOT NULL DEFAULT 0,
     created_at         timestamptz NOT NULL DEFAULT now(),
     updated_at         timestamptz NOT NULL DEFAULT now(),
     created_by         uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
     updated_by         uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
+ALTER SEQUENCE product_code_seq OWNED BY product.code;
+
 CREATE INDEX idx_product_category ON product(category_id);
 CREATE INDEX idx_product_vendor ON product(vendor_id);
 CREATE INDEX idx_product_status ON product(status) WHERE is_active = true;
- 
+
 CREATE TRIGGER trg_product_updated_at
     BEFORE UPDATE ON product
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
+
 -- Regla de negocio: category_id debe ser una categoría "hoja"
 -- (sin subcategorías propias) — no se puede validar con un CHECK simple
 CREATE OR REPLACE FUNCTION check_product_category_is_leaf()
@@ -142,16 +151,16 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
- 
+
 CREATE TRIGGER trg_product_category_leaf
     BEFORE INSERT OR UPDATE OF category_id ON product
     FOR EACH ROW EXECUTE FUNCTION check_product_category_is_leaf();
- 
- 
+
+
 -- =========================================================
 -- 7. PRODUCT_PHOTO (hasta 5 por producto, reordenables)
 -- =========================================================
- 
+
 CREATE TABLE product_photo (
     id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     product_id    integer NOT NULL REFERENCES product(id) ON DELETE CASCADE,
@@ -160,14 +169,14 @@ CREATE TABLE product_photo (
     created_at    timestamptz NOT NULL DEFAULT now(),
     created_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 CREATE INDEX idx_product_photo_product ON product_photo(product_id);
- 
- 
+
+
 -- =========================================================
 -- 8. PRODUCT_FEATURE (bullets de características)
 -- =========================================================
- 
+
 CREATE TABLE product_feature (
     id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     product_id    integer NOT NULL REFERENCES product(id) ON DELETE CASCADE,
@@ -176,14 +185,14 @@ CREATE TABLE product_feature (
     created_at    timestamptz NOT NULL DEFAULT now(),
     created_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 CREATE INDEX idx_product_feature_product ON product_feature(product_id);
- 
- 
+
+
 -- =========================================================
 -- 9. GALLERY_ITEM (accesorios personalizados / trabajos de ingeniería)
 -- =========================================================
- 
+
 CREATE TABLE gallery_item (
     id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     type          gallery_item_type NOT NULL,
@@ -195,18 +204,18 @@ CREATE TABLE gallery_item (
     created_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
     updated_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 CREATE INDEX idx_gallery_item_type ON gallery_item(type);
- 
+
 CREATE TRIGGER trg_gallery_item_updated_at
     BEFORE UPDATE ON gallery_item
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
- 
+
+
 -- =========================================================
 -- 10. HOME_HERO_IMAGE (máx. 3, orden 0-2)
 -- =========================================================
- 
+
 CREATE TABLE home_hero_image (
     id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     image_url     text NOT NULL,
@@ -214,12 +223,12 @@ CREATE TABLE home_hero_image (
     created_at    timestamptz NOT NULL DEFAULT now(),
     created_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
- 
+
+
 -- =========================================================
 -- 11. HOME_ITEM (secciones y banners intercalados)
 -- =========================================================
- 
+
 CREATE TABLE home_item (
     id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     type          varchar(20) NOT NULL CHECK (type IN ('section', 'banner')),
@@ -233,16 +242,16 @@ CREATE TABLE home_item (
     created_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
     updated_by    uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 CREATE TRIGGER trg_home_item_updated_at
     BEFORE UPDATE ON home_item
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
- 
+
+
 -- =========================================================
 -- 12. HOME_SECTION_PRODUCT (tabla puente)
 -- =========================================================
- 
+
 CREATE TABLE home_section_product (
     id             integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     home_item_id   integer NOT NULL REFERENCES home_item(id) ON DELETE CASCADE,
@@ -251,15 +260,15 @@ CREATE TABLE home_section_product (
     created_at     timestamptz NOT NULL DEFAULT now(),
     created_by     uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 CREATE INDEX idx_home_section_product_item ON home_section_product(home_item_id);
 CREATE INDEX idx_home_section_product_product ON home_section_product(product_id);
- 
- 
+
+
 -- =========================================================
 -- 13. SITE_CONFIGURATION (singleton — siempre una sola fila)
 -- =========================================================
- 
+
 CREATE TABLE site_configuration (
     id                integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     whatsapp_number   varchar(20) NOT NULL,
@@ -272,18 +281,73 @@ CREATE TABLE site_configuration (
     created_by        uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
     updated_by        uuid REFERENCES admin_profile(id) ON DELETE SET NULL
 );
- 
+
 -- Fuerza que la tabla nunca tenga más de 1 fila
 CREATE UNIQUE INDEX site_configuration_singleton ON site_configuration ((true));
- 
+
 CREATE TRIGGER trg_site_configuration_updated_at
     BEFORE UPDATE ON site_configuration
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
- 
- 
+
+
 -- =========================================================
 -- FIN DEL SCRIPT
 -- Pendiente para una futura iteración (no incluido aquí):
 --   - alt_text en tablas de imágenes (product_photo, gallery_item,
 --     home_hero_image, home_item.image_url)
 -- =========================================================
+
+
+
+
+alter table vendor enable row level security;
+alter table category enable row level security;
+alter table product enable row level security;
+alter table product_photo enable row level security;
+alter table product_feature enable row level security;
+alter table gallery_item enable row level security;
+alter table home_hero_image enable row level security;
+alter table home_item enable row level security;
+alter table home_section_product enable row level security;
+alter table site_configuration enable row level security;
+
+create policy "public read" on vendor for select using (true);
+create policy "public read" on category for select using (true);
+create policy "public read" on product for select using (true);
+create policy "public read" on product_photo for select using (true);
+create policy "public read" on product_feature for select using (true);
+create policy "public read" on gallery_item for select using (true);
+create policy "public read" on home_hero_image for select using (true);
+create policy "public read" on home_item for select using (true);
+create policy "public read" on home_section_product for select using (true);
+create policy "public read" on site_configuration for select using (true);
+
+-- Escritura: solo si auth.uid() tiene fila en admin_profile (admin logueado).
+-- Cubre las pantallas de admin con CRUD ya implementado: Productos,
+-- Categorías, Galería (ambas), Configuración.
+create policy "admin write" on category for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+create policy "admin write" on product for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+create policy "admin write" on product_photo for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+create policy "admin write" on product_feature for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+create policy "admin write" on gallery_item for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+create policy "admin write" on site_configuration for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+-- Pendiente (CRUD todavía no implementado para esas pantallas):
+-- home_hero_image, home_item, home_section_product, vendor.

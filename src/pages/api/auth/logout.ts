@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from '@shared/lib/auth/authClient';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const supabase = createSupabaseServerClient(request, cookies);
+    const supabase = await createSupabaseServerClient(request, cookies);
     await supabase.auth.signOut();
     return jsonResponse({ ok: true });
   } catch (error) {

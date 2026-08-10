@@ -15,7 +15,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (!isAdminPage && !isApiWrite) return next();
 
-  const supabase = createSupabaseServerClient(context.request, context.cookies);
+  const supabase = await createSupabaseServerClient(context.request, context.cookies);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -29,6 +29,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
     return context.redirect('/admin/login');
   }
+
+  // Se reusa este mismo cliente (ya autenticado, `getUser()` ya corrido) en
+  // los endpoints de escritura — evita que cada uno cree el suyo y vuelva a
+  // pagar el round-trip de autenticación.
+  context.locals.supabase = supabase;
 
   return next();
 });

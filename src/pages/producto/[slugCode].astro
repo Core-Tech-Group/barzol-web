@@ -1,0 +1,21 @@
+---
+import ProductoView from '@landing/producto/ProductoView.astro';
+import { getProductoByCode } from '@shared/lib/productos/productoService';
+import { extractProductoCode } from '@shared/lib/productos/productoUrl';
+
+const { slugCode } = Astro.params;
+
+// No existe columna `slug` en product — el segmento antes del `code` es
+// decorativo, la búsqueda real es por `code`.
+const code = extractProductoCode(slugCode);
+const producto = code !== null ? await getProductoByCode(code) : null;
+
+// No existe una página 404 propia todavía en el proyecto — redirige al home
+// en vez de a una ruta inexistente. Este redirect SÍ corta la respuesta
+// porque se ejecuta en el nivel de página, no en un componente anidado.
+if (!producto) {
+  return Astro.redirect('/');
+}
+---
+
+<ProductoView producto={producto} />

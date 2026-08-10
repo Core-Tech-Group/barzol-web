@@ -49,7 +49,6 @@ erDiagram
         product_status status "enum: draft / published"
         boolean is_active
         boolean is_personalizable
-        int sort_order
         timestamptz created_at
         timestamptz updated_at
         uuid created_by FK
@@ -169,7 +168,6 @@ erDiagram
 | status | `product_status` (enum) | `draft` \| `published`. Ver definición del tipo abajo |
 | is_active | boolean | visible/oculto, independiente de `status` |
 | is_personalizable | boolean | |
-| sort_order | int | orden del producto dentro de su categoría — ya no es ambiguo porque cada producto tiene una sola categoría |
 | created_at / updated_at / created_by / updated_by | — | auditoría |
 
 ### `product_photo`
@@ -339,31 +337,52 @@ CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects');
 
 **Lo que NO vale la pena optimizar más:** los tamaños de `varchar` que ya definimos (150, 255, 300, etc.) no reservan espacio fijo en Postgres — a diferencia de otros motores, un `varchar(255)` con un valor de 10 caracteres ocupa lo que pesan esos 10 caracteres, no los 255. Reducir esos números no ahorra espacio real, solo limita la validación.
 
-## Nota sobre la URL del producto (`slug` calculado + `id` guardado)
+## Nota sobre la URL del producto (`slug` calculado + `code` al final — implementado)
 
-La URL pública del producto combina un slug con el `id` en un solo segmento, con el id al final:
+La URL pública del producto combina un slug con el `code` en un solo segmento, con el `code` al final:
 
 ```
-/product/sordina-recta-trompeta-89898
+/producto/soporte-celular-trompeta-5000
 ```
 
-**Diferencia clave respecto a versiones anteriores de esta nota: el slug ya NO es una columna en `product`.** Se calcula al vuelo, en el momento de generar cualquier URL (listados, ficha de producto, sitemap), a partir de `product.name` — no se guarda en la base de datos.
+(ruta en español, `/producto/`, para mantener consistencia con el resto de rutas públicas del sitio — `/catalogo`, `/busqueda`, `/servicios`)
 
-**Por qué no guardarlo:**
-- **`id`** es quien garantiza la permanencia y unicidad de la URL — el slug ya no cumple ese rol, es puramente decorativo/SEO
-- Calcular el slug es una operación de texto liviana (minúsculas, sin tildes, espacios por guiones) — el costo de recalcularlo en cada lectura es insignificante para el volumen de este catálogo
-- Evita que quede desactualizado: si `name` cambia y alguien olvida regenerar un slug guardado, la URL mostraría un texto que ya no coincide con el producto actual. Al calcularlo siempre desde `name` en el momento, **nunca puede desincronizarse** — `name` es la única fuente de verdad
+**El slug NO es una columna en `product`.** Se calcula al vuelo, en el momento de generar cualquier URL (listados, ficha de producto), a partir de `product.name` — no se guarda en la base de datos. La búsqueda real es por `code`, no por `id`: `code` ya era único y visible para el admin (es el número de inventario), así que reusarlo evita depender del `id` autonumérico en una URL pública.
 
-**Cómo se arma y se lee (lógica de aplicación, no de base de datos):**
-1. En cualquier lugar donde se necesite el link de un producto, se genera el slug al vuelo desde `name` y se concatena con el `id`
-2. Al recibir una visita a `/product/sordina-recta-trompeta-89898`, el backend extrae el último bloque de dígitos (`89898`) y busca directo por `id` — el resto del texto se ignora para la búsqueda, solo se usa para mostrar la URL
+**Por qué funciona sin guardar el slug:**
+- **`code`** es quien garantiza que la búsqueda encuentre el producto — el texto antes de `code` es puramente decorativo/SEO, se ignora al resolver
+- Calcular el slug es una operación de texto liviana (minúsculas, sin tildes, espacios por guiones) — insignificante para el volumen de este catálogo
+- Nunca puede desincronizarse: si `name` cambia, el slug del link se recalcula solo la próxima vez que se genera — `name` es la única fuente de verdad
 
-**En el formulario del admin:** no hay ningún campo de slug que mostrar ni editar — no existe como dato, se genera automáticamente en el momento de construir cada link.
+**Implementación real** (`src/shared/lib/productos/productoUrl.ts`):
+1. `productoUrl(producto)` arma el link: `/producto/${slug}-${code}`
+2. `extractProductoCode(param)` extrae el último bloque de dígitos del segmento de la URL
+3. La página (`src/pages/producto/[slugCode].astro`) busca con `getProductoByCode(code)` — una consulta `WHERE code = $1` — y hace `Astro.redirect('/')` si no existe. Ese lookup y el redirect viven en el archivo de página, no en el componente de vista: `Astro.redirect()` solo corta la respuesta si se llama desde el nivel de página/ruta.
 
-## Nota sobre `code` (numérico, independiente de la URL)
+**En el formulario del admin:** no hay ningún campo de slug — no existe como dato. `code` sí aparece, pero de solo lectura (se autogenera, ver nota siguiente).
 
-`category.code` y `product.code` pasan de `varchar(30)` a `integer`. La razón ya **no** es para armar la URL (eso lo resuelve `id`, como quedó documentado arriba) — es para uso interno: más rápido de escribir y escanear en inventario que un código alfanumérico.
+## Nota sobre `code` (autogenerado — implementado)
 
-**Cómo se genera:** es independiente del `id` interno de la tabla (que Postgres asigna automáticamente) — `code` se puede asignar con su propia secuencia numérica de negocio (ej. empezando en 1000, para diferenciarlo visualmente de otros números del sistema), y sigue siendo editable por el admin si alguna vez hace falta corregirlo, a diferencia de `id`.
+`category.code` y `product.code` son `integer`, pensados para uso interno/inventario (más rápido de escribir y escanear que un código alfanumérico). En `product` además cumple un segundo rol: es la clave real de búsqueda de la URL pública (ver nota de arriba).
+
+**Cómo se genera:** cada tabla tiene su propia secuencia de Postgres como `DEFAULT` de la columna —
+
+```sql
+CREATE SEQUENCE category_code_seq START 1000;
+ALTER TABLE category ALTER COLUMN code SET DEFAULT nextval('category_code_seq');
+
+CREATE SEQUENCE product_code_seq START 5000;
+ALTER TABLE product ALTER COLUMN code SET DEFAULT nextval('product_code_seq');
+```
+
+**En el admin:** `code` nunca se pide al crear (la base lo asigna solo al hacer `INSERT`) — en el formulario de edición aparece, pero de **solo lectura**.
 
 **No se agrega `alt_text`** en esta versión — queda pendiente para una futura iteración del esquema.
+
+## Nota sobre `site_configuration` (singleton — implementado)
+
+Tabla de una sola fila, forzado por un índice único sobre una expresión constante (`CREATE UNIQUE INDEX site_configuration_singleton ON site_configuration ((true))` — cualquier segundo `INSERT` choca contra ese índice). Por eso el formulario de Configuración del admin (`/admin/configuracion`) **nunca hace `INSERT`** — siempre `SELECT` (para precargar el form) + `UPDATE` de esa única fila (`updateConfiguracion()` en `configuracionService.ts` resuelve el `id` real con un `SELECT` previo y actualiza por ese `id`, nunca inserta).
+
+## Nota sobre RLS de escritura (implementado)
+
+Además de las policies de lectura pública, `category`, `product`, `product_photo`, `product_feature`, `gallery_item` y `site_configuration` tienen una policy `"admin write" FOR ALL TO authenticated` que exige `auth.uid()` presente en `admin_profile` — sin eso, cualquier `INSERT`/`UPDATE`/`DELETE` (incluso con sesión válida de Supabase Auth que no sea un admin real) queda bloqueado por Postgres, no solo por la UI. `home_hero_image`, `home_item`, `home_section_product` y `vendor` todavía no tienen CRUD en el admin, así que tampoco tienen policy de escritura todavía.
