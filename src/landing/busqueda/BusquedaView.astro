@@ -91,13 +91,37 @@ const results = (q
 
 		<!-- RESULTS GRID -->
 		<div>
-			<div class="bz-search-results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
-				{results.map((p) => (
-					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} />
-				))}
-			</div>
+			{results.length > 0 ? (
+				<>
+					<div class="bz-search-results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+						{results.map((p) => (
+							<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} />
+						))}
+					</div>
 
-			<Pagination currentPage={1} totalPages={2} />
+					<Pagination currentPage={1} totalPages={2} />
+				</>
+			) : (
+				<div class="bz-empty-state" style="display:flex; flex-direction:column; align-items:center; text-align:center; background:white; border:1px solid var(--color-border-soft); border-radius:14px; padding:64px 32px;">
+					<div style="width:72px; height:72px; border-radius:50%; background:var(--color-surface-soft); display:flex; align-items:center; justify-content:center; margin-bottom:22px;">
+						<svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+							<circle cx="10.5" cy="10.5" r="6.5" stroke="var(--color-text-faint)" stroke-width="1.8"></circle>
+							<path d="M20 20l-4.35-4.35" stroke="var(--color-text-faint)" stroke-width="1.8" stroke-linecap="round"></path>
+							<path d="M8 10.5h5" stroke="var(--color-text-faint)" stroke-width="1.8" stroke-linecap="round"></path>
+						</svg>
+					</div>
+					<h2 style="font-size:17px; font-weight:700; color:var(--color-text); margin-bottom:8px;">No encontramos resultados</h2>
+					<p style="font-size:13.5px; color:var(--color-text-muted); line-height:1.6; max-width:360px; margin-bottom:26px;">
+						{query
+							? <>No hay productos que coincidan con <strong style="color:var(--color-text-soft);">"{query}"</strong>. Probá con otra palabra o revisá la ortografía.</>
+							: <>No hay productos que coincidan con los filtros seleccionados.</>}
+					</p>
+					<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+						<a href="/busqueda" style="padding:10px 20px; background:var(--color-primary); color:white; font-size:13px; font-weight:600; text-decoration:none; border-radius:9px;">Ver todos los productos</a>
+						<a href="/" style="padding:10px 20px; background:white; border:1.5px solid var(--color-border); color:var(--color-text-soft); font-size:13px; font-weight:500; text-decoration:none; border-radius:9px;">Volver al inicio</a>
+					</div>
+				</div>
+			)}
 		</div>
 	</div>
 </PublicLayout>
