@@ -47,12 +47,12 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 
 			<!-- Categorías (mega menú desktop / drawer mobile) -->
 			<div class="cat-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0; margin-left:28px;">
-				<button id="cat-trigger-btn" class="bz-cat-btn" type="button" style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:14px; font-weight:600; color:var(--color-primary); background:var(--color-primary-light); border:1px solid var(--color-primary-border); cursor:pointer; border-radius:8px; white-space:nowrap;">
+				<button id="cat-trigger-btn" class="bz-cat-btn" type="button" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; font-size:14px; font-weight:500; cursor:pointer; border-radius:9px; white-space:nowrap;">
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
 					<span class="bz-cat-label">Linea de productos</span>
 				</button>
 
-				<!-- MEGA PANEL (desktop, hover) -->
+				<!-- MEGA PANEL (desktop, click) -->
 				<div class="cat-panel" style="position:absolute; top:100%; left:0; background:white; border:1px solid var(--color-border-soft); border-top:none; box-shadow:0 10px 32px rgba(20,30,50,0.1); border-radius:0 0 10px 10px; overflow:hidden;">
 					<div class="cat-sidebar" style="width:222px; padding:10px 0 6px; display:flex; flex-direction:column; gap:1px;">
 						{navCats.map((cat) => (
@@ -121,14 +121,36 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 </div>
 
 <style>
-	/* Panel flotante de escritorio: se abre con :hover, sin JS. */
-	.cat-trigger .cat-panel {
+	/* Botón de categorías: botón primario sólido. */
+	.bz-cat-btn {
+		color: white;
+		background: var(--color-primary);
+		border: none;
+		box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.32);
+		transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+	}
+	.bz-cat-btn:hover {
+		background: var(--color-primary-dark);
+		box-shadow: 0 4px 14px rgba(var(--color-primary-rgb), 0.4);
+	}
+	.bz-cat-btn:active {
+		transform: translateY(1px);
+		box-shadow: 0 2px 6px rgba(var(--color-primary-rgb), 0.3);
+	}
+	.bz-cat-btn.is-open {
+		background: var(--color-primary-dark);
+		box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+	}
+
+	/* Panel flotante de escritorio: se abre solo con click (JS), no con :hover. */
+	.cat-panel {
 		opacity: 0;
 		visibility: hidden;
 		pointer-events: none;
-		transition: opacity 0.1s ease;
+		z-index: 401;
+		transition: opacity 0.15s ease;
 	}
-	.cat-trigger:hover .cat-panel {
+	.cat-panel.is-open {
 		opacity: 1;
 		visibility: visible;
 		pointer-events: auto;
@@ -196,7 +218,13 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		.bz-cat-btn {
 			padding: 9px !important;
 			background: var(--color-bg) !important;
+			color: var(--color-text) !important;
 			border: none !important;
+			box-shadow: none !important;
+		}
+		.bz-cat-btn.is-open {
+			background: var(--color-primary-light) !important;
+			color: var(--color-primary) !important;
 		}
 		.bz-cat-btn svg {
 			width: 20px !important;
@@ -212,13 +240,7 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 	}
 	@media (min-width: 769px) {
 		.bz-search-fullscreen,
-		#cat-drawer-overlay,
 		#cat-drawer-panel {
-			display: none !important;
-		}
-	}
-	@media (max-width: 768px) {
-		.cat-trigger:hover .cat-panel {
 			display: none !important;
 		}
 	}
@@ -230,24 +252,37 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		if (!catTriggerBtn || catTriggerBtn.dataset.wired) return;
 		catTriggerBtn.dataset.wired = 'true';
 
+		const catPanel = document.querySelector('.cat-panel');
 		const drawerOverlay = document.getElementById('cat-drawer-overlay');
 		const drawerPanel = document.getElementById('cat-drawer-panel');
 		const drawerClose = document.getElementById('cat-drawer-close');
 
-		function openDrawer() {
-			drawerOverlay?.removeAttribute('hidden');
-			drawerPanel?.removeAttribute('hidden');
+		function isMobile() {
+			return window.matchMedia('(max-width: 768px)').matches;
 		}
-		function closeDrawer() {
+		function openMenu() {
+			drawerOverlay?.removeAttribute('hidden');
+			catTriggerBtn?.classList.add('is-open');
+			if (isMobile()) {
+				drawerPanel?.removeAttribute('hidden');
+			} else {
+				catPanel?.classList.add('is-open');
+			}
+		}
+		function closeMenu() {
 			drawerOverlay?.setAttribute('hidden', '');
 			drawerPanel?.setAttribute('hidden', '');
+			catPanel?.classList.remove('is-open');
+			catTriggerBtn?.classList.remove('is-open');
 		}
 
 		catTriggerBtn.addEventListener('click', () => {
-			if (window.matchMedia('(max-width: 768px)').matches) openDrawer();
+			const isOpen = !drawerOverlay?.hasAttribute('hidden');
+			if (isOpen) closeMenu();
+			else openMenu();
 		});
-		drawerOverlay?.addEventListener('click', closeDrawer);
-		drawerClose?.addEventListener('click', closeDrawer);
+		drawerOverlay?.addEventListener('click', closeMenu);
+		drawerClose?.addEventListener('click', closeMenu);
 
 		const mobileSearchToggle = document.getElementById('mobile-search-toggle');
 		const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
