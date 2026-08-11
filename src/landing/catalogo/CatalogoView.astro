@@ -26,17 +26,20 @@ const categoryName = categoriaActual?.nombre ?? 'Categoría';
 const leafIds = categoriaActual ? [categoriaActual.id, ...categoriaActual.subcategorias.map((s) => s.id)] : [];
 const matched = await getProductosByCategoria(leafIds);
 
-// Sub-filtro por tipo de accesorio (subcategoría) dentro del instrumento.
-const instrumentos = ['Todos', ...(categoriaActual?.subcategorias.map((s) => s.nombre) ?? [])];
+const PAGE_SIZE = 12;
+const totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+const requestedPage = Number(Astro.url.searchParams.get('page')) || 1;
+const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
+const pageItems = matched.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-const products = matched.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
+const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
 ---
 
 <PublicLayout title={`${categoryName} — Barzol`}>
 	<Breadcrumb items={[{ label: 'Inicio', href: '/' }, { label: categoryName }]} />
 
 	<!-- CATEGORY HERO -->
-	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
+	<!--div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
 		<div class="bz-cat-hero" style="position:relative; height:220px; background:linear-gradient(130deg,#e8edf8 0%,#dde4f2 60%,#d0daea 100%); border-radius:16px; overflow:hidden; display:flex; align-items:center;">
 			<div class="bz-cat-hero-text" style="position:relative; z-index:2; padding:0 48px; max-width:480px;">
 				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:8px;">Categoría</div>
@@ -46,17 +49,6 @@ const products = matched.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p
 		</div>
 	</div>
 
-	<!-- SUB-CATEGORY TABS -->
-	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
-		<div style="display:flex; align-items:center; gap:8px; overflow-x:auto; padding-bottom:4px;" data-noscroll>
-			{instrumentos.map((instrumento, i) => (
-				<button
-					type="button"
-					style={`flex-shrink:0; padding:8px 18px; border-radius:99px; border:1.5px solid ${i === 0 ? 'var(--color-primary)' : 'var(--color-border)'}; background:${i === 0 ? 'var(--color-primary)' : 'white'}; color:${i === 0 ? 'white' : 'var(--color-text-soft)'}; font-size:13px; font-weight:${i === 0 ? '600' : '500'}; cursor:pointer; white-space:nowrap;`}
-				>{instrumento}</button>
-			))}
-		</div>
-	</div>
 
 	<!-- MAIN CONTENT -->
 	<div class="bz-section-wrap bz-cat-main" style="max-width:1200px; margin:0 auto; padding:20px 32px 64px; display:grid; grid-template-columns:200px 1fr; gap:24px; align-items:start;">
@@ -64,56 +56,94 @@ const products = matched.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p
 		<!-- SIDEBAR -->
 		<div class="bz-cat-sidebar" style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
 			<div style="font-size:13px; font-weight:700; color:var(--color-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
-				Filtros
+				Filtro
 				<button type="button" style="font-size:11px; font-weight:500; color:var(--color-primary); background:none; border:none; cursor:pointer; ">Limpiar</button>
 			</div>
 
 			<div style="margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--color-surface-muted);">
-				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Precio (S/)</div>
-				<div style="display:flex; gap:6px; align-items:center;">
-					<input type="number" placeholder="0" style="width:72px; padding:7px 8px; border:1.5px solid var(--color-border); border-radius:7px; font-size:12px; outline:none;" />
-					<span style="color:var(--color-text-faint); font-size:12px;">—</span>
-					<input type="number" placeholder="300" style="width:72px; padding:7px 8px; border:1.5px solid var(--color-border); border-radius:7px; font-size:12px; outline:none;" />
+				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Categoría</div>
+				<div style="display:flex; flex-direction:column; gap:3px;">
+					{categoriasDb.map((c) => (
+						<a
+							href={`/catalogo/${c.slug}`}
+							style={`display:block; padding:6px 8px; border-radius:6px; text-decoration:none; font-size:13px; ${c.id === categoriaActual?.id ? 'background:var(--color-primary-light); color:var(--color-primary); font-weight:700;' : 'color:var(--color-text-soft); font-weight:400;'}`}
+						>{c.nombre}</a>
+					))}
 				</div>
 			</div>
 
-			<div>
-				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Ordenar</div>
-				<div style="display:flex; flex-direction:column; gap:8px;">
-					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
-						<input type="radio" name="sort" checked style="accent-color:var(--color-primary); cursor:pointer;" />Relevancia
-					</label>
-					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
-						<input type="radio" name="sort" style="accent-color:var(--color-primary); cursor:pointer;" />Menor precio
-					</label>
-					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
-						<input type="radio" name="sort" style="accent-color:var(--color-primary); cursor:pointer;" />Mayor precio
-					</label>
-					<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:var(--color-text-soft);">
-						<input type="radio" name="sort" style="accent-color:var(--color-primary); cursor:pointer;" />Más nuevos
-					</label>
-				</div>
-			</div>
 		</div>
 
 		<!-- PRODUCT GRID -->
 		<div>
-			<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-				<span style="font-size:13px; color:var(--color-text-muted);"><span style="font-weight:600; color:var(--color-text);">{products.length}</span> productos</span>
+			<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+				<span style="font-size:13px; color:var(--color-text-muted);"><span style="font-weight:600; color:var(--color-text);">{matched.length}</span> productos</span>
+				<div style="display:flex; align-items:center; gap:9px;">
+					<span style="font-size:13px; color:var(--color-text-muted);">Ordenar por</span>
+					<div class="bz-sort-wrap">
+						<select class="bz-sort-select">
+							<option>Relevancia</option>
+							<option>Precio: menor a mayor</option>
+							<option>Precio: mayor a menor</option>
+							<option>Más nuevos</option>
+						</select>
+						<svg class="bz-sort-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--color-primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+					</div>
+				</div>
 			</div>
-			<div class="bz-cat-product-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+			<div class="bz-cat-product-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
 				{products.map((p) => (
 					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} />
 				))}
 			</div>
 
-			<Pagination currentPage={1} totalPages={2} />
+			<Pagination currentPage={currentPage} totalPages={totalPages} basePath={`/catalogo/${categoria}`} />
 		</div>
 
 	</div>
 </PublicLayout>
 
 <style>
+	.bz-sort-wrap {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+	}
+	.bz-sort-select {
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		padding: 9px 34px 9px 15px;
+		border: 1.5px solid var(--color-border);
+		border-radius: 10px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--color-text);
+		background: white;
+		cursor: pointer;
+		outline: none;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+	}
+	.bz-sort-select:hover {
+		border-color: var(--color-primary-border);
+		background: var(--color-primary-light);
+	}
+	.bz-sort-select:focus-visible {
+		border-color: var(--color-primary);
+		box-shadow: 0 0 0 3px var(--color-primary-light);
+	}
+	.bz-sort-arrow {
+		position: absolute;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+		transition: transform 0.15s ease;
+	}
+	.bz-sort-select:focus ~ .bz-sort-arrow {
+		transform: translateY(-50%) rotate(180deg);
+	}
+
 	@media (max-width: 860px) {
 		.bz-cat-hero {
 			height: auto !important;

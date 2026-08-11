@@ -1,25 +1,47 @@
 ---
 interface Props {
-  currentPage?: number;
+  currentPage: number;
   totalPages: number;
+  basePath: string;
+  extraParams?: Record<string, string>;
 }
 
-const { currentPage = 1, totalPages } = Astro.props;
+const { currentPage, totalPages, basePath, extraParams = {} } = Astro.props;
 const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+function hrefFor(page: number): string {
+  const params = new URLSearchParams(extraParams);
+  if (page > 1) params.set('page', String(page));
+  const qs = params.toString();
+  return qs ? `${basePath}?${qs}` : basePath;
+}
+
+const prevHref = currentPage > 1 ? hrefFor(currentPage - 1) : undefined;
+const nextHref = currentPage < totalPages ? hrefFor(currentPage + 1) : undefined;
 ---
 
-<div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:36px;">
-	<button type="button" style="width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-border); background:white; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-		<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="var(--color-text-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-	</button>
-	{pages.map((page) =>
-		page === currentPage ? (
-			<button type="button" style="width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-primary); background:var(--color-primary); cursor:pointer; font-size:13px; font-weight:600; color:white;">{page}</button>
-		) : (
-			<button type="button" style="width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-border); background:white; cursor:pointer; font-size:13px; font-weight:500; color:var(--color-text-soft);">{page}</button>
-		)
-	)}
-	<button type="button" style="width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-border); background:white; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-		<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-	</button>
-</div>
+{totalPages > 1 && (
+	<div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:36px;">
+		<a
+			href={prevHref}
+			aria-disabled={!prevHref}
+			style={`width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-border); background:white; display:flex; align-items:center; justify-content:center; ${prevHref ? 'cursor:pointer;' : 'cursor:default; opacity:0.4; pointer-events:none;'}`}
+		>
+			<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="var(--color-text-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+		</a>
+		{pages.map((page) =>
+			page === currentPage ? (
+				<span style="width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-primary); background:var(--color-primary); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:white;">{page}</span>
+			) : (
+				<a href={hrefFor(page)} style="width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-border); background:white; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:13px; font-weight:500; color:var(--color-text-soft);">{page}</a>
+			)
+		)}
+		<a
+			href={nextHref}
+			aria-disabled={!nextHref}
+			style={`width:36px; height:36px; border-radius:8px; border:1.5px solid var(--color-border); background:white; display:flex; align-items:center; justify-content:center; ${nextHref ? 'cursor:pointer;' : 'cursor:default; opacity:0.4; pointer-events:none;'}`}
+		>
+			<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--color-text-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+		</a>
+	</div>
+)}

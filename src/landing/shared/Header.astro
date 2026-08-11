@@ -41,17 +41,12 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		<div class="bz-header-row" style="max-width:1200px; margin:0 auto; padding:0 32px; height:58px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--color-surface-muted);">
 
 			<!-- Logo -->
-			<a href="/" class="bz-logo-link" style="display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0;">
-				<svg width="26" height="26" viewBox="0 0 30 30" fill="none">
-					<polygon points="15,1 28,8 28,22 15,29 2,22 2,8" fill="var(--color-primary)"></polygon>
-					<polygon points="15,7 22,11 22,19 15,23 8,19 8,11" fill="white" opacity="0.85"></polygon>
-					<polygon points="15,11.5 19,14 19,17 15,19.5 11,17 11,14" fill="var(--color-primary)"></polygon>
-				</svg>
-				<span style="font-size:16px; font-weight:700; color:var(--color-text); letter-spacing:0.01em;">BARZOL</span>
+			<a href="/" class="bz-logo-link" style="display:flex; align-items:center; text-decoration:none; flex-shrink:0;">
+				<img src="/logo.svg" alt="Barzol" width="277" height="96" class="bz-logo-img" style="height:50px; width:auto; display:block;" />
 			</a>
 
 			<!-- Categorías (mega menú desktop / drawer mobile) -->
-			<div class="cat-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
+			<div class="cat-trigger" style="position:relative; height:100%; display:flex; align-items:center; flex-shrink:0; margin-left:28px;">
 				<button id="cat-trigger-btn" class="bz-cat-btn" type="button" style="display:flex; align-items:center; gap:7px; height:36px; padding:0 11px; font-size:14px; font-weight:600; color:var(--color-primary); background:var(--color-primary-light); border:1px solid var(--color-primary-border); cursor:pointer; border-radius:8px; white-space:nowrap;">
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
 					<span class="bz-cat-label">Linea de productos</span>
@@ -168,12 +163,16 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		}
 		.bz-header-row .cat-trigger {
 			order: 1 !important;
+			margin-left: 0 !important;
 		}
 		.bz-header-row .bz-logo-link {
 			position: absolute !important;
 			left: 50% !important;
 			top: 10px !important;
 			transform: translateX(-50%) !important;
+		}
+		.bz-logo-img {
+			height: 36px !important;
 		}
 		.bz-header-row .bz-header-spacer {
 			order: 3 !important;

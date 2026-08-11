@@ -3,6 +3,7 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
 import Pagination from './Pagination.astro';
 import { getProductosPublicados } from '@shared/lib/productos/productoService';
+import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 interface Props {
@@ -13,12 +14,24 @@ const { query = '' } = Astro.props;
 
 // El buscador no debe ofrecer borradores/inactivos — se filtra a nivel de
 // query (ver getProductosPublicados), el texto se sigue matcheando en JS.
-const productosDb = await getProductosPublicados();
+const [productosDb, categoriasDb] = await Promise.all([getProductosPublicados(), getCategorias()]);
 const q = query.trim().toLowerCase();
-const results = (q
+const matched = q
   ? productosDb.filter((p) => p.nombre.toLowerCase().includes(q) || p.keywords.toLowerCase().includes(q))
-  : productosDb
-).map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
+  : productosDb;
+
+// Categorías reales (mismo instrumento que /admin/categorias y el mega
+// menú del Header) — se listan TODAS. Cada una navega a /catalogo/[slug],
+// igual que al hacer click en esa categoría desde el Header.
+const categoryFilters = categoriasDb.map((c) => ({ id: c.id, nombre: c.nombre, slug: c.slug }));
+
+const PAGE_SIZE = 12;
+const totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+const requestedPage = Number(Astro.url.searchParams.get('page')) || 1;
+const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
+const pageItems = matched.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
 ---
 
 <PublicLayout title={`Buscar "${query}" — Barzol`}>
@@ -27,18 +40,18 @@ const results = (q
 		<div style="max-width:1200px; margin:0 auto; padding:0 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
 			<div>
 				<p style="font-size:13px; color:var(--color-text-muted); margin-bottom:2px;">Mostrando resultados para</p>
-				<h1 style="font-size:20px; font-weight:700; color:var(--color-text);">"{query || 'todos los productos'}" <span style="font-size:14px; font-weight:400; color:var(--color-text-muted);">— {results.length} resultados</span></h1>
+				<h1 style="font-size:20px; font-weight:700; color:var(--color-text);">"{query || 'todos los productos'}" <span style="font-size:14px; font-weight:400; color:var(--color-text-muted);">— {matched.length} resultados</span></h1>
 			</div>
-			<div style="display:flex; align-items:center; gap:10px;">
-				<span style="font-size:13px; color:var(--color-text-muted);">Ordenar por:</span>
-				<div style="position:relative;">
-					<select style="appearance:none; padding:8px 32px 8px 14px; border:1.5px solid var(--color-border); border-radius:9px; font-size:13px; color:var(--color-text); background:white; cursor:pointer; outline:none;">
+			<div style="display:flex; align-items:center; gap:9px;">
+				<span style="font-size:13px; color:var(--color-text-muted);">Ordenar por</span>
+				<div class="bz-sort-wrap">
+					<select class="bz-sort-select">
 						<option>Relevancia</option>
 						<option>Precio: menor a mayor</option>
 						<option>Precio: mayor a menor</option>
 						<option>Más nuevos</option>
 					</select>
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none;"><path d="M6 9l6 6 6-6" stroke="var(--color-text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+					<svg class="bz-sort-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--color-primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 				</div>
 			</div>
 		</div>
@@ -50,58 +63,35 @@ const results = (q
 		<!-- SIDEBAR FILTROS -->
 		<div class="bz-search-sidebar" style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
 			<div style="font-size:14px; font-weight:700; color:var(--color-text); margin-bottom:18px; display:flex; align-items:center; justify-content:space-between;">
-				Filtros
+				Filtrossss
 				<button type="button" style="font-size:11px; font-weight:500; color:var(--color-primary); background:none; border:none; cursor:pointer; ">Limpiar</button>
 			</div>
 
-			<div style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--color-surface-muted);">
-				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px;">Categoría</div>
-				<div style="display:flex; flex-direction:column; gap:9px;">
-					<label style="display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13px; color:var(--color-text-soft);">
-						<input type="checkbox" checked style="width:15px; height:15px; accent-color:var(--color-primary); cursor:pointer;" />
-						Soporte de Celulares <span style="color:var(--color-text-faint); font-size:11px;">(18)</span>
-					</label>
-					<label style="display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13px; color:var(--color-text-soft);">
-						<input type="checkbox" style="width:15px; height:15px; accent-color:var(--color-primary); cursor:pointer;" />
-						Sordinas <span style="color:var(--color-text-faint); font-size:11px;">(6)</span>
-					</label>
-					<label style="display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13px; color:var(--color-text-soft);">
-						<input type="checkbox" style="width:15px; height:15px; accent-color:var(--color-primary); cursor:pointer;" />
-						Accesorios <span style="color:var(--color-text-faint); font-size:11px;">(4)</span>
-					</label>
+			{categoryFilters.length > 0 && (
+				<div style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--color-surface-muted);">
+					<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px;">Categoría</div>
+					<div style="display:flex; flex-direction:column; gap:9px;">
+						{categoryFilters.map((c) => (
+							<a href={`/catalogo/${c.slug}`} style="display:block; text-decoration:none; font-size:13px; color:var(--color-text-soft);">
+								{c.nombre}
+							</a>
+						))}
+					</div>
 				</div>
-			</div>
-
-			<div style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--color-surface-muted);">
-				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px;">Precio (S/)</div>
-				<div style="display:flex; gap:8px; align-items:center;">
-					<input type="number" placeholder="Mín" style="width:80px; padding:8px 10px; border:1.5px solid var(--color-border); border-radius:8px; font-size:13px; outline:none; color:var(--color-text);" />
-					<span style="color:var(--color-text-faint); font-size:13px;">—</span>
-					<input type="number" placeholder="Máx" style="width:80px; padding:8px 10px; border:1.5px solid var(--color-border); border-radius:8px; font-size:13px; outline:none; color:var(--color-text);" />
-				</div>
-			</div>
-
-			<div>
-				<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px;">Material</div>
-				<div style="display:flex; flex-wrap:wrap; gap:6px;">
-					<div style="padding:5px 12px; background:var(--color-primary-light); border:1.5px solid var(--color-primary); border-radius:99px; font-size:12px; font-weight:500; color:var(--color-primary); cursor:pointer;">PLA+</div>
-					<div style="padding:5px 12px; background:white; border:1.5px solid var(--color-border); border-radius:99px; font-size:12px; font-weight:500; color:var(--color-text-soft); cursor:pointer;">PETG</div>
-					<div style="padding:5px 12px; background:white; border:1.5px solid var(--color-border); border-radius:99px; font-size:12px; font-weight:500; color:var(--color-text-soft); cursor:pointer;">Flexible</div>
-				</div>
-			</div>
+			)}
 		</div>
 
 		<!-- RESULTS GRID -->
 		<div>
 			{results.length > 0 ? (
 				<>
-					<div class="bz-search-results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+					<div class="bz-search-results-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
 						{results.map((p) => (
 							<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} />
 						))}
 					</div>
 
-					<Pagination currentPage={1} totalPages={2} />
+					<Pagination currentPage={currentPage} totalPages={totalPages} basePath="/busqueda" extraParams={query.trim() ? { q: query.trim() } : {}} />
 				</>
 			) : (
 				<div class="bz-empty-state" style="display:flex; flex-direction:column; align-items:center; text-align:center; background:white; border:1px solid var(--color-border-soft); border-radius:14px; padding:64px 32px;">
@@ -129,6 +119,46 @@ const results = (q
 </PublicLayout>
 
 <style>
+	.bz-sort-wrap {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+	}
+	.bz-sort-select {
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		padding: 9px 34px 9px 15px;
+		border: 1.5px solid var(--color-border);
+		border-radius: 10px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--color-text);
+		background: white;
+		cursor: pointer;
+		outline: none;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+	}
+	.bz-sort-select:hover {
+		border-color: var(--color-primary-border);
+		background: var(--color-primary-light);
+	}
+	.bz-sort-select:focus-visible {
+		border-color: var(--color-primary);
+		box-shadow: 0 0 0 3px var(--color-primary-light);
+	}
+	.bz-sort-arrow {
+		position: absolute;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+		transition: transform 0.15s ease;
+	}
+	.bz-sort-select:focus ~ .bz-sort-arrow {
+		transform: translateY(-50%) rotate(180deg);
+	}
+
 	@media (max-width: 860px) {
 		.bz-search-main {
 			grid-template-columns: 1fr !important;
