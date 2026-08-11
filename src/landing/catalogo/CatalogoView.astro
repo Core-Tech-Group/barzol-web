@@ -3,7 +3,7 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import Breadcrumb from '@landing/shared/Breadcrumb.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
 import Pagination from '@landing/busqueda/Pagination.astro';
-import { getProductos } from '@shared/lib/productos/productoService';
+import { getProductosByCategoria } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
@@ -13,14 +13,18 @@ interface Props {
 
 const { categoria = '' } = Astro.props;
 
-const [productosDb, categoriasDb] = await Promise.all([getProductos(), getCategorias()]);
-
 // `categoria` es el slug del INSTRUMENTO — la misma categoría que se
 // administra en /admin/categorias, sin taxonomía alternativa.
+const categoriasDb = await getCategorias();
 const categoriaActual = categoriasDb.find((c) => c.slug === categoria);
 const categoryName = categoriaActual?.nombre ?? 'Categoría';
 
-const matched = categoriaActual ? productosDb.filter((p) => p.categoriaId === categoriaActual.id) : [];
+// Solo se pide a la base de datos lo que esta página muestra: los productos
+// de ESTE instrumento (su propio id + el de cada subcategoría — product.category_id
+// siempre apunta a una hoja, nunca al instrumento), publicados y activos —
+// no la tabla product completa.
+const leafIds = categoriaActual ? [categoriaActual.id, ...categoriaActual.subcategorias.map((s) => s.id)] : [];
+const matched = await getProductosByCategoria(leafIds);
 
 // Sub-filtro por tipo de accesorio (subcategoría) dentro del instrumento.
 const instrumentos = ['Todos', ...(categoriaActual?.subcategorias.map((s) => s.nombre) ?? [])];

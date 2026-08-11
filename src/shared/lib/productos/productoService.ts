@@ -38,6 +38,63 @@ export async function getProductos(): Promise<Product[]> {
   return (data ?? []).map((r) => mapProductoRowToProduct(toProductoRow(r), categoryRows));
 }
 
+// Trae solo los productos pedidos por id (ej. las secciones del home, que
+// referencian un puñado de productos vía home_section_product) en vez de
+// traer TODO product como hace getProductos(). Filtra published + activo a
+// nivel de query: nada de mostrar borradores/inactivos en el sitio público.
+export async function getProductosByIds(ids: string[]): Promise<Product[]> {
+  if (ids.length === 0) return [];
+  const [{ data, error }, categoryRows] = await Promise.all([
+    supabase
+      .from('product')
+      .select(PRODUCT_SELECT)
+      .in('id', ids.map(Number))
+      .eq('status', 'published')
+      .eq('is_active', true),
+    getCategoryRowsForProductMapper(),
+  ]);
+  if (error) throw error;
+  return (data ?? []).map((r) => mapProductoRowToProduct(toProductoRow(r), categoryRows));
+}
+
+// Sitio público: todos los productos publicados+activos, sin traer los
+// borradores/inactivos que sí ve el admin vía getProductos().
+export async function getProductosPublicados(): Promise<Product[]> {
+  const [{ data, error }, categoryRows] = await Promise.all([
+    supabase.from('product').select(PRODUCT_SELECT).eq('status', 'published').eq('is_active', true),
+    getCategoryRowsForProductMapper(),
+  ]);
+  if (error) throw error;
+  return (data ?? []).map((r) => mapProductoRowToProduct(toProductoRow(r), categoryRows));
+}
+
+// Catálogo por instrumento (CatalogoView) y "más productos de esta
+// categoría" (ProductoView) — filtra por categoría, publicado+activo, en
+// vez de traer todo product y filtrar en JS.
+//
+// `product.category_id` (DB) SIEMPRE apunta a una categoría hoja
+// (subcategoría) — nunca al instrumento en sí (ver productoMapper.ts). Por
+// eso este filtro recibe la lista de ids hoja del instrumento: su propio id
+// (por si se usa directo, sin subcategorías) + el de cada subcategoría.
+export async function getProductosByCategoria(
+  leafCategoryIds: string[],
+  opts: { excludeId?: string; limit?: number } = {}
+): Promise<Product[]> {
+  if (leafCategoryIds.length === 0) return [];
+  let query = supabase
+    .from('product')
+    .select(PRODUCT_SELECT)
+    .in('category_id', leafCategoryIds.map(Number))
+    .eq('status', 'published')
+    .eq('is_active', true);
+  if (opts.excludeId) query = query.neq('id', Number(opts.excludeId));
+  if (opts.limit) query = query.limit(opts.limit);
+
+  const [{ data, error }, categoryRows] = await Promise.all([query, getCategoryRowsForProductMapper()]);
+  if (error) throw error;
+  return (data ?? []).map((r) => mapProductoRowToProduct(toProductoRow(r), categoryRows));
+}
+
 export async function getProductoById(id: string): Promise<Product | null> {
   const [{ data, error }, categoryRows] = await Promise.all([
     supabase.from('product').select(PRODUCT_SELECT).eq('id', Number(id)).maybeSingle(),
@@ -49,10 +106,17 @@ export async function getProductoById(id: string): Promise<Product | null> {
 
 // No existe columna `slug` en `product` — la URL pública resuelve el
 // producto por `code` (ver productoUrl.ts). Esta es la función que hace esa
-// búsqueda real.
+// búsqueda real. Filtra publicado+activo: un link directo a un borrador
+// debe comportarse como "no existe" en el sitio público (ver [slugCode].astro).
 export async function getProductoByCode(code: number): Promise<Product | null> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase.from('product').select(PRODUCT_SELECT).eq('code', code).maybeSingle(),
+    supabase
+      .from('product')
+      .select(PRODUCT_SELECT)
+      .eq('code', code)
+      .eq('status', 'published')
+      .eq('is_active', true)
+      .maybeSingle(),
     getCategoryRowsForProductMapper(),
   ]);
   if (error) throw error;

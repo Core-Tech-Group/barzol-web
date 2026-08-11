@@ -2,7 +2,7 @@
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
 import Pagination from './Pagination.astro';
-import { getProductos } from '@shared/lib/productos/productoService';
+import { getProductosPublicados } from '@shared/lib/productos/productoService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 interface Props {
@@ -11,7 +11,9 @@ interface Props {
 
 const { query = '' } = Astro.props;
 
-const productosDb = await getProductos();
+// El buscador no debe ofrecer borradores/inactivos — se filtra a nivel de
+// query (ver getProductosPublicados), el texto se sigue matcheando en JS.
+const productosDb = await getProductosPublicados();
 const q = query.trim().toLowerCase();
 const results = (q
   ? productosDb.filter((p) => p.nombre.toLowerCase().includes(q) || p.keywords.toLowerCase().includes(q))

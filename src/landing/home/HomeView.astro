@@ -3,7 +3,7 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCarousel from '@landing/producto/ProductCarousel.astro';
 import ServicePromoCard from './ServicePromoCard.astro';
 import { getHomeItems } from '@shared/lib/home/homeService';
-import { getProductos } from '@shared/lib/productos/productoService';
+import { getProductosByIds } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
@@ -12,13 +12,18 @@ import { productoUrl } from '@shared/lib/productos/productoUrl';
 // que espera ProductCarousel (href/nombre/precio). Los banners de imagen no
 // se renderizan todavía en esta vista — el hero actual es estático, sin
 // slots de imagen — así que solo se muestran las secciones de tipo 'seccion'.
-const [homeItemsDb, productosDb, categoriasDb] = await Promise.all([getHomeItems(), getProductos(), getCategorias()]);
+const homeItemsDb = await getHomeItems();
+const visibleSections = homeItemsDb.filter((it) => it.tipo === 'seccion' && it.visible);
+
+// Solo se piden los productos que las secciones visibles realmente
+// referencian — no toda la tabla product (a diferencia de getProductos()).
+const neededProductIds = [...new Set(visibleSections.flatMap((it) => it.productoIds))];
+const [productosDb, categoriasDb] = await Promise.all([getProductosByIds(neededProductIds), getCategorias()]);
 
 const productById = new Map(productosDb.map((p) => [p.id, p]));
 const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
 
-const sections = homeItemsDb
-  .filter((it) => it.tipo === 'seccion' && it.visible)
+const sections = visibleSections
   .sort((a, b) => a.orden - b.orden)
   .map((it) => {
     const productos = it.productoIds.map((pid) => productById.get(pid)).filter((p): p is NonNullable<typeof p> => !!p);

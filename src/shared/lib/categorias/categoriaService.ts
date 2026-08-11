@@ -10,13 +10,22 @@ import { mapCategoryRowsToCategories, type CategoryRow } from './categoriaMapper
 // (instrumentos), las mismas que se administran en /admin/categorias — no
 // una taxonomía alternativa.
 
+// Header (en cada página) y las vistas que listan productos (getProductos)
+// piden las mismas filas de `category` por separado — sin esta caché corta,
+// una sola navegación dispara la misma query dos veces contra Supabase.
+let categoryRowsCache: { rows: CategoryRow[]; expiresAt: number } | null = null;
+const CATEGORY_ROWS_CACHE_TTL_MS = 60_000;
+
 async function fetchCategoryRows(): Promise<CategoryRow[]> {
+  if (categoryRowsCache && categoryRowsCache.expiresAt > Date.now()) {
+    return categoryRowsCache.rows;
+  }
   const { data, error } = await supabase
     .from('category')
     .select('id, parent_category_id, code, name, sort_order, is_active')
     .order('sort_order');
   if (error) throw error;
-  return (data ?? []).map((r) => ({
+  const rows = (data ?? []).map((r) => ({
     id: String(r.id),
     parent_category_id: r.parent_category_id === null ? null : String(r.parent_category_id),
     code: r.code,
@@ -24,6 +33,8 @@ async function fetchCategoryRows(): Promise<CategoryRow[]> {
     sort_order: r.sort_order,
     is_active: r.is_active,
   }));
+  categoryRowsCache = { rows, expiresAt: Date.now() + CATEGORY_ROWS_CACHE_TTL_MS };
+  return rows;
 }
 
 // Exportado para que productoService.ts pueda derivar Product.categoriaId
@@ -69,6 +80,7 @@ export async function createCategoria(
     .select('id')
     .single();
   if (error) throw error;
+  categoryRowsCache = null;
   return { id: String(data.id) };
 }
 
@@ -86,6 +98,7 @@ export async function updateCategoria(
     })
     .eq('id', Number(id));
   if (error) throw error;
+  categoryRowsCache = null;
   return { id };
 }
 
@@ -97,4 +110,5 @@ export async function deleteCategoria(supabaseAuth: SupabaseClient, id: string):
     }
     throw error;
   }
+  categoryRowsCache = null;
 }

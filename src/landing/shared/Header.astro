@@ -228,6 +228,9 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 <script>
 	function initHeader() {
 		const catTriggerBtn = document.getElementById('cat-trigger-btn');
+		if (!catTriggerBtn || catTriggerBtn.dataset.wired) return;
+		catTriggerBtn.dataset.wired = 'true';
+
 		const drawerOverlay = document.getElementById('cat-drawer-overlay');
 		const drawerPanel = document.getElementById('cat-drawer-panel');
 		const drawerClose = document.getElementById('cat-drawer-close');
@@ -241,7 +244,7 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 			drawerPanel?.setAttribute('hidden', '');
 		}
 
-		catTriggerBtn?.addEventListener('click', () => {
+		catTriggerBtn.addEventListener('click', () => {
 			if (window.matchMedia('(max-width: 768px)').matches) openDrawer();
 		});
 		drawerOverlay?.addEventListener('click', closeDrawer);
@@ -254,5 +257,6 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		mobileSearchClose?.addEventListener('click', () => mobileSearchOverlay?.setAttribute('hidden', ''));
 	}
 
+	document.addEventListener('astro:page-load', initHeader);
 	initHeader();
 </script>

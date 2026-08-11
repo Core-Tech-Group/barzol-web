@@ -1,5 +1,6 @@
 ---
 import '@shared/styles/tokens.css';
+import { ClientRouter } from 'astro:transitions';
 import Header from '@landing/shared/Header.astro';
 import Footer from '@landing/shared/Footer.astro';
 import WhatsAppButton from '@landing/shared/WhatsAppButton.astro';
@@ -24,13 +25,14 @@ const { title = 'Barzol' } = Astro.props;
 			href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
 		/>
 		<title>{title}</title>
+		<ClientRouter />
 	</head>
 	<body>
 		<div style="min-height:100vh; background:var(--color-bg);">
 			<Header />
 			<slot />
 			<WhatsAppButton />
-			<Footer />
+			<Footer transition:persist="site-footer" />
 		</div>
 	</body>
 </html>

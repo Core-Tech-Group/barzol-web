@@ -4,7 +4,7 @@ import Breadcrumb from '@landing/shared/Breadcrumb.astro';
 import ProductCarousel from './ProductCarousel.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import type { Product } from '@shared/types';
-import { getProductos } from '@shared/lib/productos/productoService';
+import { getProductosByCategoria } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
@@ -18,7 +18,7 @@ interface Props {
 // componente anidado como este.
 const { producto } = Astro.props;
 
-const [productosDb, categoriasDb] = await Promise.all([getProductos(), getCategorias()]);
+const categoriasDb = await getCategorias();
 const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
 
 const nombre = producto.nombre;
@@ -32,12 +32,12 @@ const caracteristicas = producto.caracteristicas;
 const categoria = producto.categoriaId ? categoryById.get(producto.categoriaId) : undefined;
 const breadcrumbMiddle = categoria ? { label: categoria.nombre, href: `/catalogo/${categoria.slug}` } : null;
 
-const suggested = categoria
-  ? productosDb
-      .filter((p) => p.id !== producto.id && p.categoriaId === categoria.id)
-      .slice(0, 4)
-      .map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }))
-  : [];
+// Solo se piden los 4 productos que esta sección muestra, del mismo
+// instrumento (su id + el de cada subcategoría), excluyendo el actual —
+// no toda la tabla product.
+const leafIds = categoria ? [categoria.id, ...categoria.subcategorias.map((s) => s.id)] : [];
+const suggestedDb = leafIds.length ? await getProductosByCategoria(leafIds, { excludeId: producto.id, limit: 4 }) : [];
+const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
 ---
 
 <PublicLayout title={`${nombre} — Barzol`}>
