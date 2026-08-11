@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
+import type { ApiResponse } from '@shared/api/apiResponse';
 
 export interface AdminConfiguracion {
   whatsappNumero: string;
@@ -66,7 +67,7 @@ export default function ConfiguracionAdmin({ initialConfiguracion }: Props) {
           direccion: form.direccion.trim() || null,
         }),
       });
-      const body = await res.json();
+      const body = (await res.json()) as ApiResponse<unknown>;
       if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo guardar la configuración.');
       setSavedToast(true);
       setTimeout(() => setSavedToast(false), 2200);

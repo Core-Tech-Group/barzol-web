@@ -165,7 +165,7 @@ import '@shared/styles/tokens.css';
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username: usernameInput.value.trim(), password: passwordInput.value }),
 			});
-			const body = await res.json();
+			const body = (await res.json()) as { success: boolean; message: string | null };
 
 			if (!res.ok || !body.success) {
 				spinner.style.display = 'none';

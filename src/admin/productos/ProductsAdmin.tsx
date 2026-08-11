@@ -3,6 +3,7 @@ import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
 import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
+import type { ApiResponse } from '@shared/api/apiResponse';
 
 export interface AdminProduct {
   id: string;
@@ -264,7 +265,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const body = await res.json();
+      const body = (await res.json()) as ApiResponse<unknown>;
       if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo guardar el producto.');
       window.__adminHasUnsavedChanges = false;
       queueSuccessMessage(isNew ? 'Producto creado exitosamente' : 'Producto actualizado exitosamente');
@@ -295,7 +296,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const body = await res.json();
+      const body = (await res.json()) as ApiResponse<unknown>;
       if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo duplicar el producto.');
       queueSuccessMessage('Producto duplicado exitosamente');
       window.location.reload();
@@ -313,7 +314,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     setDeleting(true);
     try {
       const res = await fetch(`/api/productos/${target.id}`, { method: 'DELETE' });
-      const body = await res.json();
+      const body = (await res.json()) as ApiResponse<unknown>;
       if (!res.ok || !body.success) throw new Error(body.message || 'No se pudo eliminar el producto.');
       queueSuccessMessage('Producto eliminado exitosamente');
       window.location.reload();

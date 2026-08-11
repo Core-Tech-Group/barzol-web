@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { jsonResponse, errorResponse } from '@shared/api/apiResponse';
 import { getConfiguracion, updateConfiguracion } from '@shared/lib/configuracion/configuracionService';
+import { configuracionWriteSchema } from '@shared/lib/validation/configuracionSchema';
+import { formatZodError } from '@shared/lib/validation/zodError';
 
 export const GET: APIRoute = async () => {
   try {
@@ -16,8 +18,10 @@ export const GET: APIRoute = async () => {
 // locals en vez de crear uno nuevo y volver a autenticar.
 export const PUT: APIRoute = async ({ request, locals }) => {
   try {
-    const body = await request.json();
-    const configuracion = await updateConfiguracion(locals.supabase!, body);
+    const validacion = configuracionWriteSchema.safeParse(await request.json());
+    if (!validacion.success) return errorResponse(formatZodError(validacion.error), 400);
+
+    const configuracion = await updateConfiguracion(locals.supabase!, validacion.data);
     return jsonResponse(configuracion);
   } catch (error) {
     return errorResponse((error as Error).message);

@@ -3,6 +3,7 @@ import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
 import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
+import type { ApiResponse } from '@shared/api/apiResponse';
 
 export interface GalleryPhoto {
   id: string;
@@ -187,7 +188,7 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
-    const json = await res.json();
+    const json = (await res.json()) as ApiResponse<unknown>;
     if (!res.ok || !json.success) throw new Error(json.message || 'Error al guardar la galería.');
     setOpsDone((n) => n + 1);
     return json.data;

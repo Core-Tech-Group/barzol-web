@@ -5,6 +5,8 @@ import {
   updateCategoria,
   deleteCategoria,
 } from '@shared/lib/categorias/categoriaService';
+import { categoriaWriteSchema } from '@shared/lib/validation/categoriaSchema';
+import { formatZodError } from '@shared/lib/validation/zodError';
 
 export const GET: APIRoute = async ({ params }) => {
   try {
@@ -20,8 +22,10 @@ export const GET: APIRoute = async ({ params }) => {
 // locals en vez de crear uno nuevo y volver a autenticar.
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   try {
-    const body = await request.json();
-    const categoria = await updateCategoria(locals.supabase!, params.id!, body);
+    const validacion = categoriaWriteSchema.safeParse(await request.json());
+    if (!validacion.success) return errorResponse(formatZodError(validacion.error), 400);
+
+    const categoria = await updateCategoria(locals.supabase!, params.id!, validacion.data);
     return jsonResponse(categoria);
   } catch (error) {
     return errorResponse((error as Error).message);

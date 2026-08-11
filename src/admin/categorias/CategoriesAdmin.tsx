@@ -3,6 +3,7 @@ import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
 import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
+import type { ApiResponse } from '@shared/api/apiResponse';
 
 export interface AdminSubcategory {
   id: string;
@@ -257,16 +258,16 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
     setSaveConfirmOpen(true);
   }
 
-  async function apiCall(url: string, method: string, body?: unknown) {
+  async function apiCall<T = unknown>(url: string, method: string, body?: unknown): Promise<T> {
     const res = await fetch(url, {
       method,
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
-    const json = await res.json();
+    const json = (await res.json()) as ApiResponse<T>;
     if (!res.ok || !json.success) throw new Error(json.message || 'Error al guardar categorías.');
     setOpsDone((n) => n + 1);
-    return json.data;
+    return json.data as T;
   }
 
   async function confirmSaveChanges() {
@@ -293,7 +294,7 @@ export default function CategoriesAdmin({ initialCategories }: Props) {
       for (let i = 0; i < categories.length; i++) {
         const cat = categories[i];
         if (!initialCatIds.has(cat.id)) {
-          const created = await apiCall('/api/categorias', 'POST', { nombre: cat.name, parentId: null, orden: i });
+          const created = await apiCall<{ id: string }>('/api/categorias', 'POST', { nombre: cat.name, parentId: null, orden: i });
           realIdOf.set(cat.id, created.id);
         } else {
           realIdOf.set(cat.id, cat.id);

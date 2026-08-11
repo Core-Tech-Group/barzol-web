@@ -1,18 +1,25 @@
+import { z } from 'zod';
 import type { APIRoute } from 'astro';
 import { jsonResponse, errorResponse } from '@shared/api/apiResponse';
 import { createSupabaseServerClient, usernameToSyntheticEmail } from '@shared/lib/auth/authClient';
 
+const loginSchema = z.object({
+  username: z.string().trim().min(1, 'obligatorio'),
+  password: z.string().min(1, 'obligatorio'),
+});
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const { username, password } = await request.json();
-    if (!username || !password) {
+    const validacion = loginSchema.safeParse(await request.json());
+    if (!validacion.success) {
       return errorResponse('Usuario y contraseña son obligatorios.', 400);
     }
+    const { username, password } = validacion.data;
 
     const supabase = await createSupabaseServerClient(request, cookies);
     const { error } = await supabase.auth.signInWithPassword({
-      email: usernameToSyntheticEmail(String(username)),
-      password: String(password),
+      email: usernameToSyntheticEmail(username),
+      password,
     });
 
     if (error) {
