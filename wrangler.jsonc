@@ -8,6 +8,16 @@
 		"directory": "./dist",
 		"binding": "ASSETS"
 	},
+	// Bucket de contenido multimedia. Al ser un binding, el worker escribe en R2
+	// sin credenciales S3 ni firma: el acceso lo concede la plataforma. En
+	// `npm run dev` Cloudflare lo simula en local dentro de .wrangler/state, así
+	// que se puede probar la subida sin tocar el bucket real.
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "barzol-web"
+		}
+	],
 	"observability": {
 		"enabled": true
 	}

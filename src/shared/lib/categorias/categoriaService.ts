@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Category } from '../../types';
 import { mapCategoryRowsToCategories, type CategoryRow } from './categoriaMapper';
@@ -20,7 +20,7 @@ async function fetchCategoryRows(): Promise<CategoryRow[]> {
   if (categoryRowsCache && categoryRowsCache.expiresAt > Date.now()) {
     return categoryRowsCache.rows;
   }
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('category')
     .select('id, parent_category_id, code, name, sort_order, is_active')
     .order('sort_order');

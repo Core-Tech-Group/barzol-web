@@ -27,6 +27,28 @@ Sitio web tipo catálogo para Barzol: home, catálogo de productos por categorí
 
 Presupuesto anual acordado: S/. 160-330. Con este stack, el único gasto real es el dominio (~S/. 40-70/año); hosting, base de datos e imágenes corren en planes gratuitos. Ver sección [Riesgos y mitigaciones](#riesgos-y-mitigaciones).
 
+### Un solo ecosistema
+
+Hosting, almacenamiento de multimedia y CDN son **todos de Cloudflare**. No es una preferencia estética: al vivir en la misma plataforma, R2 se consume por *binding* (`wrangler.jsonc` → `r2_buckets`) y no por credenciales. Eso elimina de raíz las claves de acceso S3, la firma de peticiones y la configuración de CORS — tres superficies de fallo y de fuga que aparecerían si el hosting estuviera en otro proveedor. La única pieza fuera del ecosistema es Supabase, que aporta lo que Cloudflare no cubre en el plan gratuito: PostgreSQL con autenticación.
+
+### Variables de entorno
+
+Todas las variables son **de servidor**: al no llevar el prefijo `PUBLIC_`, Astro no las incluye en el bundle del navegador. Renombrar cualquiera a `PUBLIC_*` filtraría el secreto al cliente.
+
+Se leen **siempre** con `requireServerEnv()` / `readServerEnv()` de `shared/lib/env/serverEnv.ts`, que las toma del objeto `env` de `cloudflare:workers`. Nunca con `import.meta.env.BARZOL_*` directo: Vite sustituye cada acceso `import.meta.env.X` por su valor **de build time**, y las variables de Cloudflare son invisibles en ese momento, así que quedan como `undefined` fijo dentro del bundle. Con un patrón como `if (!url) throw ...` eso pliega la condición en un `throw` incondicional y elimina el resto como código muerto — el despliegue falla en cada request aunque las variables estén bien cargadas. Tampoco se usa `process.env`: en el worker se compila a un objeto vacío.
+
+| Variable | Uso |
+|---|---|
+| `BARZOL_SUPABASE_URL` / `BARZOL_SUPABASE_ANON_KEY` | Cliente de datos y sesión del admin |
+| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | Reservada — saltar RLS; hoy sin uso |
+| `BARZOL_R2_PUBLIC_URL` | Base pública de lectura del bucket, sin barra final |
+
+R2 **no** aparece con credenciales: la escritura va por el binding `MEDIA`, no por claves.
+
+En local viven en `.env` (ignorado por git), que wrangler carga dentro del worker — el build lo confirma con `Using secrets defined in .env`. En producción, en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets. `.env.example` es la plantilla y sí se versiona.
+
+> **Nota sobre `worker-configuration.d.ts`:** lo genera `npm run generate-types` a partir de `wrangler.jsonc` y **se versiona**, porque `tsconfig.json` lo incluye: sin él, `npm run check` falla en un clon recién hecho. Hay que regenerarlo cada vez que cambien los bindings.
+
 ## Estructura de Carpetas
 
 Organización por **zona explícita**: `landing/` (visitante), `admin/` (administrador) y `shared/` (compartido entre ambos). `pages/` existe porque Astro lo exige para el enrutamiento (file-based routing), pero solo contiene archivos delgados que apuntan a la vista real — nunca lógica ni marcado extenso.
@@ -54,8 +76,10 @@ src/
 │       ├── categorias/
 │       │   ├── index.ts
 │       │   └── [id].ts
-│       └── galeria/
-│           └── index.ts
+│       ├── galeria/
+│       │   └── index.ts
+│       └── media/
+│           └── index.ts        # POST — sube un archivo a R2 por el binding MEDIA
 │
 ├── landing/                      # TODO lo del visitante — una carpeta por vista, nada más entra aquí
 │   ├── layout/
@@ -101,7 +125,9 @@ src/
 └── shared/                        # Compartido entre landing/ Y admin/ — si algo solo lo usa un lado, NO va aquí
     ├── lib/                        # Lógica de negocio / acceso a datos, separada de las rutas
     │   ├── db/
-    │   │   └── client.ts            # Conexión a Supabase/Postgres
+    │   │   └── client.ts            # `getSupabase()` — instancia perezosa, única para todo el server
+    │   ├── env/
+    │   │   └── serverEnv.ts         # ÚNICA lectura de variables de entorno del servidor
     │   ├── productos/
     │   │   ├── productoService.ts   # ÚNICA fuente de productos (mock hoy, Supabase mañana)
     │   │   └── productoMapper.ts    # fila cruda de `product` (+ joins) → `Product` — sin usar hasta que exista la consulta real
@@ -117,10 +143,15 @@ src/
     │   ├── configuracion/
     │   │   ├── configuracionService.ts  # ÚNICA fuente de la configuración del sitio (WhatsApp, contacto, redes, banner de personalización) — tabla singleton
     │   │   └── configuracionMapper.ts   # fila cruda de `site_configuration` → `Configuracion`
-    │   ├── storage/
-    │   │   └── r2Client.ts          # Cliente de Cloudflare R2
+    │   ├── storage/                 # Cloudflare R2 — una responsabilidad por archivo
+    │   │   ├── r2Bucket.ts          # Acceso al binding MEDIA (sin credenciales)
+    │   │   ├── mediaKey.ts          # Funciones puras: sanea el nombre y arma la clave del objeto
+    │   │   ├── mediaUrl.ts          # clave → URL pública de lectura
+    │   │   └── mediaStorage.ts      # Escribe en R2 pasando el cuerpo como stream
     │   ├── validation/
-    │   │   └── [entidad]Schema.ts   # Schemas de Zod, uno por entidad
+    │   │   ├── [entidad]Schema.ts   # Schemas de Zod, uno por entidad
+    │   │   ├── mediaSchema.ts       # Allow-list de MIME + límites de tamaño de la subida
+    │   │   └── zodError.ts          # ZodError → texto de `ApiResponse.message`
     │   └── errors/
     │       └── apiError.ts          # Manejo de errores centralizado
     ├── styles/
@@ -191,7 +222,24 @@ src/
 - **Ubicación:** un schema por entidad en `shared/lib/validation/[entidad]Schema.ts` (ej. `productoSchema.ts`).
 - **Regla:** todo `Request` que llega a `pages/api/**` se valida contra su schema de Zod antes de tocar `shared/lib/[feature]/[feature]Service.ts`. Si la validación falla, se responde con el formato de error definido abajo — el endpoint nunca llega al service con datos sin validar.
 
-> **Estado actual:** no implementado todavía. `pages/api/**` sigue devolviendo `ApiResponse<T>` sin pasar por Zod — pendiente para cuando se conecte Supabase.
+> **Estado actual:** parcial. Zod ya está instalado y `POST /api/media` valida contra `mediaSchema.ts` antes de tocar nada, devolviendo 400 con el detalle por campo (formateado por `zodError.ts`). Los endpoints de productos, categorías y galería siguen pasando el body sin validar — y eso hoy **rompe `npm run check`**: con los tipos de Cloudflare cargados, `request.json()` devuelve `unknown`, así que pasarlo directo al service es un error de tipos. Son 8 errores preexistentes que desaparecen al validar. Pendiente.
+
+### Storage de multimedia (Cloudflare R2)
+
+La escritura va por el **binding nativo** `MEDIA`, declarado en `wrangler.jsonc`. La plataforma concede el acceso al worker, así que **no hay credenciales de R2 en ninguna parte**: ni Access Key, ni Secret, ni endpoint S3, ni firma de peticiones. Nada que rotar y nada que se pueda filtrar desde el código.
+
+Flujo: el admin hace `POST /api/media?carpeta=<carpeta>&nombre=<archivo>` (protegido por el middleware) con el archivo como cuerpo crudo → el endpoint valida carpeta, nombre, MIME y tamaño → escribe en R2 → devuelve `{ key, publicUrl, contentType, size }` → se guarda `publicUrl` en Supabase.
+
+Reglas que sostienen el diseño:
+
+- **El cuerpo es el archivo en crudo, no un `FormData`.** Así se pasa el `ReadableStream` directo a R2 sin materializarlo: `request.formData()` bufferiza, y un worker dispone de 128 MB.
+- **Allow-list de MIME, nunca deny-list.** `image/svg+xml` queda fuera a propósito: un SVG servido desde el dominio público del bucket es un XSS almacenado.
+- **El `Content-Type` se normaliza antes de validar** (`image/png; charset=utf-8` → `image/png`): la cabecera admite parámetros y rechazarla por eso descartaría subidas legítimas.
+- **La carpeta es un enum cerrado** (`productos` | `galeria` | `home`) y el nombre de archivo se sanea descartando cualquier componente de ruta, así que no se puede escribir fuera del prefijo previsto.
+- **La clave lleva un UUID por delante del nombre** — en R2 un `PUT` sobre una clave existente sobrescribe sin avisar.
+- **El límite de tamaño es real**: 10 MB para imagen, 100 MB para video, que es el tope de cuerpo de request en el plan Free de Workers.
+
+El binding sirve para escribir, no para publicar: las imágenes se sirven desde la base pública del bucket (`BARZOL_R2_PUBLIC_URL`), no proxeadas por el worker.
 
 ## Manejo de Errores
 
@@ -244,6 +292,8 @@ Ver [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md) — diagrama entidad-relación co
 | Pausa por inactividad (Supabase Free) | Sin actividad 7 días | Ping automático diario (ej. cron-job.org, gratis) para mantener la BD activa |
 | Salto de costo al superar plan gratis | Crecimiento de datos/tráfico | ORM (Drizzle/Prisma) para poder migrar de proveedor de BD sin reescribir código |
 | Pérdida de imágenes en cada deploy | Sistema de archivos no persistente en algunos hosts | Imágenes siempre en R2, nunca en `/public` del repo |
+| Build de producción que arranca roto | Variables leídas con `import.meta.env`, congeladas en build time | Lectura obligatoria vía `shared/lib/env/serverEnv.ts`, que las toma de `cloudflare:workers` en runtime. Ver Changelog |
+| Video que supera el cuerpo máximo del worker | Tope de 100 MB por request en el plan Free | El límite está validado en `mediaSchema.ts` y devuelve 400 con mensaje claro en vez de un fallo opaco de la plataforma. Si hiciera falta más, la salida es subida multiparte o URL prefirmada |
 | Cómputo compartido más lento (Supabase Free) | Recursos compartidos entre proyectos | Aceptable para el volumen de tráfico esperado; reevaluar si el catálogo crece mucho |
 
 ## Decisiones Clave
@@ -273,3 +323,10 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Reestructuración por zonas | `Pagination.astro` se dejó en `landing/busqueda/` pero también lo importa `CatalogoView.astro` | Se siguió la instrucción explícita de ubicarlo en `busqueda/`; en sentido estricto, al usarlo 2 vistas debería vivir en `landing/shared/` — queda como ajuste pendiente a validar |
 | Reestructuración por zonas | `admin/layout/AdminLayout.astro` creado como equivalente funcional del antiguo `BaseLayout.astro` (sin nav propia todavía) | La reestructuración fue solo movimiento de archivos, sin agregar lógica/UI nueva; la nav real del admin queda como tarea aparte |
 | Panel admin completo | Esquema de base de datos movido a `DATABASE_SCHEMA.md`, con diagrama Mermaid completo (categorías de 2 niveles, fotos/características de producto, home_items unificado, galería, configuración, admin_profiles) | El borrador de 3 tablas original no reflejaba ninguna de las pantallas reales construidas en `admin/` (Productos, Categorías, Página de inicio, Galería) |
+| Storage R2 (2026-08-08) | Se **descartó migrar el hosting a Vercel** y se confirmó Cloudflare Pages | Mantener hosting y storage en la misma plataforma permite consumir R2 por binding. Repartirlos habría obligado a credenciales S3, firma de peticiones y CORS — tres piezas que con un solo ecosistema no existen |
+| Storage R2 (2026-08-08) | R2 se consume por **binding nativo** (`r2_buckets` en `wrangler.jsonc`), no por API S3 | Sin credenciales que guardar, rotar o filtrar. Además evita cargar el SDK de AWS, demasiado pesado para workerd |
+| Storage R2 (2026-08-08) | La subida **atraviesa el worker** en vez de usar URL prefirmada | Las prefirmadas resolvían el límite de ~4.5 MB de cuerpo de Vercel, que en Workers no existe (100 MB en Free). Sin ese problema, el proxy es más simple y no necesita CORS por ser mismo origen |
+| Storage R2 (2026-08-08) | El cuerpo del `POST` es el archivo crudo, con los metadatos en query string y cabeceras | Permite pasar el `ReadableStream` directo a R2. `request.formData()` cargaría el archivo entero en los 128 MB del worker |
+| Storage R2 (2026-08-08) | Toda variable de entorno se lee por `shared/lib/env/serverEnv.ts` desde `cloudflare:workers`; queda **prohibido** `import.meta.env.BARZOL_*` directo | Vite congela esos accesos en build time y las variables de Cloudflare son invisibles entonces. Se detectó que `db/client.ts` compilaba a un `throw` incondicional con el `createClient` eliminado como código muerto |
+| Storage R2 (2026-08-08) | `db/client.ts` pasa de instancia en el cuerpo del módulo a `getSupabase()` perezoso; se actualizaron los 5 services | En workerd el entorno no existe mientras se evalúan los módulos, sólo dentro de una petición: crear el cliente al importar reventaba al arrancar el worker |
+| Storage R2 (2026-08-08) | `image/svg+xml` excluido de la allow-list de subida | Un SVG servido desde el dominio público del bucket es un vector de XSS almacenado |

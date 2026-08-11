@@ -1,4 +1,4 @@
-import { supabase } from '../db/client';
+import { getSupabase } from '../db/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Product, Vendor } from '../../types';
 import { mapProductoRowToProduct, type ProductoRow } from './productoMapper';
@@ -31,7 +31,7 @@ function toProductoRow(r: any): ProductoRow {
 
 export async function getProductos(): Promise<Product[]> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase.from('product').select(PRODUCT_SELECT),
+    getSupabase().from('product').select(PRODUCT_SELECT),
     getCategoryRowsForProductMapper(),
   ]);
   if (error) throw error;
@@ -45,7 +45,7 @@ export async function getProductos(): Promise<Product[]> {
 export async function getProductosByIds(ids: string[]): Promise<Product[]> {
   if (ids.length === 0) return [];
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase
+    getSupabase()
       .from('product')
       .select(PRODUCT_SELECT)
       .in('id', ids.map(Number))
@@ -61,7 +61,7 @@ export async function getProductosByIds(ids: string[]): Promise<Product[]> {
 // borradores/inactivos que sí ve el admin vía getProductos().
 export async function getProductosPublicados(): Promise<Product[]> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase.from('product').select(PRODUCT_SELECT).eq('status', 'published').eq('is_active', true),
+    getSupabase().from('product').select(PRODUCT_SELECT).eq('status', 'published').eq('is_active', true),
     getCategoryRowsForProductMapper(),
   ]);
   if (error) throw error;
@@ -81,7 +81,7 @@ export async function getProductosByCategoria(
   opts: { excludeId?: string; limit?: number } = {}
 ): Promise<Product[]> {
   if (leafCategoryIds.length === 0) return [];
-  let query = supabase
+  let query = getSupabase()
     .from('product')
     .select(PRODUCT_SELECT)
     .in('category_id', leafCategoryIds.map(Number))
@@ -97,7 +97,7 @@ export async function getProductosByCategoria(
 
 export async function getProductoById(id: string): Promise<Product | null> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase.from('product').select(PRODUCT_SELECT).eq('id', Number(id)).maybeSingle(),
+    getSupabase().from('product').select(PRODUCT_SELECT).eq('id', Number(id)).maybeSingle(),
     getCategoryRowsForProductMapper(),
   ]);
   if (error) throw error;
@@ -110,7 +110,7 @@ export async function getProductoById(id: string): Promise<Product | null> {
 // debe comportarse como "no existe" en el sitio público (ver [slugCode].astro).
 export async function getProductoByCode(code: number): Promise<Product | null> {
   const [{ data, error }, categoryRows] = await Promise.all([
-    supabase
+    getSupabase()
       .from('product')
       .select(PRODUCT_SELECT)
       .eq('code', code)
@@ -124,7 +124,7 @@ export async function getProductoByCode(code: number): Promise<Product | null> {
 }
 
 export async function getVendors(): Promise<Vendor[]> {
-  const { data, error } = await supabase.from('vendor').select('id, name').order('name');
+  const { data, error } = await getSupabase().from('vendor').select('id, name').order('name');
   if (error) throw error;
   return (data ?? []).map((r) => ({ id: String(r.id), nombre: r.name }));
 }

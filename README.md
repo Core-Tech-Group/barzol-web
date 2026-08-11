@@ -37,4 +37,13 @@ Abre `http://localhost:4321`.
 | `npm run build` | Genera el build de producción en `dist/` |
 | `npm run preview` | Sirve el build de producción localmente para probarlo antes de desplegar |
 | `npm run astro` | Acceso directo al CLI de Astro (`npm run astro -- <comando>`) |
+| `npm run check` | Chequeo de tipos con `astro check` |
 | `npm run generate-types` | Genera los tipos de bindings de Cloudflare (`wrangler types`) |
+
+## Despliegue
+
+Se despliega en **Cloudflare Pages** con el adaptador `@astrojs/cloudflare` (`output: 'server'`). Antes del primer deploy hay que cargar las variables de `.env.example` en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets.
+
+El contenido multimedia vive en **Cloudflare R2** (bucket `barzol-web`), enlazado como binding `MEDIA` en `wrangler.jsonc`. Al estar hosting y storage en la misma plataforma, la escritura no usa credenciales: el acceso lo concede el binding. Ver ARCHITECTURE.md § Storage de multimedia.
+
+Tras cambiar bindings en `wrangler.jsonc`, correr `npm run generate-types` y commitear `worker-configuration.d.ts`.
