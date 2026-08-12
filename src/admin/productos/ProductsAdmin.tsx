@@ -4,6 +4,11 @@ import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
 import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
 import type { ApiResponse } from '@shared/api/apiResponse';
+import { optimizeImageFile, extensionForMimeType } from '@shared/lib/media/imageOptimizer';
+import { subirMedia } from '@shared/lib/media/uploadClient';
+import { IMAGE_MIME_TYPES } from '@shared/lib/validation/mediaSchema';
+
+const IMAGE_ACCEPT = IMAGE_MIME_TYPES.join(',');
 
 export interface AdminProduct {
   id: string;
@@ -109,6 +114,13 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   // esta sesión de edición) — lo que se guarda de verdad es el nombre del
   // archivo (editDraft.photos[i]), nunca el contenido en base64.
   const [photoPreviews, setPhotoPreviews] = useState<Record<number, string>>({});
+  // true mientras una foto se está optimizando/subiendo a R2 en ese slot.
+  const [uploadingPhotos, setUploadingPhotos] = useState<Record<number, boolean>>({});
+  // Se incrementa cada vez que se empieza o se cancela una subida para ese
+  // índice — una subida vieja que resuelve tarde se compara contra esto y,
+  // si ya no es la vigente, no toca el estado (evita pisar una foto más
+  // nueva con el resultado de una más vieja).
+  const photoUploadToken = useRef<Record<number, number>>({});
   const [showValidation, setShowValidation] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<'cat' | 'sub' | null>(null);
   const [catSearchQuery, setCatSearchQuery] = useState('');
@@ -233,6 +245,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
   async function saveEdit() {
     if (!editDraft) return;
+    if (Object.values(uploadingPhotos).some(Boolean)) {
+      showError('Esperá a que terminen de subir las fotos.');
+      return;
+    }
     const needsPhoto = editDraft.statusLabel === 'Publicado' && editDraft.active;
     const hasPhoto = editDraft.photos.some(Boolean);
     const errors: string[] = [];
@@ -331,26 +347,78 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     if (pendingHref) window.location.href = pendingHref;
   }
 
-  // ---------- Fotos: se elige el archivo del escritorio (para que el admin
-  // vea una vista previa real), pero lo que se guarda es solo el NOMBRE del
-  // archivo — nunca el contenido en base64. Eso es lo que volvía pesado cada
-  // guardado; se resuelve del todo recién cuando se conecte R2 (ahí este
-  // nombre se reemplaza por la URL real que devuelva la subida). ----------
+  // ---------- Fotos: se elige el archivo del escritorio, se muestra una
+  // vista previa local al instante (blob: URL) y en paralelo se optimiza
+  // (redimensiona + reencoda a WebP, ver imageOptimizer.ts) y se sube a R2
+  // vía /api/media. `editDraft.photos[i]` queda en null hasta que la subida
+  // termina bien — recién ahí pasa a tener la URL pública real; así
+  // `saveEdit` nunca manda un nombre de archivo local como si fuera la foto.
+  // ----------
 
-  function handlePhotoFile(index: number, file: File | null) {
+  async function handlePhotoFile(index: number, file: File | null) {
     if (!file) return;
+
     const previewUrl = URL.createObjectURL(file);
     setPhotoPreviews((prev) => {
       const old = prev[index];
       if (old) URL.revokeObjectURL(old);
       return { ...prev, [index]: previewUrl };
     });
-    setEditDraft((d) => {
-      if (!d) return d;
-      const photos = [...d.photos];
-      photos[index] = file.name;
-      return { ...d, photos };
-    });
+
+    const myToken = (photoUploadToken.current[index] ?? 0) + 1;
+    photoUploadToken.current[index] = myToken;
+    const isCurrent = () => photoUploadToken.current[index] === myToken;
+
+    if (!(IMAGE_MIME_TYPES as readonly string[]).includes(file.type)) {
+      showError('Formato no soportado — usá JPG, PNG, WEBP o AVIF.');
+      return;
+    }
+
+    setUploadingPhotos((prev) => ({ ...prev, [index]: true }));
+    try {
+      const { blob } = await optimizeImageFile(file);
+      const extension = extensionForMimeType(blob.type);
+      const baseName = file.name.replace(/\.[^.]+$/, '').trim() || 'foto';
+      const guardada = await subirMedia(blob, { carpeta: 'productos', nombreArchivo: `${baseName}.${extension}` });
+
+      // Solo en dev: baja el mismo blob que se acaba de confirmar en R2, para
+      // poder revisarlo a simple vista (Descargas) sin entrar al bucket. Se
+      // elimina del bundle de producción — Vite descarta la rama en build.
+      if (import.meta.env.DEV) {
+        const debugUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = debugUrl;
+        a.download = `${baseName}.${extension}`;
+        a.click();
+        URL.revokeObjectURL(debugUrl);
+      }
+
+      if (!isCurrent()) return; // se reemplazó o se quitó esta foto mientras subía
+      setEditDraft((d) => {
+        if (!d) return d;
+        const photos = [...d.photos];
+        photos[index] = guardada.publicUrl;
+        return { ...d, photos };
+      });
+    } catch (e) {
+      if (!isCurrent()) return;
+      showError((e as Error).message || 'No se pudo subir la imagen.');
+      setPhotoPreviews((prev) => {
+        const old = prev[index];
+        if (old) URL.revokeObjectURL(old);
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+      setEditDraft((d) => {
+        if (!d) return d;
+        const photos = [...d.photos];
+        photos[index] = null;
+        return { ...d, photos };
+      });
+    } finally {
+      if (isCurrent()) setUploadingPhotos((prev) => ({ ...prev, [index]: false }));
+    }
   }
 
   // Botón de arriba: elegir varias fotos de una — llena los espacios vacíos
@@ -364,6 +432,12 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   }
 
   function removePhoto(index: number) {
+    photoUploadToken.current[index] = (photoUploadToken.current[index] ?? 0) + 1; // invalida una subida en curso
+    setUploadingPhotos((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
     setPhotoPreviews((prev) => {
       const old = prev[index];
       if (old) URL.revokeObjectURL(old);
@@ -818,7 +892,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                   <label
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'transparent', border: '1.5px dashed var(--color-border-muted)', borderRadius: 7, color: 'var(--color-text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
                   >
-                    <input type="file" accept="image/*" multiple hidden onChange={(e) => handlePhotosSelected(e.target.files)} />
+                    <input type="file" accept={IMAGE_ACCEPT} multiple hidden onChange={(e) => handlePhotosSelected(e.target.files)} />
                     <Icon size={12}>
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -874,24 +948,29 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                         >
                           {preview ? (
                             <label style={{ width: '100%', height: '100%', display: 'block', cursor: 'pointer' }}>
-                              <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
+                              <input type="file" accept={IMAGE_ACCEPT} hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
                               <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             </label>
                           ) : photo ? (
-                            <label style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 10.5, fontWeight: 600, textAlign: 'center', padding: 6, overflowWrap: 'anywhere' }}>
-                              <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
-                              {photo}
+                            <label style={{ width: '100%', height: '100%', display: 'block', cursor: 'pointer' }}>
+                              <input type="file" accept={IMAGE_ACCEPT} hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
+                              <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             </label>
                           ) : (
                             <label style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-faint)', fontSize: 10, textAlign: 'center', padding: 4 }}>
-                              <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
+                              <input type="file" accept={IMAGE_ACCEPT} hidden onChange={(e) => handlePhotoFile(i, e.target.files?.[0] ?? null)} />
                               {i === 0 ? 'Foto principal' : `Foto ${i + 1}`}
                             </label>
+                          )}
+                          {uploadingPhotos[i] && (
+                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,24,39,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'white' }}>Subiendo...</span>
+                            </div>
                           )}
                           <div style={{ position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 5, background: 'rgba(17,24,39,0.65)', color: 'white', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                             {i + 1}
                           </div>
-                          {photo && (
+                          {(photo || preview) && !uploadingPhotos[i] && (
                             <button
                               type="button"
                               onClick={() => removePhoto(i)}
@@ -909,7 +988,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                   })}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 10 }}>
-                  La foto 1 es la principal. Arrastra las tarjetas para reordenar. Por ahora se guarda el nombre del archivo, no la imagen — la subida real se conecta más adelante con R2.
+                  La foto 1 es la principal. Arrastra las tarjetas para reordenar. Las imágenes se optimizan (se redimensionan y convierten a WebP) y se suben automáticamente.
                 </div>
                 {showValidation && editDraft.statusLabel === 'Publicado' && editDraft.active && !editDraft.photos.some(Boolean) && (
                   <div style={{ fontSize: 11, color: 'var(--color-danger)', fontWeight: 600, marginTop: 4 }}>Un producto publicado y activo necesita al menos 1 foto</div>
