@@ -1,37 +1,62 @@
-# Kanban — Cloudflare Pages + R2 (evaluación de Vercel descartada)
+# Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Fecha:** 2026-08-08 · **Rama:** `main` · **Alcance:** puesta en marcha de Cloudflare R2 para contenido multimedia, manteniendo Cloudflare Pages como hosting.
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-11 · **Rama:** `main`
+> **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
 
-## Resumen del avance
+## Estado del despliegue — 2026-08-11
 
-Se conectó **Cloudflare R2** por *binding nativo* para el contenido multimedia, con subida a través del worker. Durante el proceso se evaluó y luego se **descartó** migrar el hosting a Vercel; la sección [Decisión revertida](#decisión-revertida-vercel) documenta por qué y qué quedó de esa exploración.
+El pipeline **funciona**: build verde, `wrangler deploy` correcto y los 4 bindings adjuntos, incluido `env.MEDIA (barzol-web)` como R2 Bucket. Pero el sitio responde **HTTP 500 con cuerpo vacío** en todas las rutas.
 
-Apareció además un **bug de producción preexistente** en la lectura de variables de entorno que habría hecho fallar el sitio entero en cada request. Está corregido y verificado en el bundle compilado (`BZ-04`).
+**Causa confirmada** (no inferida — la devolvió la propia API de producción):
 
-**Verificaciones ejecutadas:** `npm run build` con `@astrojs/cloudflare`, escritura real contra el bucket R2 simulado en local (`put` → `get` → `delete`), 8 casos de validación del schema de subida, y prueba de rutas con datos reales de Supabase (11 rutas, `/admin` redirigiendo a login).
+```
+GET https://barzol-web.willymichael-cardenas.workers.dev/api/productos
+{"success":false,"data":null,"message":"Faltan variables de entorno:
+ BARZOL_SUPABASE_URL, BARZOL_SUPABASE_ANON_KEY. ..."}
+```
 
----
+Las variables de entorno **no están cargadas en el Worker desplegado**. El código está bien: arranca, ejecuta y falla exactamente donde debe, con el mensaje que se diseñó para este caso. Falta una acción de configuración en el panel — ver `BZ-23`, que es el único bloqueante real.
 
-## Decisión revertida: Vercel
-
-Se llegó a migrar el proyecto entero a Vercel (`@astrojs/vercel`, subida por URL prefirmada con el SDK de AWS, `wrangler.jsonc` eliminado) y quedó funcionando y verificado contra el bucket real. **Se revirtió por decisión de arquitectura:** repartir hosting y storage entre dos proveedores obliga a piezas que con un solo ecosistema no existen.
-
-| Aspecto | Vercel + R2 (descartado) | Cloudflare Pages + R2 (actual) |
-|---|---|---|
-| Acceso a R2 | API S3 con Access Key + Secret | Binding `MEDIA`, sin credenciales |
-| Credenciales que rotar | 3 (token, access key, secret) | **ninguna** |
-| CORS del bucket | Obligatorio | No aplica — mismo origen |
-| Firma de peticiones | SigV4 con SDK de AWS | No aplica |
-| Dependencias extra | `@aws-sdk/client-s3`, `s3-request-presigner` | ninguna |
-| Límite de subida | ~4.5 MB de cuerpo → forzaba prefirmadas | 100 MB (plan Free) |
-
-El trabajo descartado quedó en la rama `feat/perfil-vercel-r2` por si alguna vez se reevalúa. **No debe fusionarse.**
-
-Lo que **sí sobrevivió** de esa exploración, porque el problema era independiente del hosting: el hallazgo del bug de variables de entorno (`BZ-04`), el saneo de nombres de archivo, la allow-list de MIME y el formateo de errores de Zod.
+> **Precisión importante:** esto no es Cloudflare **Pages**. El log muestra `npx wrangler deploy` y el dominio `*.workers.dev`: es un **Worker con assets estáticos**, el sucesor de Pages. Importa porque cambia dónde se cargan las variables en el panel.
 
 ---
 
-## Leyenda
+## Tablero
+
+| ID | Tarea | Estado | Prio |
+|---|---|---|---|
+| BZ-01 | Confirmar Cloudflare como hosting | ✅ Hecho | 🔴 |
+| BZ-02 | Binding de R2 y módulo de storage | ✅ Hecho | 🔴 |
+| BZ-03 | Endpoint `POST /api/media` | ✅ Hecho | 🔴 |
+| BZ-04 | Corregir lectura de variables de entorno | ✅ Hecho | 🔴 |
+| BZ-05 | Cliente de Supabase perezoso | ✅ Hecho | 🔴 |
+| BZ-06 | Documentación de arquitectura | ✅ Hecho | 🟠 |
+| BZ-07 | Revocar el token de API de R2 | ⬜ Pendiente | 🔴 |
+| BZ-08 | Habilitar acceso público del bucket | ✅ Hecho | 🔴 |
+| BZ-09 | Enlazar el bucket en el proyecto | ✅ Hecho | 🔴 |
+| BZ-10 | Conectar el panel admin a la subida | ⬜ Pendiente | 🟠 |
+| BZ-11 | Borrado de multimedia y huérfanos | ⬜ Pendiente | 🟠 |
+| BZ-12 | Validar endpoints con Zod | ✅ Hecho | 🟠 |
+| BZ-13 | Implementar escrituras de los services | ✅ Hecho | 🟠 |
+| BZ-14 | Dejar de filtrar mensajes internos | ⬜ Pendiente | 🔴 ↑ |
+| BZ-15 | `baseUrl` deprecado en tsconfig | ⬜ Pendiente | ⚪ |
+| BZ-16 | Vulnerabilidades de npm | ⬜ Pendiente | ⚪ |
+| BZ-17 | Mover `Pagination.astro` | ⬜ Pendiente | ⚪ |
+| BZ-18 | Vista de Configuración del admin | ✅ Hecho | ⚪ |
+| BZ-19 | Datos estructurados y SEO | ⬜ Pendiente | ⚪ |
+| BZ-20 | Arranque lento del servidor de dev | ⬜ Pendiente | ⚪ |
+| BZ-21 | Diagnóstico del 500 en producción | ✅ Hecho | 🔴 |
+| BZ-22 | Página de error 500 | ✅ Hecho | 🟠 |
+| BZ-23 | **Cargar las variables en el Worker** | ⬜ **Bloqueante** | 🔴 |
+| BZ-24 | Verificación post-deploy | ⬜ Pendiente | 🔴 |
+| BZ-25 | Probar la subida a R2 en producción | ⬜ Pendiente | 🟠 |
+| BZ-26 | Separar variables de secretos | ⬜ Pendiente | 🟠 |
+| BZ-27 | Dominio propio para el sitio | ⬜ Pendiente | 🟡 |
+| BZ-28 | Dominio propio para el bucket | ⬜ Pendiente | 🟡 |
+| BZ-29 | Runbook de observabilidad | ⬜ Pendiente | 🟡 |
+| BZ-30 | `npm run preview` roto en Windows | ⬜ Pendiente | 🟡 |
+
+**Progreso:** 14 de 30 hechas. Bloqueantes activos: **BZ-23** (y `BZ-07`, independiente).
 
 | Prioridad | Significado |
 |---|---|
@@ -42,56 +67,213 @@ Lo que **sí sobrevivió** de esa exploración, porque el problema era independi
 
 ---
 
-## ✅ HECHO — en esta sesión
+## ✅ Cerradas en esta sesión (2026-08-11)
 
-### BZ-01 · Confirmar Cloudflare Pages como hosting 🔴
-Se mantiene `@astrojs/cloudflare` y `wrangler.jsonc`. Se añadió el script `npm run check` (`astro check`), que no existía.
+### BZ-21 · Diagnóstico del 500 en producción 🔴
+Se descartaron las hipótesis por orden de coste antes de tocar código:
 
-**Verificado:** `npm run build` → `adapter: @astrojs/cloudflare`, build completo en ~3s.
+1. **Reproducción local del worker compilado** — `wrangler dev` sobre `dist/server/wrangler.json` **crashea workerd en Windows** (`std::terminate() called with no exception`). Descartada como vía de diagnóstico; queda fichada como `BZ-30`.
+2. **`wrangler tail` contra producción** — requiere `wrangler login`, que abre navegador. No se ejecutó.
+3. **Sondeo directo de rutas de producción** — la que dio la respuesta. Las páginas devuelven 500 con cuerpo vacío (la excepción sube sin página de error), pero `/api/productos` tiene `try/catch` y devolvió el mensaje completo, identificando las dos variables ausentes.
 
-### BZ-02 · Binding de R2 y módulo de storage 🔴
-`wrangler.jsonc` declara el bucket:
+**Conclusión:** el despliegue está bien y el código está bien; falta configuración en el panel. Ver `BZ-23`.
 
-```jsonc
-"r2_buckets": [{ "binding": "MEDIA", "bucket_name": "barzol-web" }]
+**Efecto lateral valioso:** el diagnóstico fue posible porque `MissingEnvError` nombra las variables que faltan en vez de fallar con un genérico. Ese diseño se pagó solo. **Pero también expuso `BZ-14`**: ese mensaje llegó al cliente público, que es justo lo que ARCHITECTURE.md prohíbe.
+
+### BZ-22 · Página de error 500 🟠
+Nuevo `src/pages/500.astro`. Antes, cualquier error no capturado devolvía **500 con cuerpo vacío** — exactamente lo que se vio en producción: una pantalla en blanco del navegador, sin ninguna pista para el visitante ni para quien depura.
+
+Decisiones:
+
+- **No usa `PublicLayout`, y no debe usarlo nunca.** Ese layout monta `Header`, que lee categorías desde Supabase. Si el error es que falta configuración o que la base no responde, el layout volvería a fallar y se regresaría al 500 vacío. La página es autónoma: sin datos, sin islas, sin red.
+- **No muestra el detalle técnico.** Puede contener nombres de variables o mensajes internos; queda en los logs del worker (observabilidad ya activada en `wrangler.jsonc`).
+- Sin colores ni tipografías propias: usa los tokens y no repite lo que `tokens.css` ya fija en `body`.
+
+**Verificado:** renderiza con status 500, título correcto y sin rastro de Header ni de consultas a Supabase. Las rutas normales siguen en 200 (`/`, `/nosotros`, `/admin/login`).
+
+---
+
+## ✅ Cerradas desde la última revisión
+
+Trabajo hecho fuera de esta sesión, verificado ahora contra el código real:
+
+### BZ-08 · Acceso público del bucket ✅
+`BARZOL_R2_PUBLIC_URL` apunta a `https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev`.
+**Verificado:** un objeto inexistente devuelve un 404 legítimo de Cloudflare, no un fallo de DNS — el subdominio público está activo. Falta cargar esa variable en producción (`BZ-23`) y, más adelante, pasar a dominio propio (`BZ-28`).
+
+### BZ-09 · Bucket enlazado al proyecto ✅
+El log de despliegue lo confirma: `env.MEDIA (barzol-web) → R2 Bucket`, junto a `SESSION`, `IMAGES` y `ASSETS`.
+
+### BZ-12 · Validación con Zod ✅
+Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configuracionSchema.ts`, todos reutilizando `zodError.ts`.
+**Verificado:** `npm run check` pasa con **0 errores sobre 93 archivos**. Los 8 errores de tipos que reportaba la revisión anterior desaparecieron, y desaparecieron por la vía correcta —validando— y no casteando.
+
+### BZ-13 · Escrituras de los services ✅
+**Verificado:** ya no queda ningún `Not implemented` en `src/shared/lib/`. Los endpoints reciben el cliente autenticado desde `locals.supabase`, armado una sola vez por el middleware, lo que evita re-autenticar en cada escritura.
+
+### BZ-18 · Vista de Configuración ✅
+`src/admin/configuracion/ConfiguracionView.astro` + `ConfiguracionAdmin.tsx` + ruta `/admin/configuracion`.
+
+---
+
+## 🚧 Bloqueante
+
+### BZ-23 · Cargar las variables de entorno en el Worker 🔴
+**Es lo único que separa al sitio de estar funcionando.** El código ya está desplegado y correcto.
+
+**Ruta en el panel:** Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**. No es la sección de Pages: este proyecto se despliega como Worker con assets.
+
+| Variable | Tipo | Valor |
+|---|---|---|
+| `BARZOL_SUPABASE_URL` | Variable | `https://rnfcccnesxunjtpwahce.supabase.co` |
+| `BARZOL_SUPABASE_ANON_KEY` | Variable | la publishable key del proyecto |
+| `BARZOL_R2_PUBLIC_URL` | Variable | `https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev` |
+| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | **Secret** | sólo si algún día se usa; hoy ningún código la lee |
+
+**Ojo con las dos que no son de Supabase:** `BARZOL_R2_PUBLIC_URL` es igual de obligatoria. Sin ella, la subida funcionará pero `buildPublicUrl()` lanzará `MissingEnvError` al construir la URL de la imagen, y el fallo aparecerá recién al guardar contenido — más difícil de asociar con la causa.
+
+Tras guardarlas hay que **volver a desplegar** para que el Worker las tome.
+
+**Criterio de aceptación:** `/` responde 200 y `/api/productos` devuelve el catálogo real.
+**Bloquea:** BZ-24, BZ-25.
+
+---
+
+## 📋 Despliegue — siguientes pasos
+
+### BZ-24 · Verificación post-deploy 🔴
+Checklist de humo contra el dominio de producción, no sólo la home:
+
+```
+/                       200 y muestra productos
+/catalogo/<categoria>   200
+/producto/<slug>        200
+/galeria                200
+/api/productos          JSON con datos
+/admin                  302 → /admin/login
+/admin/login            200 y permite iniciar sesión
+/una-ruta-inventada     404 (no 500)
 ```
 
-Cuatro archivos en `src/shared/lib/storage/`, uno por responsabilidad, ninguno supera las 60 líneas:
+El último caso importa: hay `500.astro` pero **no hay `404.astro`**, así que conviene comprobar qué devuelve hoy una ruta inexistente.
 
-| Archivo | Responsabilidad |
-|---|---|
-| `r2Bucket.ts` | Devuelve el binding `MEDIA`; error accionable si falta |
-| `mediaKey.ts` | Funciones puras: sanea el nombre y arma la clave del objeto |
-| `mediaUrl.ts` | Clave → URL pública de lectura |
-| `mediaStorage.ts` | Escribe en R2 pasando el cuerpo como stream |
+### BZ-25 · Probar la subida a R2 en producción 🟠
+La escritura en R2 se verificó contra el **bucket simulado en local** (`put`/`get`/`delete`), nunca contra el bucket real desde el worker desplegado. Falta cerrar ese hueco: subir una imagen real y comprobar que se ve desde `BARZOL_R2_PUBLIC_URL`.
 
-`npm run generate-types` regeneró `worker-configuration.d.ts`, donde `MEDIA` ya aparece tipado como `R2Bucket`. Ese archivo **se versiona**: `tsconfig.json` lo incluye, y sin él `npm run check` falla en un clon nuevo.
+**Depende de:** BZ-23, y en la práctica de BZ-10 (sin UI de subida hay que hacerlo con `curl` y una sesión válida).
 
-**Verificado contra el bucket simulado en local:** `put` con stream OK → `get` devuelve 12 bytes con `contentType=image/png` → `delete` OK y el objeto deja de existir. El saneo convirtió `Prueba Ñandú (1).PNG` en `prueba-nandu-1.png`.
+### BZ-26 · Separar variables de secretos 🟠
+Hoy todo iría como *variable* en texto plano, visible en el panel. Conviene decidir la clasificación de una vez:
 
-### BZ-03 · Endpoint `POST /api/media` 🔴
-Recibe el archivo como cuerpo crudo, con `carpeta` y `nombre` en query string y el tipo/tamaño en cabeceras. Devuelve `{ key, publicUrl, contentType, size }`. Valida con Zod (`mediaSchema.ts`) y formatea los errores con `zodError.ts`, reutilizable por el resto de endpoints.
+- `BARZOL_SUPABASE_URL`, `BARZOL_R2_PUBLIC_URL` → variables. Son públicas por naturaleza.
+- `BARZOL_SUPABASE_ANON_KEY` → variable. Está pensada para exponerse; la protege RLS.
+- `BARZOL_SUPABASE_SERVICE_ROLE_KEY` → **secret, siempre**. Salta RLS. Si algún día se usa, jamás como variable plana.
 
-Decisiones de seguridad y robustez, todas verificadas caso por caso:
+Conviene además revisar que RLS esté realmente activo en Supabase: toda la seguridad de la anon key depende de eso.
 
-| Caso | Resultado |
-|---|---|
-| Imagen válida / video válido | Aceptados |
-| `image/svg+xml` | Rechazado — XSS almacenado si se sirve desde el bucket |
-| Imagen > 10 MB | `tamanoBytes: supera el máximo de 10 MB para image/png` |
-| Video > 100 MB | `tamanoBytes: supera el máximo de 100 MB para video/mp4` |
-| `carpeta=../secretos` | Rechazado — enum cerrado |
-| Sin cabeceras | Rechazado, con el detalle de los 4 campos |
-| `image/png; charset=utf-8` | **Aceptado** tras corregirlo (ver abajo) |
+### BZ-27 · Dominio propio para el sitio 🟡
+Hoy el sitio vive en `barzol-web.willymichael-cardenas.workers.dev`. ARCHITECTURE.md ya presupuesta el dominio (~S/. 40-70/año) y es el único gasto real del proyecto. Al conectarlo hay que revisar los enlaces absolutos y los canonical.
 
-El cuerpo viaja como `ReadableStream` hasta R2, sin materializarse: `request.formData()` lo bufferizaría y un worker tiene 128 MB.
+### BZ-28 · Dominio propio para el bucket 🟡
+`pub-*.r2.dev` **no está recomendado para tráfico de producción**: tiene límites de tasa y no es cacheable igual que un dominio propio. Conviene un subdominio tipo `media.barzol.com`.
 
-**Corrección durante la propia verificación:** la primera versión rechazaba `image/png; charset=utf-8`. La cabecera `Content-Type` admite parámetros de forma perfectamente legítima, así que se añadió `normalizeContentType()` para quedarse sólo con el tipo antes de validar.
+El cambio es sólo de variable (`BARZOL_R2_PUBLIC_URL`), pero **las URLs ya guardadas en Supabase quedarían apuntando al dominio viejo**. Por eso conviene hacerlo antes de cargar contenido de verdad, o guardar la `key` junto a la URL (ver `BZ-11`) para poder reconstruirlas.
 
-**Verificado:** `POST` sin sesión → `401 {"success":false,"message":"No autenticado."}` (lo corta el middleware).
+### BZ-29 · Runbook de observabilidad 🟡
+`wrangler.jsonc` ya tiene `observability.enabled: true`, pero nadie documentó cómo usarla. Un error en producción hoy se diagnostica a ciegas — este mismo 500 se resolvió sondeando rutas, no leyendo logs.
 
-### BZ-04 · Corregir la lectura de variables de entorno 🔴
-**Bug preexistente, independiente del hosting.** `db/client.ts` y `authClient.ts` leían con `import.meta.env.BARZOL_*`. Vite sustituye esos accesos por su valor **de build time**; como las variables de Cloudflare son invisibles en ese momento, quedó `undefined` fijo y el compilador plegó el `if (!url) throw` en un `throw` incondicional, eliminando `createClient` como código muerto. El chunk compilado era literalmente:
+Documentar: `wrangler login`, `wrangler tail barzol-web` para logs en vivo, y dónde ver las trazas en el panel. Los `console.error` de `/api/media` van ahí.
+
+### BZ-30 · `npm run preview` inutilizable en Windows 🟡
+`wrangler dev` sobre el build compilado crashea workerd con `std::terminate() called with no exception`. **No hay forma de probar el bundle de producción en local**, que es justamente lo que habría anticipado este 500 antes de desplegar. `npm run dev` sí funciona, pero no ejerce el mismo código.
+
+Investigar si es el binding de assets, el de R2 o una incompatibilidad de workerd en Windows.
+
+---
+
+## 📋 Funcionalidad pendiente
+
+### BZ-10 · Conectar el panel admin al flujo de subida 🟠
+El módulo de R2 existe pero **ningún componente lo usa**: `ProductsAdmin.tsx`, `GalleryAdmin.tsx` e `InicioAdmin.tsx` siguen manejando imágenes como data-URL en estado local.
+
+Falta el cliente que haga el `POST` a `/api/media` y devuelva la `publicUrl`. Debe vivir en **un solo archivo** compartido por las tres islas — p. ej. `src/admin/shared/useSubidaMedia.ts` — con estados de progreso, error y cancelación. No replicar la lógica en cada componente.
+
+**Nota de alcance:** los tres componentes superan las 1000 líneas y quedaron fuera por indicación explícita. El hook nuevo va aparte.
+
+### BZ-11 · Borrado de multimedia y huérfanos 🟠
+No hay forma de borrar un objeto desde la aplicación: al reemplazar la foto de un producto, la anterior queda en el bucket para siempre. Falta `borrarMedia(key)` en `mediaStorage.ts` y el endpoint `DELETE /api/media`.
+
+Conviene guardar la `key` además de la `publicUrl` en Supabase — derivar una de otra manipulando strings es frágil, y `BZ-28` (cambio de dominio) lo vuelve directamente peligroso.
+
+---
+
+## 🧹 Deuda técnica
+
+### BZ-14 · Dejar de filtrar mensajes internos 🔴 ↑ *(prioridad elevada)*
+**Ya no es teórico: pasó en producción.** Una petición pública a `/api/productos` devolvió el mensaje interno completo, incluidos los nombres de las variables de entorno y la ruta del panel de Cloudflare. Sirvió para diagnosticar, pero es exactamente la fuga que ARCHITECTURE.md prohíbe.
+
+Hay **18 apariciones de `errorResponse((error as Error).message)` en 9 archivos**: `auth/login`, `auth/logout`, `categorias/index`, `categorias/[id]`, `configuracion/index`, `galeria/index`, `galeria/[id]`, `productos/index`, `productos/[id]`.
+
+La solución es el `shared/lib/errors/apiError.ts` que el documento ya exige: registra el error real con `console.error` (visible por observabilidad) y devuelve un texto genérico. `/api/media` ya sigue ese patrón y sirve de referencia.
+
+**No hacerlo con un reemplazo ciego:** algunos de esos mensajes hoy son la única pista de diagnóstico. Hay que mover la información al log en el mismo cambio, no simplemente borrarla.
+
+### BZ-07 · Revocar el token de API de R2 🔴
+El token, el Access Key ID y el Secret se compartieron en una captura por chat. Con el binding nativo **la aplicación ya no usa credenciales de R2**, así que no hace falta reemplazarlo: se revoca y punto.
+**Pasos:** Cloudflare → R2 → Manage API tokens → borrar `barzol-web-token`.
+
+### BZ-15 · `baseUrl` deprecado en `tsconfig.json` ⚪
+TypeScript 6 lo marca como deprecado y deja de funcionar en 7.0.
+
+### BZ-16 · Vulnerabilidades de npm ⚪
+El log de despliegue reporta 9 (1 moderada, 8 altas). Además, 3 paquetes tienen scripts de instalación sin aprobar (`esbuild`, `sharp`, `workerd`).
+
+### BZ-17 · Mover `Pagination.astro` a `landing/shared/` ⚪
+La usan `BusquedaView` y `CatalogoView`.
+
+### BZ-19 · Datos estructurados y SEO ⚪
+Faltan `Product` JSON-LD, `BreadcrumbList` y `Organization`, además de canonical y Open Graph. Se vuelve accionable recién con dominio propio (`BZ-27`).
+
+### BZ-20 · Arranque lento del servidor de desarrollo ⚪
+`npm run dev` tarda ~31s y el CLI corta a los 30s: **el primer intento falla casi siempre**, el segundo funciona. Se confirmó de nuevo en esta sesión.
+
+---
+
+## Mapa de dependencias
+
+```
+BZ-07 (revocar token) ───────── independiente, hacer YA
+BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
+
+BZ-23 (cargar variables) ──┬── BZ-24 (verificación post-deploy)
+                           └── BZ-25 (subida real a R2) ── depende también de BZ-10
+BZ-10 (subida en admin) ─────── BZ-11 (borrado) ── habilita BZ-28
+BZ-27 (dominio sitio) ───────── BZ-19 (SEO)
+BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido real
+```
+
+**Orden sugerido:** BZ-23 → BZ-24 → BZ-07 → BZ-14 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+
+---
+
+## Historial de decisiones
+
+### Vercel evaluado y descartado (2026-08-08)
+Se llegó a migrar el proyecto entero a Vercel (`@astrojs/vercel`, subida por URL prefirmada con el SDK de AWS, `wrangler.jsonc` eliminado) y quedó funcionando, verificado contra el bucket real. **Se revirtió por decisión de arquitectura:** repartir hosting y storage entre dos proveedores obliga a piezas que con un solo ecosistema no existen.
+
+| Aspecto | Vercel + R2 (descartado) | Cloudflare + R2 (actual) |
+|---|---|---|
+| Acceso a R2 | API S3 con Access Key + Secret | Binding `MEDIA`, sin credenciales |
+| Credenciales que rotar | 3 | **ninguna** |
+| CORS del bucket | Obligatorio | No aplica — mismo origen |
+| Firma de peticiones | SigV4 con SDK de AWS | No aplica |
+| Dependencias extra | `@aws-sdk/client-s3`, `s3-request-presigner` | ninguna |
+| Límite de subida | ~4.5 MB → forzaba prefirmadas | 100 MB (plan Free) |
+
+El trabajo descartado quedó en la rama `feat/perfil-vercel-r2`. **No debe fusionarse.**
+
+### El bug de `import.meta.env` (2026-08-08, `BZ-04`)
+`db/client.ts` y `authClient.ts` leían las variables con `import.meta.env.BARZOL_*`. Vite sustituye esos accesos por su valor **de build time**; como las variables de Cloudflare son invisibles entonces, quedaba `undefined` fijo y el compilador plegaba el `if (!url) throw` en un `throw` incondicional, eliminando `createClient` como código muerto:
 
 ```js
 import "@supabase/supabase-js";
@@ -99,107 +281,4 @@ throw new Error("Faltan BARZOL_SUPABASE_URL / ...");
 export { supabase as t };
 ```
 
-Ese bundle falla en **cada request** aunque las variables estén perfectamente cargadas en la plataforma.
-
-**Solución:** nuevo `src/shared/lib/env/serverEnv.ts` como única vía de lectura, tomando los valores del objeto `env` de `cloudflare:workers` — la fuente real en runtime. Reporta de una sola vez todas las variables que faltan en lugar de fallar en la primera, y elimina la duplicación del par leer-y-lanzar que estaba copiado en dos archivos.
-
-**Verificado:** el chunk recompilado conserva `requireServerEnv([...])` y el `createClient`; el `import { env } from "cloudflare:workers"` sobrevive en el bundle. En dev, `/api/productos` y `/api/categorias` devuelven datos reales de Supabase.
-
-### BZ-05 · Cliente de Supabase perezoso 🔴
-Consecuencia obligada del punto anterior: en workerd el entorno **no existe mientras se evalúan los módulos**, sólo dentro de una petición. Crear el cliente en el cuerpo del módulo reventaba al arrancar el worker.
-
-`db/client.ts` pasa de `export const supabase = createClient(...)` a `getSupabase()` con instancia cacheada. Se actualizaron los 5 services (`productos`, `categorias`, `galeria`, `home`, `configuracion`). Esto estaba fichado como deuda técnica a futuro; el cambio de plataforma lo volvió bloqueante.
-
-**Verificado:** 11 rutas responden — `/`, `/galeria`, `/servicios`, `/nosotros`, `/busqueda`, `/catalogo/soportes-de-celular`, `/admin/login` y las 3 de API en 200; `/admin` en 302 hacia el login.
-
-### BZ-06 · Documentación 🟠
-`ARCHITECTURE.md`: nueva sección **Un solo ecosistema** con la justificación del binding, nueva sección **Variables de entorno**, nueva sección **Storage de multimedia**, árbol de carpetas actualizado, 2 riesgos nuevos y 7 entradas en el changelog de decisiones (incluida la reversión de Vercel). `README.md`: sección de despliegue y scripts. `.env.example`: reescrito — ya no pide credenciales de R2, porque el binding no las usa.
-
----
-
-## 🚧 POR HACER — bloqueantes
-
-### BZ-07 · Revocar el token de API de R2 🔴
-El token, el Access Key ID y el Secret Access Key se compartieron en una captura por un canal de chat y deben considerarse comprometidos.
-
-Con el binding nativo **la aplicación ya no usa credenciales de R2**, así que no hace falta reemplazarlo: se revoca y punto.
-
-**Pasos:** Cloudflare → R2 → Manage API tokens → borrar `barzol-web-token`.
-**Criterio de aceptación:** el token ya no aparece en la lista y el sitio sigue funcionando (no lo usaba).
-
-### BZ-08 · Habilitar el acceso público del bucket 🔴
-`BARZOL_R2_PUBLIC_URL` está vacía. Sin ella, `buildPublicUrl()` lanza `MissingEnvError` y no hay forma de mostrar las imágenes aunque la subida funcione. El binding sirve para escribir, no para publicar.
-
-**Pasos:** R2 → `barzol-web` → Settings → Public Development URL (subdominio `*.r2.dev`), o conectar un dominio propio tipo `media.barzol.com` — preferible para producción, porque `r2.dev` tiene límites de tasa y no está pensado para tráfico real.
-**Criterio de aceptación:** un objeto subido se abre en el navegador desde `BARZOL_R2_PUBLIC_URL/<key>`.
-**Bloquea:** BZ-10.
-
-### BZ-09 · Enlazar el bucket en el proyecto de Cloudflare 🔴
-El binding está declarado en `wrangler.jsonc`, pero el proyecto de Pages también necesita el enlace en su propia configuración para producción, junto con las variables de entorno de `.env.example`.
-
-**Criterio de aceptación:** deploy verde y `POST /api/media` funcionando en el dominio de producción, no sólo en local.
-
----
-
-## 📋 POR HACER — funcionalidad
-
-### BZ-10 · Conectar el panel admin al flujo de subida 🟠
-Hoy el módulo existe pero **ningún componente lo usa**: `ProductsAdmin.tsx`, `GalleryAdmin.tsx` e `InicioAdmin.tsx` siguen manejando imágenes como data-URL en estado local.
-
-Falta el cliente que haga el `POST` y devuelva la `publicUrl`. Debe vivir en **un solo archivo** compartido por las tres islas — p. ej. `src/admin/shared/useSubidaMedia.ts` — con estados de progreso, error y cancelación. No replicar la lógica en cada componente.
-
-**Nota de alcance:** los tres componentes superan las 1000 líneas y quedaron fuera por indicación explícita. El hook nuevo va aparte; el cableado dentro de cada isla es trabajo posterior.
-**Depende de:** BZ-08.
-
-### BZ-11 · Borrado de multimedia y limpieza de huérfanos 🟠
-No hay forma de borrar un objeto desde la aplicación. Al reemplazar la foto de un producto, la anterior queda en el bucket para siempre.
-
-Falta `borrarMedia(key)` en `mediaStorage.ts` y el endpoint `DELETE /api/media`. Conviene guardar la `key` además de la `publicUrl` en Supabase: derivar una de otra manipulando strings es frágil si cambia el dominio público. Con el binding, el borrado es una sola llamada — la pieza que falta es el cableado y la decisión de esquema.
-
-### BZ-12 · Validar con Zod el resto de endpoints — y arreglar `npm run check` 🟠
-`productos`, `categorias` y `galeria` hacen `await request.json()` y pasan el body crudo al service.
-
-**Esto ahora rompe el chequeo de tipos:** con los tipos de Cloudflare cargados, `request.json()` devuelve `unknown` en vez de `any`, así que `npm run check` reporta **8 errores** en 6 archivos (`api/productos/*`, `api/categorias/*`, `api/galeria/index.ts`, `api/auth/login.ts` y `LoginView.astro`). Son errores preexistentes que estaban ocultos, no una regresión: `astro build` sigue pasando porque no hace typecheck.
-
-La solución correcta es validar con Zod, no castear — un `as` silenciaría al compilador dejando intacto el problema real de entrada sin validar. `zodError.ts` ya está listo para reutilizar; falta un schema por entidad en `shared/lib/validation/`.
-
-### BZ-13 · Implementar las escrituras de los services 🟠
-`createProducto`, `updateProducto`, `deleteProducto`, `createCategoria`, `updateCategoria`, `deleteCategoria`, `addGaleriaItem` y `updateConfiguracion` siguen lanzando `Not implemented`. El panel admin no persiste nada: `POST /api/productos` devuelve 500. Las lecturas sí funcionan contra Supabase.
-
----
-
-## 🧹 POR HACER — deuda técnica
-
-### BZ-14 · Centralizar errores y dejar de filtrar mensajes internos 🟡
-`shared/lib/errors/apiError.ts` no existe, pese a estar en ARCHITECTURE.md. Peor: los endpoints responden `errorResponse((error as Error).message)`, que devuelve al cliente el mensaje crudo de Supabase — exactamente lo que el documento prohíbe. `/api/media` ya sigue el patrón correcto y sirve de referencia.
-
-### BZ-15 · `baseUrl` deprecado en `tsconfig.json` ⚪
-TypeScript 6 lo marca como deprecado y deja de funcionar en 7.0. Los alias `@/*`, `@landing/*`, `@admin/*`, `@shared/*` deberían pasar a rutas relativas a `paths` sin `baseUrl`. Preexistente.
-
-### BZ-16 · Vulnerabilidades de npm ⚪
-`npm audit` reporta 9 (1 moderada, 8 altas). Revisar cuáles afectan a producción antes de correr `npm audit fix`, que puede subir versiones mayores.
-
-### BZ-17 · Mover `Pagination.astro` a `landing/shared/` ⚪
-La usan `BusquedaView` y `CatalogoView`; por la regla de oro de ARCHITECTURE.md corresponde a `shared/` de la zona. Ya está anotado como pendiente en el propio documento.
-
-### BZ-18 · Vista de Configuración del admin ⚪
-La tarjeta "Configuración" del dashboard apunta a `href: '#'`. Existen `configuracionService` y `configuracionMapper`, pero no hay vista ni ruta.
-
-### BZ-19 · Datos estructurados y SEO ⚪
-Faltan `Product` JSON-LD en ficha, `BreadcrumbList` en categoría y `Organization` en home, además de canonical y Open Graph por página. Para un catálogo comercial es requisito funcional, no adorno.
-
-### BZ-20 · Arranque lento del servidor de desarrollo ⚪
-`npm run dev` tarda ~31s en levantar workerd y el CLI de Astro corta a los 30s, así que **el primer intento suele fallar** con `Dev server failed to start within 30s`. El segundo funciona. Conviene documentarlo o buscar si el adaptador admite subir ese tope.
-
----
-
-## Mapa de dependencias
-
-```
-BZ-07 (revocar token) ─── independiente, hacer YA
-BZ-08 (URL pública) ──┬── BZ-10 (subida en admin) ─── BZ-11 (borrado)
-BZ-09 (enlazar en CF) ┘
-BZ-12 (validación + typecheck) ─── BZ-13 (escrituras) ─── BZ-14 (errores)
-```
-
-**Orden sugerido:** BZ-07 → BZ-08 → BZ-09 → BZ-10 → BZ-12 → BZ-13 → BZ-11 → BZ-14.
+Ese bundle habría fallado en cada request **aunque las variables estuvieran bien cargadas**. Se corrigió con `shared/lib/env/serverEnv.ts`, que las toma de `cloudflare:workers` en runtime. El 500 de este despliegue es un caso distinto y sano: el código funciona y avisa correctamente de lo que falta.

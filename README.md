@@ -42,8 +42,26 @@ Abre `http://localhost:4321`.
 
 ## Despliegue
 
-Se despliega en **Cloudflare Pages** con el adaptador `@astrojs/cloudflare` (`output: 'server'`). Antes del primer deploy hay que cargar las variables de `.env.example` en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets.
+Se despliega como **Worker de Cloudflare con assets estáticos** (`wrangler deploy`), usando el adaptador `@astrojs/cloudflare` con `output: 'server'`. No es Cloudflare Pages: la distinción importa porque cambia dónde se configuran las variables en el panel.
+
+> **Un build verde no significa un sitio funcionando.** Las variables de entorno son de *runtime*: si faltan, el despliegue sale correcto y el sitio responde 500 en todas las rutas. Es el fallo más probable de un primer deploy.
+
+**Antes del primer despliegue**, cargar todas las variables de `.env.example` en
+Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**, y volver a desplegar para que el Worker las tome. `BARZOL_R2_PUBLIC_URL` es tan obligatoria como las de Supabase: sin ella la subida funciona pero falla al construir la URL de la imagen.
+
+`BARZOL_SUPABASE_SERVICE_ROLE_KEY` va siempre como **Secret**, nunca como variable en texto plano — salta las políticas RLS.
 
 El contenido multimedia vive en **Cloudflare R2** (bucket `barzol-web`), enlazado como binding `MEDIA` en `wrangler.jsonc`. Al estar hosting y storage en la misma plataforma, la escritura no usa credenciales: el acceso lo concede el binding. Ver ARCHITECTURE.md § Storage de multimedia.
 
 Tras cambiar bindings en `wrangler.jsonc`, correr `npm run generate-types` y commitear `worker-configuration.d.ts`.
+
+### Diagnosticar un fallo en producción
+
+`observability` está activada en `wrangler.jsonc`, así que los `console.error` del servidor quedan registrados:
+
+```bash
+npx wrangler login
+npx wrangler tail barzol-web
+```
+
+Ante un 500, los endpoints de `/api/**` suelen dar la pista más rápida: devuelven `ApiResponse` con el motivo, mientras que las páginas sólo muestran `500.astro`.
