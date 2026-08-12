@@ -18,7 +18,7 @@ Sitio web tipo catálogo para Barzol: home, catálogo de productos por categorí
 | Almacenamiento de imágenes | Cloudflare R2 (plan Free) |
 | ORM | Drizzle o Prisma (a definir) |
 | Validación de datos | Zod |
-| Hosting | Cloudflare Pages (plan Free) |
+| Hosting | Cloudflare Workers con assets estáticos (plan Free) — se despliega con `wrangler deploy`, no con Pages |
 | Modo de renderizado | `output: 'server'` + `@astrojs/cloudflare` (requerido por el admin: POST/PUT/DELETE no funcionan en modo estático puro) |
 | Dominio | Registrador a definir (~S/. 40-70/año) |
 | Color primario de marca | `#1e4d8c` |
@@ -200,10 +200,15 @@ src/
 | `/servicios` | PublicLayout | `landing/servicios/ServiciosView.astro` | Institucional |
 | `/nosotros` | PublicLayout | `landing/nosotros/NosotrosView.astro` | Institucional |
 | `/busqueda` | PublicLayout | `landing/busqueda/BusquedaView.astro` | Resultados de búsqueda, usa `Pagination.astro` |
-| `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (mock — Supabase Auth pendiente) |
+| `/500` | — (autónoma) | `pages/500.astro` | Error de servidor. **Sin layout a propósito:** `PublicLayout` monta `Header`, que consulta Supabase; si el error viene de ahí, la página de error volvería a fallar |
+| `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (Supabase Auth real) |
 | `/admin` | AdminLayout | `admin/dashboard/DashboardView.astro` | Dashboard del panel |
 | `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD de productos |
 | `/admin/categorias` | AdminLayout | `admin/categorias/CategoriasView.astro` | CRUD de categorías |
+| `/admin/inicio` | AdminLayout | `admin/inicio/InicioView.astro` | Hero, banners y secciones de la home |
+| `/admin/galeria-accesorios` | AdminLayout | `admin/galeria/GaleriaAccesoriosView.astro` | Galería de accesorios |
+| `/admin/galeria-trabajos` | AdminLayout | `admin/galeria/GaleriaTrabajosView.astro` | Galería de trabajos de ingeniería |
+| `/admin/configuracion` | AdminLayout | `admin/configuracion/ConfiguracionView.astro` | Contacto, WhatsApp y redes |
 
 > Regla: cualquier página nueva se agrega primero a esta tabla (ruta + vista real), luego se implementa. Evita que el documento quede desactualizado frente al código real.
 
@@ -330,3 +335,6 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Storage R2 (2026-08-08) | Toda variable de entorno se lee por `shared/lib/env/serverEnv.ts` desde `cloudflare:workers`; queda **prohibido** `import.meta.env.BARZOL_*` directo | Vite congela esos accesos en build time y las variables de Cloudflare son invisibles entonces. Se detectó que `db/client.ts` compilaba a un `throw` incondicional con el `createClient` eliminado como código muerto |
 | Storage R2 (2026-08-08) | `db/client.ts` pasa de instancia en el cuerpo del módulo a `getSupabase()` perezoso; se actualizaron los 5 services | En workerd el entorno no existe mientras se evalúan los módulos, sólo dentro de una petición: crear el cliente al importar reventaba al arrancar el worker |
 | Storage R2 (2026-08-08) | `image/svg+xml` excluido de la allow-list de subida | Un SVG servido desde el dominio público del bucket es un vector de XSS almacenado |
+| Despliegue (2026-08-11) | Se documenta el hosting como **Workers con assets**, no Pages | El despliegue real corre `wrangler deploy` sobre `*.workers.dev`. La distinción no es cosmética: cambia dónde se cargan las variables de entorno en el panel |
+| Despliegue (2026-08-11) | `src/pages/500.astro` **sin layout**, autónoma y sin acceso a datos | El primer despliegue devolvió 500 con cuerpo vacío. Una página de error que dependa de `PublicLayout` → `Header` → Supabase volvería a fallar justo cuando la causa es la base o la configuración |
+| Despliegue (2026-08-11) | La página de error no muestra el detalle técnico | El mensaje puede contener nombres de variables o estado interno; va a los logs del worker, que ya tiene observabilidad activada |
