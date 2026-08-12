@@ -51,7 +51,7 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 
 	<!-- PRODUCT DETAIL -->
 	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:24px 32px 32px;">
-		<div class="bz-product-grid" style="display:grid; grid-template-columns:448px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
+		<div class="bz-product-grid" style="display:grid; grid-template-columns:560px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
 
 			<!-- GALERÍA -->
 			<div class="bz-gallery" style="display:flex; gap:12px; align-items:flex-start;">
@@ -60,7 +60,7 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 						<div class="bz-thumb" style="width:80px; height:80px; background:var(--color-surface-muted); border-radius:8px; flex-shrink:0;"></div>
 					))}
 				</div>
-				<div class="bz-main-img-wrap" style="width:448px; height:540px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
+				<div class="bz-main-img-wrap" style="flex:1; min-width:0; height:540px; border-radius:12px; overflow:hidden; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
 					Foto principal del producto
 				</div>
 			</div>
@@ -116,8 +116,8 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 		</div>
 	</div>
 
-	<!-- PRODUCTOS SUGERIDOS -->
-	{suggested.length > 0 && (
+	<!-- PRODUCTOS SUGERIDOS: solo si hay al menos 2, para no mostrar un carrusel con un único producto -->
+	{suggested.length >= 2 && (
 		<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px 64px;">
 			<div style="border-top:1px solid var(--color-border-soft); padding-top:40px;">
 				<ProductCarousel title={`Más productos de ${breadcrumbMiddle?.label ?? ''}`} products={suggested} />

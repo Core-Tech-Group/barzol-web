@@ -12,7 +12,7 @@
 */
 @theme {
 	/* Marca — azul primario */
-	--color-primary: #1e4d8c;
+	--color-primary: #1a3e6e;
 	--color-primary-dark: #043d87;
 	--color-primary-light: #eef4ff;
 	--color-primary-border: #d3e3fa;
@@ -22,7 +22,7 @@
 
 	/* Marca — navy institucional (footer, hero "Nosotros"/"Servicios") */
 	--color-navy: #1e3560;
-	--color-navy-dark: #152848;
+	--color-navy-dark: #09162e;
 
 	/* Marca — acento de servicio (BARZOL_CONTEXTO.md: "Naranja servicio") */
 	--color-orange: #c2410c;

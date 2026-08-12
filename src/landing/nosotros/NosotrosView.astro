@@ -3,11 +3,11 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 
 const confianza = [
-  { icon: 'M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z', label: 'Diseño exclusivo' },
-  { icon: 'rect', label: 'Productos patentados' },
-  { icon: 'truck', label: 'Envío nacional e internacional' },
-  { icon: 'pencil', label: 'Personalización disponible' },
-];
+  { key: 'star', label: 'Diseño exclusivo' },
+  { key: 'lock', label: 'Productos patentados' },
+  { key: 'truck', label: 'Envío nacional e internacional' },
+  { key: 'pencil', label: 'Personalización disponible' },
+] as const;
 
 const proceso = [
   { n: '1', title: 'Diseño CAD/CAE', desc: 'Modelamos la pieza con software profesional, ajustada a tu instrumento.' },
@@ -16,10 +16,10 @@ const proceso = [
 ];
 
 const valores = [
-  { title: 'Calidad', desc: 'Empleamos materiales de alto rendimiento que aseguran durabilidad y comodidad.' },
-  { title: 'Innovación', desc: 'Transformamos ideas en productos únicos que enriquecen la experiencia musical.' },
-  { title: 'Personalización', desc: 'Ofrecemos la posibilidad de añadir nombres, logos o detalles especiales a cada accesorio.' },
-];
+  { key: 'star', title: 'Calidad', desc: 'Empleamos materiales de alto rendimiento que aseguran durabilidad y comodidad.' },
+  { key: 'box', title: 'Innovación', desc: 'Transformamos ideas en productos únicos que enriquecen la experiencia musical.' },
+  { key: 'pencil', title: 'Personalización', desc: 'Ofrecemos la posibilidad de añadir nombres, logos o detalles especiales a cada accesorio.' },
+] as const;
 ---
 
 <PublicLayout title="Nosotros — Barzol">
@@ -43,7 +43,18 @@ const valores = [
 				{confianza.map((item) => (
 					<div style="background:white; border:1px solid var(--color-border-soft); border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px;">
 						<div style="width:44px; height:44px; background:var(--color-primary-light); border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--color-primary)" stroke-width="1.7"></circle></svg>
+							{item.key === 'star' && (
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="var(--color-primary)" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+							)}
+							{item.key === 'lock' && (
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="var(--color-primary)" stroke-width="1.7"></rect><path d="M8 11V7a4 4 0 018 0v4" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round"></path></svg>
+							)}
+							{item.key === 'truck' && (
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="1" y="3" width="15" height="13" rx="2" stroke="var(--color-primary)" stroke-width="1.7" stroke-linejoin="round"></rect><path d="M16 8h3l3 4v5h-6V8z" stroke="var(--color-primary)" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="5.5" cy="18.5" r="1.5" stroke="var(--color-primary)" stroke-width="1.4"></circle><circle cx="18.5" cy="18.5" r="1.5" stroke="var(--color-primary)" stroke-width="1.4"></circle></svg>
+							)}
+							{item.key === 'pencil' && (
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+							)}
 						</div>
 						<span style="font-size:12px; font-weight:600; color:var(--color-text-soft); text-align:center; line-height:1.35;">{item.label}</span>
 					</div>
@@ -53,7 +64,7 @@ const valores = [
 	</div>
 
 	<!-- HISTORIA -->
-	<div style="max-width:1200px; margin:0 auto; padding:64px 32px;">
+	<!--div style="max-width:1200px; margin:0 auto; padding:64px 32px;">
 		<div style="display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
 			<div>
 				<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--color-primary); text-transform:uppercase; margin-bottom:12px;">Nuestra historia</div>
@@ -128,7 +139,15 @@ const valores = [
 				{valores.map((valor) => (
 					<div style="padding:32px 28px; border-radius:12px; border:1px solid var(--color-border-soft); text-align:center;">
 						<div style="width:52px; height:52px; background:var(--color-primary-light); border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+							{valor.key === 'star' && (
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+							)}
+							{valor.key === 'box' && (
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="var(--color-primary)" stroke-width="1.8"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="var(--color-primary)" stroke-width="1.8"></polyline></svg>
+							)}
+							{valor.key === 'pencil' && (
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="var(--color-primary)" stroke-width="1.8" stroke-linecap="round"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+							)}
 						</div>
 						<h3 style="font-size:15px; font-weight:700; color:var(--color-text); margin-bottom:10px;">{valor.title}</h3>
 						<p style="font-size:13px; color:var(--color-text-muted); line-height:1.65;">{valor.desc}</p>
@@ -153,11 +172,6 @@ const valores = [
 					<WhatsAppIcon size={13} fill="var(--color-success)" />
 					+51 950 759 032
 				</a>
-			</div>
-
-			<div style="max-width:420px; margin:32px auto 0; padding-top:24px; border-top:1px solid var(--color-surface-muted); display:flex; align-items:center; justify-content:center; gap:10px;">
-				<span style="font-size:13px; color:var(--color-text-muted);">Distribuidor autorizado — Alexis Caycho</span>
-				<a href="https://wa.me/51941556169" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; color:var(--color-primary); text-decoration:none;">+51 941 556 169</a>
 			</div>
 		</div>
 	</div>
