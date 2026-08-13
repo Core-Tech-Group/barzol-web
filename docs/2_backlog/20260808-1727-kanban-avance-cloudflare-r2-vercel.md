@@ -1,9 +1,31 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-13 · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-13 (2ª revisión) · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
 
-## Estado del despliegue — 2026-08-13
+## Estado del despliegue — 2026-08-13, 2ª revisión
+
+Se corrigió el valor de `BARZOL_SUPABASE_URL`, se volvió a desplegar (verde, `Version ID: 8ce7074c`) **y el sitio sigue en 500**. La causa es otra, y es la más incómoda posible: **el propio despliegue borra las variables**.
+
+Sondeo a producción justo después de ese despliegue:
+
+```
+GET /api/productos
+{"success":false,"data":null,"message":"Faltan variables de entorno:
+ BARZOL_SUPABASE_URL, BARZOL_SUPABASE_ANON_KEY. ..."}
+```
+
+Ya no dice que el valor sea inválido: dice que **no están**. Y estaban — la captura del panel las mostraba cargadas. Lo que las eliminó fue `npx wrangler deploy`, que es exactamente lo que corre el pipeline de Cloudflare en cada push. Lo documenta el propio esquema de configuración de wrangler (`node_modules/wrangler/config-schema.json`, propiedad `keep_vars`):
+
+> *By default, the Wrangler configuration file is the source of truth for your environment configuration, like a terraform file. If you change your vars in the dashboard, wrangler will override/delete them on its next deploy.*
+
+Como `wrangler.jsonc` no declara ningún bloque `vars`, cada despliegue dejaba el worker sin ninguna variable. El ciclo era: cargarlas a mano → el sitio anda → cualquier push las borra → 500. Los **Secrets** no se ven afectados; sólo las *Variables* de texto plano.
+
+**Corregido en este commit** con `"keep_vars": true` en `wrangler.jsonc` — ver `BZ-34`. Falta la parte manual: volver a cargar las dos variables y redesplegar.
+
+Esto explica también por qué el diagnóstico venía costando tanto: dos caídas distintas, con dos causas distintas, y en ambas el log de despliegue terminó en `✨ Success!`. Por eso esta sesión suma rastreo propio — ver `BZ-35` y `BZ-36`.
+
+## Estado del despliegue — 2026-08-13, 1ª revisión
 
 **El despliegue no falló.** El log del 2026-08-12 termina en `✨ Success! Build completed.`: build verde, `wrangler deploy` correcto, 22 assets subidos y los 4 bindings adjuntos, incluido `env.MEDIA (barzol-web)`. Lo que falla es el **runtime**: el sitio devuelve 500 y muestra la página "Algo salió mal".
 
@@ -60,11 +82,17 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-28 | Dominio propio para el bucket | ⬜ Pendiente | 🟡 |
 | BZ-29 | Runbook de observabilidad | ⬜ Pendiente | 🟡 |
 | BZ-30 | `npm run preview` roto en Windows | ⬜ Pendiente | 🟡 |
-| BZ-31 | **Corregir el valor de `BARZOL_SUPABASE_URL`** | ⬜ **Bloqueante** | 🔴 |
+| BZ-31 | Corregir el valor de `BARZOL_SUPABASE_URL` | ✅ Hecho | 🔴 |
 | BZ-32 | Borrar las variables `R2_*` residuales del panel | ⬜ Pendiente | 🔴 |
 | BZ-33 | Validar las variables `*_URL` al leerlas | ✅ Hecho | 🟠 |
+| BZ-34 | **`wrangler deploy` borra las variables del panel** | 🔶 Código hecho, falta recargarlas | 🔴 |
+| BZ-35 | Endpoint `GET /api/diagnostico` | ✅ Hecho | 🔴 |
+| BZ-36 | Rastreo de errores en los logs del worker | ✅ Hecho | 🟠 |
+| BZ-37 | Proteger o retirar `/api/diagnostico` | ⬜ Pendiente | 🟡 |
 
-**Progreso:** 16 de 33 hechas. Bloqueantes activos: **BZ-31** (y `BZ-32` + `BZ-07`, de seguridad).
+**Progreso:** 19 de 37 hechas. Bloqueante activo: **BZ-34** (y `BZ-32` + `BZ-07`, de seguridad).
+
+`BZ-31` quedó cerrada: el valor con corchetes ya se corrigió. Lo que quedó abierto es que el despliegue borra lo que se corrija.
 
 | Prioridad | Significado |
 |---|---|
@@ -76,6 +104,39 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 ---
 
 ## ✅ Cerradas en esta sesión (2026-08-13)
+
+### BZ-35 · Endpoint `GET /api/diagnostico` 🔴
+Dos caídas seguidas, dos causas distintas, y en las dos el log de despliegue terminó en `✨ Success! Build completed.`. Ese log responde "¿se subió el código?"; la pregunta cuando el sitio falla es "¿qué configuración recibe el worker al atender una petición?", y no había forma de responderla sin sondear rutas a ciegas.
+
+`src/pages/api/diagnostico.ts` la responde de una: qué variables llegaron, con qué forma, qué bindings ve el worker y si Supabase contesta de verdad —hace una consulta real, `head: true`, contra `category`—. El campo `pistas` traduce todo eso a la acción concreta: reconoce los corchetes de markdown, la variable ausente, la barra final y la consulta rechazada por RLS.
+
+**Dos reglas lo hacen seguro de dejar expuesto:**
+
+1. **Nunca devuelve el valor de una variable** — sólo `presente`, `longitud` y qué problemas tiene. El valor no sale de `serverEnv.ts`: la inspección vive ahí y devuelve booleanos. Un diagnóstico que filtra la clave que diagnostica no sirve de nada.
+2. **De los errores devuelve el nombre y el código, nunca el mensaje.** El mensaje puede nombrar tablas y va al log.
+
+Responde `200` siempre, incluso cuando todo falla: un 500 acá se confundiría con el 500 que se está diagnosticando.
+
+**Verificado de punta a punta contra el servidor de desarrollo**, no sólo compilado:
+
+| Escenario | Resultado |
+|---|---|
+| Configuración correcta | `ok: true`, los 4 bindings en `true`, Supabase responde |
+| `BARZOL_SUPABASE_URL` con corchetes (el valor real del panel) | `problemas: ["corchetes-de-markdown", "no-es-url-http"]`, `supabase.motivo: "InvalidEnvError"` y la pista nombrando el enlace de markdown |
+| `BARZOL_R2_PUBLIC_URL` ausente | `presente: false` y la pista con la ruta del panel |
+
+En ninguna respuesta apareció un solo carácter de ningún valor. El `.env` se restauró al terminar.
+
+### BZ-36 · Rastreo de errores en los logs del worker 🟠
+Hasta ahora una excepción subía muda hasta `500.astro`: producción mostraba "Algo salió mal" y no quedaba registro en ningún lado. `observability.enabled` estaba en `true` desde el principio, pero nadie escribía nada.
+
+`shared/lib/errors/logServerError.ts` es ahora el único punto de escritura de errores del servidor, y el middleware lo llama antes de relanzar. Emite una línea de JSON por error con `contexto`, `ruta`, `metodo`, nombre, código y stack — una línea por error para que dos peticiones simultáneas no entrelacen sus stacks, y formato estable para poder filtrar por `contexto` en el visor de Cloudflare.
+
+Nunca incluye valores de variables, cuerpos, cookies ni cabeceras: puede haber tokens en los cuatro. Es la contracara de la regla de `apiResponse` —detalle al log, mensaje genérico al cliente— y el primer ladrillo del `shared/lib/errors/apiError.ts` que `ARCHITECTURE.md` viene pidiendo para `BZ-14`.
+
+**Límite conocido y documentado:** con streaming activado, un error lanzado mientras el cuerpo de la página ya está viajando no pasa por el middleware. Por eso el rastreo no depende sólo de este borde — `BZ-35` responde sin necesidad de provocar el error.
+
+El runbook para leer todo esto quedó en `docs/3_recursos/20260813-1730-runbook-diagnostico-produccion.md`, escrito para resolverlo sin abrir el código. Cubre buena parte de lo que pedía `BZ-29`.
 
 ### BZ-33 · Validar las variables `*_URL` al leerlas 🟠
 Este 500 costó una sesión entera de diagnóstico por un motivo evitable: el error que veía el desarrollador (`Invalid supabaseUrl`) **no nombraba la variable**, y la página sólo decía "Algo salió mal". El valor estaba cargado, así que `MissingEnvError` —que sí nombra— nunca se disparaba.
@@ -141,8 +202,28 @@ Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configu
 
 ## 🚧 Bloqueante
 
-### BZ-31 · Corregir el valor de `BARZOL_SUPABASE_URL` 🔴
-**Es lo único que separa al sitio de estar funcionando.** El código está bien y desplegado; el valor cargado en el panel, no.
+### BZ-34 · `wrangler deploy` borra las variables del panel 🔴
+**Es lo único que separa al sitio de estar funcionando**, y explica por qué cargarlas a mano "no servía": servía, hasta el siguiente push.
+
+Wrangler trata `wrangler.jsonc` como fuente de verdad al estilo terraform. Sin bloque `vars` ahí, cada `npx wrangler deploy` —lo que corre el pipeline de Cloudflare en cada push— elimina del worker todas las variables cargadas desde el panel.
+
+**Ya corregido en el código:** `"keep_vars": true` en `wrangler.jsonc`.
+
+**Falta la parte manual, en este orden:**
+
+1. Cargar de nuevo `BARZOL_SUPABASE_URL` y `BARZOL_SUPABASE_ANON_KEY` en Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets** (verificar que `BARZOL_R2_PUBLIC_URL` siga ahí).
+2. Redesplegar. El `keep_vars` sólo protege a partir del despliegue que lo incluya, así que **este primer redespliegue es el que lo activa**.
+3. Abrir `/api/diagnostico` y confirmar `"ok": true`.
+
+> **Alternativa considerada y descartada:** declarar las variables en `wrangler.jsonc`, que las dejaría versionadas y reproducibles. Se descartó porque mete la anon key de Supabase al repositorio. Si más adelante se prefiere ese camino, la decisión es sólo sobre la anon key — `BARZOL_SUPABASE_URL` y `BARZOL_R2_PUBLIC_URL` son públicas y podrían ir al archivo sin discusión.
+
+**Criterio de aceptación:** `/api/diagnostico` responde `ok: true`, `/` responde 200 y sigue respondiendo 200 **después del siguiente push**. Esa segunda parte es la que prueba que el `keep_vars` funcionó.
+**Bloquea:** BZ-24, BZ-25.
+
+---
+
+### BZ-31 · Corregir el valor de `BARZOL_SUPABASE_URL` ✅
+Cerrada. Queda como referencia de la primera causa del 500 — el valor estaba pegado como enlace de markdown. Al recargar las variables (`BZ-34`) hay que volver a pegarlo en crudo.
 
 **Ruta en el panel:** Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**. No es la sección de Pages: este proyecto se despliega como Worker con assets.
 
@@ -255,6 +336,17 @@ La solución es el `shared/lib/errors/apiError.ts` que el documento ya exige: re
 El token, el Access Key ID y el Secret se compartieron en una captura por chat. Con el binding nativo **la aplicación ya no usa credenciales de R2**, así que no hace falta reemplazarlo: se revoca y punto.
 **Pasos:** Cloudflare → R2 → Manage API tokens → borrar `barzol-web-token`.
 
+### BZ-37 · Proteger o retirar `/api/diagnostico` 🟡
+El endpoint no filtra valores ni mensajes, pero sí revela **qué está mal configurado**: qué variables faltan y qué bindings no llegaron. Es poca cosa y hoy compensa —es la herramienta con la que se está estabilizando el despliegue—, pero no tiene por qué quedar abierto para siempre.
+
+Cuando el sitio esté estable, decidir entre tres:
+
+- Dejarlo público tal cual. Defendible: no expone nada aprovechable.
+- Exigir un token propio (`BARZOL_DIAG_TOKEN`) y devolver 404 si no está definido. Queda apagado por defecto y se enciende cuando hace falta.
+- Retirarlo.
+
+**No conviene ponerlo detrás del login del admin:** si lo que falla es la configuración de Supabase, no se puede iniciar sesión, y el diagnóstico quedaría inaccesible justo cuando hace falta. Ese es el motivo de que hoy sea público.
+
 ### BZ-15 · `baseUrl` deprecado en `tsconfig.json` ⚪
 TypeScript 6 lo marca como deprecado y deja de funcionar en 7.0.
 
@@ -278,14 +370,15 @@ Faltan `Product` JSON-LD, `BreadcrumbList` y `Organization`, además de canonica
 BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── hacer YA, es seguridad
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
 
-BZ-31 (corregir la URL) ───┬── BZ-24 (verificación post-deploy)
+BZ-34 (recargar variables) ┬── BZ-24 (verificación post-deploy)
                            └── BZ-25 (subida real a R2) ── depende también de BZ-10
+BZ-35 (/api/diagnostico) ────── verifica BZ-34 ── se cierra con BZ-37
 BZ-10 (subida en admin) ─────── BZ-11 (borrado) ── habilita BZ-28
 BZ-27 (dominio sitio) ───────── BZ-19 (SEO)
 BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido real
 ```
 
-**Orden sugerido:** BZ-31 → BZ-24 → BZ-32 → BZ-07 → BZ-14 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-34 → BZ-24 → BZ-32 → BZ-07 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
 
 Las tres primeras son de panel, no de código: se hacen en una sola visita a Cloudflare y un redespliegue.
 

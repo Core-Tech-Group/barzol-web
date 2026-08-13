@@ -81,6 +81,63 @@ function assertUrlIfNeeded(name: string, valor: string): void {
   }
 }
 
+// ─── Diagnóstico ──────────────────────────────────────────────────────────
+//
+// Lo de abajo existe para `GET /api/diagnostico`, que responde qué configuración
+// ve el worker desplegado sin necesidad de abrir el panel ni tener wrangler.
+//
+// Regla que sostiene todo esto: el VALOR de una variable nunca sale de este
+// archivo. Se devuelven hechos sobre su forma —presente, largo, qué la
+// invalida— y nada más. Un diagnóstico que filtra la clave que diagnostica no
+// sirve de nada.
+
+export type ProblemaVariable =
+  | 'corchetes-de-markdown'
+  | 'comillas'
+  | 'espacios-internos'
+  | 'salto-de-linea'
+  | 'no-es-url-http'
+  | 'barra-final';
+
+export interface InspeccionVariable {
+  presente: boolean;
+  /** Sólo el largo, para distinguir un valor completo de uno recortado al pegar. */
+  longitud?: number;
+  problemas?: ProblemaVariable[];
+}
+
+/** Radiografía de una variable, sin revelar su contenido. */
+export function inspeccionarVariable(name: string): InspeccionVariable {
+  const crudo = (workerEnv as unknown as EnvRecord)[name];
+  const valor = crudo?.trim();
+  if (!valor) return { presente: false };
+
+  const problemas: ProblemaVariable[] = [];
+  if (/[[\]]/.test(valor)) problemas.push('corchetes-de-markdown');
+  if (/["'`]/.test(valor)) problemas.push('comillas');
+  if (/\s/.test(valor)) problemas.push('espacios-internos');
+  if (/[\r\n]/.test(valor)) problemas.push('salto-de-linea');
+
+  if (name.endsWith('_URL')) {
+    try {
+      assertUrlIfNeeded(name, valor);
+      // La barra final no rompe nada —`buildPublicUrl` la recorta— pero delata
+      // un copiado desde la barra del navegador, así que conviene avisar.
+      if (valor.endsWith('/')) problemas.push('barra-final');
+    } catch {
+      problemas.push('no-es-url-http');
+    }
+  }
+
+  return { presente: true, longitud: valor.length, problemas };
+}
+
+/** ¿El worker recibió este binding (R2, KV, Images, Assets)? */
+export function hayBinding(name: string): boolean {
+  const valor = (workerEnv as unknown as Record<string, unknown>)[name];
+  return valor !== undefined && valor !== null && typeof valor === 'object';
+}
+
 /**
  * Exige un grupo de variables y las devuelve tipadas por nombre. Reporta TODAS
  * las que faltan de una vez, en lugar de fallar en la primera: cuando falta la

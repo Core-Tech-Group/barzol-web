@@ -4,6 +4,18 @@
 	"compatibility_flags": ["global_fetch_strictly_public"],
 	"name": "barzol-web",
 	"main": "@astrojs/cloudflare/entrypoints/server",
+	// Conserva las variables cargadas en el panel de Cloudflare.
+	//
+	// Por defecto wrangler trata este archivo como única fuente de verdad, al
+	// estilo terraform: como acá no hay bloque `vars`, cada `wrangler deploy`
+	// BORRA las variables que se hayan cargado desde el panel. Eso fue lo que
+	// dejó el sitio en 500 el 2026-08-13 — las variables estaban bien puestas y
+	// el propio despliegue las eliminó (ver BZ-34 en el kanban).
+	//
+	// La alternativa es declararlas acá, pero eso mete la anon key de Supabase
+	// al repositorio; se prefiere que el panel mande. Los secretos (Secrets) no
+	// se ven afectados por esto: wrangler nunca los toca.
+	"keep_vars": true,
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"

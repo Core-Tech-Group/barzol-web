@@ -49,6 +49,8 @@ R2 **no** aparece con credenciales: la escritura va por el binding `MEDIA`, no p
 
 En local viven en `.env` (ignorado por git), que wrangler carga dentro del worker — el build lo confirma con `Using secrets defined in .env`. En producción, en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets. `.env.example` es la plantilla y sí se versiona.
 
+> **`keep_vars: true` en `wrangler.jsonc` no es opcional mientras las variables vivan en el panel.** Por defecto wrangler trata ese archivo como única fuente de verdad, al estilo terraform: como no declara ningún bloque `vars`, cada `wrangler deploy` **borra** las variables cargadas desde el panel. El pipeline de Cloudflare corre `npx wrangler deploy` en cada push, así que el sitio se caía solo al desplegar. Los Secrets no se ven afectados. Si algún día se decide versionar las variables en el archivo, esa línea deja de hacer falta.
+
 > **Nota sobre `worker-configuration.d.ts`:** lo genera `npm run generate-types` a partir de `wrangler.jsonc` y **se versiona**, porque `tsconfig.json` lo incluye: sin él, `npm run check` falla en un clon recién hecho. Hay que regenerarlo cada vez que cambien los bindings.
 
 ## Estructura de Carpetas
@@ -264,6 +266,17 @@ El binding sirve para escribir, no para publicar: las imágenes se sirven desde 
 - **Regla:** todos los endpoints de `pages/api/**` capturan errores y responden con este formato — ninguno deja pasar un stack trace o error crudo al cliente.
 
 > **Estado actual:** los endpoints ya capturan errores y responden con `ApiResponse<T>` vía `shared/api/apiResponse.ts` (`jsonResponse`/`errorResponse`), pero todavía no existe `shared/lib/errors/apiError.ts` como punto central — pendiente.
+
+### Observabilidad
+
+El detalle del error va al log; al cliente va un mensaje genérico. Las dos mitades de esa regla:
+
+- **`shared/lib/errors/logServerError.ts`** — único punto de escritura de errores del servidor. Emite una línea de JSON por error (`contexto`, `ruta`, `metodo`, nombre, código, stack) por `console.error`, que llega a Observability. **Nunca** incluye valores de variables, cuerpos de petición, cookies ni cabeceras. Lo llama el middleware antes de relanzar: sin eso, una excepción subía muda hasta `500.astro` y no quedaba registro en ningún lado.
+- **`GET /api/diagnostico`** — estado de la configuración del worker desplegado sin abrir el panel: qué variables llegaron y con qué forma, qué bindings ve, y si Supabase responde a una consulta real. No devuelve valores de variables ni mensajes de error, sólo su nombre y código. Responde 200 siempre, para no confundirse con el 500 que se está diagnosticando.
+
+El log del despliegue **no** sirve para diagnosticar el sitio caído: termina en `Success` aunque el worker no atienda nada. Runbook completo en `docs/3_recursos/20260813-1730-runbook-diagnostico-produccion.md`.
+
+> **Límite conocido:** con streaming activado, un error lanzado mientras el cuerpo de la página ya está viajando no pasa por el middleware y no queda registrado. Para ese caso está `/api/diagnostico`, que no necesita provocar el error.
 
 ## Autenticación del Admin
 
