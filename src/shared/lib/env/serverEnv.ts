@@ -17,10 +17,18 @@ import { env as workerEnv } from 'cloudflare:workers';
 
 type EnvRecord = Record<string, string | undefined>;
 
-/** Devuelve la variable, o `undefined` si no está definida o está vacía. */
+/**
+ * Devuelve la variable, o `undefined` si no está definida o está vacía.
+ *
+ * @throws {InvalidEnvError} si el nombre termina en `_URL` y el valor no es una
+ * URL absoluta http(s).
+ */
 export function readServerEnv(name: string): string | undefined {
   const valor = (workerEnv as unknown as EnvRecord)[name]?.trim();
-  return valor ? valor : undefined;
+  if (!valor) return undefined;
+
+  assertUrlIfNeeded(name, valor);
+  return valor;
 }
 
 export class MissingEnvError extends Error {
@@ -34,6 +42,45 @@ export class MissingEnvError extends Error {
   }
 }
 
+export class InvalidEnvError extends Error {
+  // `variable`, y no `name`: `Error.name` ya está tomado por el nombre del error.
+  constructor(public readonly variable: string) {
+    super(
+      `La variable de entorno ${variable} no contiene una URL absoluta válida ` +
+        '(debe empezar con http:// o https://). Revisá que el valor se haya pegado ' +
+        'en crudo: los corchetes de un enlace de markdown, las comillas y los ' +
+        'espacios sobrantes quedan dentro del valor y lo invalidan.'
+    );
+    this.name = 'InvalidEnvError';
+  }
+}
+
+// El mensaje NO incluye el valor recibido a propósito: estos errores hoy pueden
+// llegar al cliente (ver BZ-14) y una URL de servicio con token en el query
+// string sería una fuga peor que el nombre de la variable.
+
+/**
+ * Convención del proyecto: toda variable cuyo nombre termina en `_URL` debe ser
+ * una URL absoluta http(s). Se valida al leerla porque el consumidor típico
+ * (`createClient`, `new URL`) falla mucho más lejos y con un mensaje que no
+ * nombra la variable — un valor mal pegado en el panel de Cloudflare aparecía
+ * como un 500 sin pista alguna.
+ */
+function assertUrlIfNeeded(name: string, valor: string): void {
+  if (!name.endsWith('_URL')) return;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(valor);
+  } catch {
+    throw new InvalidEnvError(name);
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new InvalidEnvError(name);
+  }
+}
+
 /**
  * Exige un grupo de variables y las devuelve tipadas por nombre. Reporta TODAS
  * las que faltan de una vez, en lugar de fallar en la primera: cuando falta la
@@ -41,6 +88,7 @@ export class MissingEnvError extends Error {
  * reintentar el arranque cinco veces.
  *
  * @throws {MissingEnvError} si alguna falta.
+ * @throws {InvalidEnvError} si alguna `*_URL` está presente pero mal formada.
  */
 export function requireServerEnv<const N extends readonly string[]>(
   names: N

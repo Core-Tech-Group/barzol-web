@@ -45,6 +45,8 @@ Se leen **siempre** con `requireServerEnv()` / `readServerEnv()` de `shared/lib/
 
 R2 **no** aparece con credenciales: la escritura va por el binding `MEDIA`, no por claves.
 
+**Convención `_URL`:** toda variable cuyo nombre termina en `_URL` debe ser una URL absoluta `http`/`https`, y `readServerEnv()` lo valida al leerla — si no lo es, lanza `InvalidEnvError` nombrando la variable. Existe porque un valor mal pegado en el panel de Cloudflare (los corchetes de un enlace de markdown quedaron dentro del valor) tumbó producción con un `Invalid supabaseUrl` que no decía de qué variable venía. El mensaje del error **no incluye el valor recibido**: una URL de servicio puede llevar token en el query string.
+
 En local viven en `.env` (ignorado por git), que wrangler carga dentro del worker — el build lo confirma con `Using secrets defined in .env`. En producción, en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets. `.env.example` es la plantilla y sí se versiona.
 
 > **Nota sobre `worker-configuration.d.ts`:** lo genera `npm run generate-types` a partir de `wrangler.jsonc` y **se versiona**, porque `tsconfig.json` lo incluye: sin él, `npm run check` falla en un clon recién hecho. Hay que regenerarlo cada vez que cambien los bindings.
@@ -184,7 +186,7 @@ src/
 | Componentes/vistas Astro/React | PascalCase | `ProductCard.astro`, `HomeView.astro` |
 | Archivos de lógica/servicios | camelCase | `productoService.ts` |
 | Rutas de API | kebab-case | `/api/productos`, `/api/categorias` |
-| Variables de entorno | UPPER_SNAKE_CASE con prefijo `BARZOL_` | `BARZOL_SUPABASE_URL`, `BARZOL_R2_ACCESS_KEY` |
+| Variables de entorno | UPPER_SNAKE_CASE con prefijo `BARZOL_` | `BARZOL_SUPABASE_URL`, `BARZOL_R2_PUBLIC_URL` |
 | Columnas de base de datos | snake_case | `product_name`, `created_at`, `category_id` |
 | IDs expuestos en API | UUID (nunca IDs secuenciales) | igual que el POS |
 | Slugs (URLs amigables) | kebab-case | `zapatilla-nike-air`, no el UUID en la URL pública |

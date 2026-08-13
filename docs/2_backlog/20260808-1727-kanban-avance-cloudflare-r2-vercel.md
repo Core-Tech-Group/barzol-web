@@ -1,21 +1,26 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-11 · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-13 · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
 
-## Estado del despliegue — 2026-08-11
+## Estado del despliegue — 2026-08-13
 
-El pipeline **funciona**: build verde, `wrangler deploy` correcto y los 4 bindings adjuntos, incluido `env.MEDIA (barzol-web)` como R2 Bucket. Pero el sitio responde **HTTP 500 con cuerpo vacío** en todas las rutas.
+**El despliegue no falló.** El log del 2026-08-12 termina en `✨ Success! Build completed.`: build verde, `wrangler deploy` correcto, 22 assets subidos y los 4 bindings adjuntos, incluido `env.MEDIA (barzol-web)`. Lo que falla es el **runtime**: el sitio devuelve 500 y muestra la página "Algo salió mal".
 
-**Causa confirmada** (no inferida — la devolvió la propia API de producción):
+Eso ya es un avance respecto del 2026-08-11 — antes el 500 salía con cuerpo vacío; ahora aparece la página de error de `BZ-22`, que es exactamente lo que se construyó para este caso.
+
+**Causa identificada — el valor de `BARZOL_SUPABASE_URL` está mal pegado.** En el panel de Cloudflare figura como enlace de markdown en vez de URL en crudo:
 
 ```
-GET https://barzol-web.willymichael-cardenas.workers.dev/api/productos
-{"success":false,"data":null,"message":"Faltan variables de entorno:
- BARZOL_SUPABASE_URL, BARZOL_SUPABASE_ANON_KEY. ..."}
+valor cargado:  [https://rnfcccnesxunjtpwahce.supabase.co](https://rnfcccnesxunjtpwahce.supabase.co)
+valor correcto:  https://rnfcccnesxunjtpwahce.supabase.co
 ```
 
-Las variables de entorno **no están cargadas en el Worker desplegado**. El código está bien: arranca, ejecuta y falla exactamente donde debe, con el mensaje que se diseñó para este caso. Falta una acción de configuración en el panel — ver `BZ-23`, que es el único bloqueante real.
+Ese valor no llega nunca a Supabase: `@supabase/supabase-js` lo valida al construir el cliente y aborta con `Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.` (verificado en `node_modules/@supabase/supabase-js/dist/index.cjs:372`). La excepción sube sin capturar y Astro responde 500 → `500.astro`.
+
+Encaja con todo lo observado: `getSupabase()` se llama en el render de la home y en el middleware, así que **todas** las rutas con datos caen, y `R2_ENDPOINT` muestra los mismos corchetes — se pegaron ambas desde un documento renderizado, no desde texto plano.
+
+Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad) y `BZ-33` (ya cerrada: el mismo error ahora se nombra solo).
 
 > **Precisión importante:** esto no es Cloudflare **Pages**. El log muestra `npx wrangler deploy` y el dominio `*.workers.dev`: es un **Worker con assets estáticos**, el sucesor de Pages. Importa porque cambia dónde se cargan las variables en el panel.
 
@@ -47,7 +52,7 @@ Las variables de entorno **no están cargadas en el Worker desplegado**. El cód
 | BZ-20 | Arranque lento del servidor de dev | ⬜ Pendiente | ⚪ |
 | BZ-21 | Diagnóstico del 500 en producción | ✅ Hecho | 🔴 |
 | BZ-22 | Página de error 500 | ✅ Hecho | 🟠 |
-| BZ-23 | **Cargar las variables en el Worker** | ⬜ **Bloqueante** | 🔴 |
+| BZ-23 | Cargar las variables en el Worker | ✅ Hecho (con valor mal pegado → BZ-31) | 🔴 |
 | BZ-24 | Verificación post-deploy | ⬜ Pendiente | 🔴 |
 | BZ-25 | Probar la subida a R2 en producción | ⬜ Pendiente | 🟠 |
 | BZ-26 | Separar variables de secretos | ⬜ Pendiente | 🟠 |
@@ -55,8 +60,11 @@ Las variables de entorno **no están cargadas en el Worker desplegado**. El cód
 | BZ-28 | Dominio propio para el bucket | ⬜ Pendiente | 🟡 |
 | BZ-29 | Runbook de observabilidad | ⬜ Pendiente | 🟡 |
 | BZ-30 | `npm run preview` roto en Windows | ⬜ Pendiente | 🟡 |
+| BZ-31 | **Corregir el valor de `BARZOL_SUPABASE_URL`** | ⬜ **Bloqueante** | 🔴 |
+| BZ-32 | Borrar las variables `R2_*` residuales del panel | ⬜ Pendiente | 🔴 |
+| BZ-33 | Validar las variables `*_URL` al leerlas | ✅ Hecho | 🟠 |
 
-**Progreso:** 14 de 30 hechas. Bloqueantes activos: **BZ-23** (y `BZ-07`, independiente).
+**Progreso:** 16 de 33 hechas. Bloqueantes activos: **BZ-31** (y `BZ-32` + `BZ-07`, de seguridad).
 
 | Prioridad | Significado |
 |---|---|
@@ -67,7 +75,22 @@ Las variables de entorno **no están cargadas en el Worker desplegado**. El cód
 
 ---
 
-## ✅ Cerradas en esta sesión (2026-08-11)
+## ✅ Cerradas en esta sesión (2026-08-13)
+
+### BZ-33 · Validar las variables `*_URL` al leerlas 🟠
+Este 500 costó una sesión entera de diagnóstico por un motivo evitable: el error que veía el desarrollador (`Invalid supabaseUrl`) **no nombraba la variable**, y la página sólo decía "Algo salió mal". El valor estaba cargado, así que `MissingEnvError` —que sí nombra— nunca se disparaba.
+
+`shared/lib/env/serverEnv.ts` ahora aplica una convención del proyecto: **toda variable cuyo nombre termina en `_URL` debe ser una URL absoluta http(s)**, y se valida en `readServerEnv()`, es decir en el único punto por el que pasan todas. Si no lo es, lanza `InvalidEnvError` nombrando la variable y explicando la causa más probable — corchetes de markdown, comillas o espacios pegados junto al valor.
+
+Cubre las tres de una vez (`BARZOL_SUPABASE_URL`, `BARZOL_R2_PUBLIC_URL` y cualquiera futura) sin tocar ningún llamador.
+
+**El mensaje no incluye el valor recibido, a propósito.** Mientras `BZ-14` siga abierto estos errores pueden llegar al cliente público, y una URL de servicio con token en el query string sería una fuga peor que el nombre de la variable.
+
+**Verificado:** `npm run check` en 0 errores sobre 95 archivos y `npm run build` verde. La regla se probó contra el valor real del panel (rechazado), el valor correcto (aceptado), un valor entre comillas (rechazado) y un dominio sin esquema (rechazado). `npm run preview` sigue sin poder correr en Windows — ver `BZ-30`.
+
+---
+
+## ✅ Cerradas en la sesión anterior (2026-08-11)
 
 ### BZ-21 · Diagnóstico del 500 en producción 🔴
 Se descartaron las hipótesis por orden de coste antes de tocar código:
@@ -118,24 +141,34 @@ Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configu
 
 ## 🚧 Bloqueante
 
-### BZ-23 · Cargar las variables de entorno en el Worker 🔴
-**Es lo único que separa al sitio de estar funcionando.** El código ya está desplegado y correcto.
+### BZ-31 · Corregir el valor de `BARZOL_SUPABASE_URL` 🔴
+**Es lo único que separa al sitio de estar funcionando.** El código está bien y desplegado; el valor cargado en el panel, no.
 
 **Ruta en el panel:** Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**. No es la sección de Pages: este proyecto se despliega como Worker con assets.
 
-| Variable | Tipo | Valor |
+| Variable | Estado hoy | Acción |
 |---|---|---|
-| `BARZOL_SUPABASE_URL` | Variable | `https://rnfcccnesxunjtpwahce.supabase.co` |
-| `BARZOL_SUPABASE_ANON_KEY` | Variable | la publishable key del proyecto |
-| `BARZOL_R2_PUBLIC_URL` | Variable | `https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev` |
-| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | **Secret** | sólo si algún día se usa; hoy ningún código la lee |
+| `BARZOL_SUPABASE_URL` | `[https://…](https://…)` — enlace de markdown | **Reemplazar** por `https://rnfcccnesxunjtpwahce.supabase.co`, sin corchetes, sin paréntesis, sin barra final |
+| `BARZOL_SUPABASE_ANON_KEY` | Presente | Verificar que el **nombre** termine en `_KEY` (el panel recorta el texto visible) y que el valor no traiga comillas ni espacios |
+| `BARZOL_R2_PUBLIC_URL` | `https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev` | Correcta, dejar como está |
+| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | Ausente | Bien así — hoy ningún código la lee. Si algún día se usa, va como **Secret** |
 
-**Ojo con las dos que no son de Supabase:** `BARZOL_R2_PUBLIC_URL` es igual de obligatoria. Sin ella, la subida funcionará pero `buildPublicUrl()` lanzará `MissingEnvError` al construir la URL de la imagen, y el fallo aparecerá recién al guardar contenido — más difícil de asociar con la causa.
+Cómo comprobar cada valor sin adivinar: el campo del panel muestra el texto recortado, así que conviene abrirlo y llevar el cursor al final. Un valor correcto empieza en `https://` **y termina en el dominio** — si aparece `](` en cualquier punto, se pegó desde un documento renderizado en vez de texto plano.
 
-Tras guardarlas hay que **volver a desplegar** para que el Worker las tome.
+Tras guardarlas hay que **volver a desplegar** para que el Worker las tome. Editar variables no redespliega solo.
 
 **Criterio de aceptación:** `/` responde 200 y `/api/productos` devuelve el catálogo real.
 **Bloquea:** BZ-24, BZ-25.
+
+### BZ-32 · Borrar las variables `R2_*` residuales del panel 🔴
+El panel tiene tres variables que **ningún código del proyecto lee**: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_ENDPOINT` (esta última también con corchetes de markdown). Son restos del intento con Vercel, donde R2 se accedía por API S3 firmada. Con el binding `MEDIA` no hay credenciales que configurar — ver la tabla comparativa en el historial de decisiones.
+
+Dos motivos para borrarlas, no sólo limpieza:
+
+1. **`R2_SECRET_ACCESS_KEY` está como *Variable*, en texto plano y visible en el panel.** Un secreto real guardado donde cualquiera con acceso al panel lo lee de un vistazo.
+2. Sugieren que la aplicación usa credenciales de R2, lo que llevaría a rotar en vez de revocar cuando se atienda `BZ-07`.
+
+**Pasos:** borrar las tres variables en Settings → Variables and Secrets, y después revocar el token en R2 → Manage API tokens (`BZ-07`). Nada del código las referencia, así que el borrado no puede romper nada — verificado: no hay ninguna aparición de `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` ni `R2_ENDPOINT` en `src/`.
 
 ---
 
@@ -242,17 +275,19 @@ Faltan `Product` JSON-LD, `BreadcrumbList` y `Organization`, además de canonica
 ## Mapa de dependencias
 
 ```
-BZ-07 (revocar token) ───────── independiente, hacer YA
+BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── hacer YA, es seguridad
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
 
-BZ-23 (cargar variables) ──┬── BZ-24 (verificación post-deploy)
+BZ-31 (corregir la URL) ───┬── BZ-24 (verificación post-deploy)
                            └── BZ-25 (subida real a R2) ── depende también de BZ-10
 BZ-10 (subida en admin) ─────── BZ-11 (borrado) ── habilita BZ-28
 BZ-27 (dominio sitio) ───────── BZ-19 (SEO)
 BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido real
 ```
 
-**Orden sugerido:** BZ-23 → BZ-24 → BZ-07 → BZ-14 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-31 → BZ-24 → BZ-32 → BZ-07 → BZ-14 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+
+Las tres primeras son de panel, no de código: se hacen en una sola visita a Cloudflare y un redespliegue.
 
 ---
 
