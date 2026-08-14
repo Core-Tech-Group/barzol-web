@@ -87,7 +87,8 @@ src/
 │
 ├── landing/                      # TODO lo del visitante — una carpeta por vista, nada más entra aquí
 │   ├── layout/
-│   │   └── PublicLayout.astro      # Header + <slot /> + Footer, usado por TODAS las vistas de landing/
+│   │   ├── PublicLayout.astro      # Header + <slot /> + Footer, usado por TODAS las vistas de landing/
+│   │   └── ErrorLayout.astro       # 404 y 500 — autónomo, SIN Header ni acceso a datos (ver abajo)
 │   ├── shared/                     # Compartido SOLO entre vistas del landing (no lo usa admin/)
 │   │   ├── Header.astro             # Barra de anuncio + mega menú categorías + mega menú servicios
 │   │   ├── Footer.astro
@@ -204,7 +205,8 @@ src/
 | `/servicios` | PublicLayout | `landing/servicios/ServiciosView.astro` | Institucional |
 | `/nosotros` | PublicLayout | `landing/nosotros/NosotrosView.astro` | Institucional |
 | `/busqueda` | PublicLayout | `landing/busqueda/BusquedaView.astro` | Resultados de búsqueda, usa `Pagination.astro` |
-| `/500` | — (autónoma) | `pages/500.astro` | Error de servidor. **Sin layout a propósito:** `PublicLayout` monta `Header`, que consulta Supabase; si el error viene de ahí, la página de error volvería a fallar |
+| `/500` | ErrorLayout | `pages/500.astro` | Error de servidor |
+| `/404` | ErrorLayout | `pages/404.astro` | Ruta inexistente |
 | `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (Supabase Auth real) |
 | `/admin` | AdminLayout | `admin/dashboard/DashboardView.astro` | Dashboard del panel |
 | `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD de productos |
@@ -353,3 +355,6 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Despliegue (2026-08-11) | Se documenta el hosting como **Workers con assets**, no Pages | El despliegue real corre `wrangler deploy` sobre `*.workers.dev`. La distinción no es cosmética: cambia dónde se cargan las variables de entorno en el panel |
 | Despliegue (2026-08-11) | `src/pages/500.astro` **sin layout**, autónoma y sin acceso a datos | El primer despliegue devolvió 500 con cuerpo vacío. Una página de error que dependa de `PublicLayout` → `Header` → Supabase volvería a fallar justo cuando la causa es la base o la configuración |
 | Despliegue (2026-08-11) | La página de error no muestra el detalle técnico | El mensaje puede contener nombres de variables o estado interno; va a los logs del worker, que ya tiene observabilidad activada |
+| Despliegue (2026-08-14) | Se **descartó migrar a Cloudflare Pages** y se confirmó Workers con assets | La documentación de Cloudflare recomienda Workers para proyectos nuevos y sólo publica guía de migración *desde* Pages *hacia* Workers. Pages sigue soportado, pero todo el desarrollo de features va a Workers |
+| Despliegue (2026-08-14) | Se **descartó migrar a Workers KV** como almacén de datos | KV es clave-valor de consistencia eventual (hasta 60s de propagación): no admite filtros, joins ni RLS, que es justo lo que usa el catálogo. Ya está en uso donde corresponde — el binding `SESSION` de las sesiones de Astro. Queda como posible caché de lectura, no como base de datos |
+| Despliegue (2026-08-14) | `landing/layout/ErrorLayout.astro` compartido por `404.astro` y `500.astro` | Las dos páginas necesitan el mismo cascarón autónomo; duplicarlo habría dejado dos copias que se desincronizan. Las páginas quedan en ~15 líneas y sólo declaran su texto e icono |

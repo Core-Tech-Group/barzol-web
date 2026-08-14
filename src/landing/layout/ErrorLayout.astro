@@ -1,0 +1,108 @@
+---
+import '@shared/styles/tokens.css';
+
+// Layout de las páginas de error (404 y 500).
+//
+// Existe aparte de PublicLayout, y NO debe reemplazarse por él nunca: aquel
+// monta Header, que lee las categorías desde Supabase. Si la causa del error es
+// justamente que falta configuración o que la base no responde, el layout
+// volvería a fallar y el visitante recibiría un 500 con cuerpo vacío — que es
+// exactamente lo que pasaba antes de que existieran estas páginas. Todo acá es
+// autónomo: sin datos, sin islas, sin red.
+//
+// Ninguna página de error muestra el detalle técnico: puede contener nombres de
+// variables o mensajes internos. Eso va a los logs del worker (observabilidad
+// activada en wrangler.jsonc, ver el runbook en docs/3_recursos/).
+
+interface Props {
+  /** Texto del <title>; se le agrega el sufijo de marca. */
+  titulo: string;
+  encabezado: string;
+  mensaje: string;
+  /** 'alerta' para errores del servidor, 'brujula' para páginas inexistentes. */
+  icono: 'alerta' | 'brujula';
+  /** Los errores del servidor ofrecen contacto; un 404 no lo amerita. */
+  mostrarWhatsapp?: boolean;
+}
+
+const { titulo, encabezado, mensaje, icono, mostrarWhatsapp = false } = Astro.props;
+
+const WHATSAPP = 'https://wa.me/51950759032';
+
+// El icono de alerta va en rojo; el de "no encontrado" en el azul de marca —
+// una página inexistente no es una falla que deba alarmar.
+const colorIcono = icono === 'alerta' ? 'var(--color-danger)' : 'var(--color-primary)';
+const fondoIcono = icono === 'alerta' ? 'var(--color-danger-bg)' : 'var(--color-primary-light)';
+---
+
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>{titulo} — Barzol</title>
+	</head>
+	<!-- tokens.css ya fija margin, font-family, background y color en body -->
+	<body style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+		<main style="max-width:520px; text-align:center;">
+			<div
+				aria-hidden="true"
+				style={`width:64px; height:64px; margin:0 auto 24px; border-radius:16px; background:${fondoIcono}; display:flex; align-items:center; justify-content:center;`}
+			>
+				{
+					icono === 'alerta' ? (
+						<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+							<path d="M12 8v5" stroke={colorIcono} stroke-width="2" stroke-linecap="round" />
+							<circle cx="12" cy="16.5" r="1.2" fill={colorIcono} />
+							<path
+								d="M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20.2h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
+								stroke={colorIcono}
+								stroke-width="1.8"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					) : (
+						<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+							<circle cx="12" cy="12" r="9" stroke={colorIcono} stroke-width="1.8" />
+							<path
+								d="m14.8 9.2-1.6 4.1a1 1 0 0 1-.55.56l-4.05 1.6 1.6-4.06a1 1 0 0 1 .56-.56z"
+								stroke={colorIcono}
+								stroke-width="1.6"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					)
+				}
+			</div>
+
+			<h1 style="font-size:26px; font-weight:700; color:var(--color-text); margin:0 0 12px;">
+				{encabezado}
+			</h1>
+			<p style="font-size:15px; color:var(--color-text-muted); line-height:1.7; margin:0 0 28px;">
+				{mensaje}
+			</p>
+
+			<div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+				<a
+					href="/"
+					style="display:inline-block; padding:12px 22px; border-radius:10px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none;"
+				>
+					Volver al inicio
+				</a>
+				{
+					mostrarWhatsapp && (
+						<a
+							href={WHATSAPP}
+							rel="noopener noreferrer"
+							target="_blank"
+							style="display:inline-block; padding:12px 22px; border-radius:10px; border:1px solid var(--color-border); background:white; color:var(--color-text); font-size:14px; font-weight:600; text-decoration:none;"
+						>
+							Escribir por WhatsApp
+						</a>
+					)
+				}
+			</div>
+		</main>
+	</body>
+</html>

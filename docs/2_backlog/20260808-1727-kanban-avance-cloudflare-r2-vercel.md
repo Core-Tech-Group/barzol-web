@@ -1,7 +1,33 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-13 (2ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-14 (3ª revisión) · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
+
+## Estado del despliegue — 2026-08-14, 3ª revisión
+
+**El worker en producción está corriendo código viejo.** Esto reordena todo el diagnóstico anterior.
+
+Prueba directa contra producción:
+
+```
+GET /api/diagnostico   → 404 Not Found
+```
+
+Ese endpoint existe en `origin/main` (commit `3908e0e`) — verificado con `git cat-file`. Que devuelva 404 significa que **el worker desplegado no incluye los dos últimos commits**. En cambio `/500` sí responde con la página de error, que llegó en `112af0b`. O sea: producción está parada alrededor de `112af0b`/`394e46c`, y `origin/main` va dos commits más adelante.
+
+**La consecuencia es la que importa:** `keep_vars: true` viaja en `3908e0e`, así que **nunca llegó al worker**. Por eso las variables se siguen borrando pese a estar corregido en el repositorio. Cargarlas a mano y redesplegar no iba a funcionar: el despliegue que las conserva es justamente el que no se está ejecutando.
+
+**Hipótesis principal sobre por qué se detuvieron los despliegues:** el repositorio **se movió a `Core-Tech-Group/barzol-web`**. GitHub redirige los `git push` (por eso los commits llegan), pero una integración de Workers Builds atada al repositorio anterior puede haber dejado de dispararse. Ver `BZ-38`, que es ahora el bloqueante real.
+
+Sondeo completo del día:
+
+| Ruta | Respuesta | Lectura |
+|---|---|---|
+| `/` | 500 | Sigue sin variables |
+| `/api/productos` | `Faltan variables de entorno: BARZOL_SUPABASE_URL, BARZOL_SUPABASE_ANON_KEY` | Confirmado: borradas otra vez |
+| `/500` | 500 con la página de error | El commit `112af0b` sí está desplegado |
+| `/api/diagnostico` | **404** | El commit `3908e0e` **no** está desplegado |
+| ruta inexistente | 404 por defecto de Astro | Resuelto en esta sesión (`BZ-40`) |
 
 ## Estado del despliegue — 2026-08-13, 2ª revisión
 
@@ -89,8 +115,15 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-35 | Endpoint `GET /api/diagnostico` | ✅ Hecho | 🔴 |
 | BZ-36 | Rastreo de errores en los logs del worker | ✅ Hecho | 🟠 |
 | BZ-37 | Proteger o retirar `/api/diagnostico` | ⬜ Pendiente | 🟡 |
+| BZ-38 | **Los despliegues no se están ejecutando** | ⬜ **Bloqueante** | 🔴 |
+| BZ-39 | Actualizar el remoto git a `Core-Tech-Group` | ⬜ Pendiente | 🟠 |
+| BZ-40 | Página 404 propia | ✅ Hecho | 🟠 |
+| BZ-41 | Evaluación: ¿migrar a Workers KV? | ✅ Hecho (descartado) | 🟠 |
+| BZ-42 | Evaluación: ¿volver a Cloudflare Pages? | ✅ Hecho (descartado) | 🟠 |
+| BZ-43 | Caché de catálogo en KV | ⬜ Pendiente | ⚪ |
+| BZ-44 | Verificar qué commit corre en producción | ⬜ Pendiente | 🟠 |
 
-**Progreso:** 19 de 37 hechas. Bloqueante activo: **BZ-34** (y `BZ-32` + `BZ-07`, de seguridad).
+**Progreso:** 22 de 44 hechas. Bloqueante activo: **BZ-38** — y hasta resolverlo, `BZ-34` no puede completarse: el `keep_vars` que conserva las variables sólo entra en vigor con un despliegue que lo incluya.
 
 `BZ-31` quedó cerrada: el valor con corchetes ya se corrigió. Lo que quedó abierto es que el despliegue borra lo que se corrija.
 
@@ -103,7 +136,70 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 
 ---
 
-## ✅ Cerradas en esta sesión (2026-08-13)
+## ✅ Cerradas en esta sesión (2026-08-14)
+
+### BZ-41 · Evaluación: ¿migrar a Workers KV? — **descartado** 🟠
+Se planteó mover el proyecto a Workers KV. **No corresponde, y en parte ya está hecho.**
+
+**KV no es una alternativa de hosting.** Es un almacén clave-valor, no un lugar donde desplegar el sitio; no compite con Workers ni con Pages. La captura del panel muestra el namespace `barzol-web-session`, que **ya está en uso**: lo provisiona automáticamente el adaptador de Astro para las sesiones, y aparece en el log de despliegue como `env.SESSION (inherited) KV Namespace`. Por eso no está declarado en `wrangler.jsonc` — lo inyecta el adaptador.
+
+**KV tampoco puede reemplazar a Supabase.** Es la parte importante de la evaluación:
+
+| Necesidad del catálogo | Supabase | Workers KV |
+|---|---|---|
+| `where categoria = X order by orden` | Sí | No — sólo `get` por clave exacta |
+| Joins (producto + fotos + características) | Sí | No |
+| Autenticación del admin | Supabase Auth | No existe |
+| RLS por fila | Sí | No |
+| Consistencia | Inmediata | **Eventual: hasta 60s o más** entre ubicaciones |
+
+Ese último punto solo ya lo descalifica para el panel: el admin guarda un producto y podría no verlo al recargar. Y las consultas del catálogo son relacionales — `categoriaService` arma un árbol de categorías con subcategorías anidadas, algo que en KV habría que precalcular y reescribir entero en cada cambio.
+
+**KV tampoco reemplaza a R2:** el límite de respuesta es de 25 MB y está pensado para valores chicos y lectura intensiva, no para fotos y video. R2 es el almacén de objetos y no cobra egress.
+
+**Dónde sí serviría, más adelante:** cachear en el borde las consultas de catálogo y categorías para ahorrar viajes a Supabase — que además mitigaría la pausa por inactividad del plan Free. Queda como `BZ-43`, prioridad baja: primero hay que tener el sitio en pie.
+
+**Conclusión:** KV ya cumple su función (sesiones). No hay nada que migrar.
+
+### BZ-42 · Evaluación: ¿volver a Cloudflare Pages? — **descartado** 🟠
+La sospecha era que el despliegue "no era óptimo" por usar `wrangler deploy` en vez de Pages. **Es al revés: la configuración actual es la recomendada por Cloudflare, y Pages es el camino heredado.**
+
+La documentación oficial es explícita: *"If you are starting a new project, use Workers instead of Pages... all investment, optimizations, and feature work will be dedicated to improving Workers."* Existe una guía de migración **de Pages hacia Workers**, no en la dirección contraria.
+
+Lo que el proyecto ya tiene y confirma que está del lado correcto:
+
+- `wrangler.jsonc` con bloque `assets` → Workers con assets estáticos, la vía recomendada para sitios con SSR.
+- `_headers` generado por el adaptador y soportado nativamente en Workers.
+- Bindings de R2, KV e Images adjuntos al mismo worker, sin configuración extra.
+
+Mover a Pages costaría reconfigurar el proyecto entero, perdería el soporte de features nuevas y **no resolvería ninguno de los dos problemas reales** (variables borradas y despliegues detenidos). Lo único que Pages traía "gratis" —que sus variables no se borran al desplegar— ya está resuelto con `keep_vars: true`.
+
+> **Sobre el video** ([enlace](https://www.youtube.com/watch?v=FmzbkWV-SwU)): sólo se pudo recuperar el título, *"How to Deploy Astro on Cloudflare in Minutes (Pages & Workers)"*. YouTube no expone la transcripción por esa vía, así que **el contenido no se revisó** y esta evaluación se basa en la documentación oficial de Cloudflare, no en el video. Si trae algún paso concreto que contradiga esto, vale traerlo y reevaluar.
+
+**Fuentes:**
+- [Migrate from Pages to Workers](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/)
+- [Static Assets · Workers](https://developers.cloudflare.com/workers/static-assets/)
+- [Choosing a data or storage product](https://developers.cloudflare.com/workers/platform/storage-options/)
+- [Limits · Workers KV](https://developers.cloudflare.com/kv/platform/limits/)
+- [How KV works](https://developers.cloudflare.com/kv/concepts/how-kv-works/)
+
+### BZ-40 · Página 404 propia 🟠
+Producción servía el **404 por defecto de Astro**: fondo oscuro, tipografía monoespaciada y texto en inglés, sin ninguna relación con el sitio. Era el punto que `BZ-24` había dejado anotado para verificar, y quedó confirmado.
+
+Nuevo `src/pages/404.astro`. Para no duplicar el marcado con `500.astro`, la parte común se extrajo a **`src/landing/layout/ErrorLayout.astro`**, que recibe título, encabezado, mensaje e icono por props. Las dos páginas quedaron en 13 y 20 líneas.
+
+El layout hereda la regla que sostenía a `500.astro`: **no monta `PublicLayout`**, porque ese lee categorías desde Supabase y volvería a fallar justo cuando la causa del error es la base o la configuración.
+
+Dos diferencias deliberadas entre ambas páginas:
+
+- El 404 usa el azul de marca y el 500 el rojo de peligro: una URL mal escrita no es una falla que deba alarmar.
+- El 404 **no ofrece WhatsApp**. Un enlace mal tipeado no amerita empujar al visitante a soporte, sólo devolverlo al catálogo.
+
+**Verificado en el servidor de desarrollo:** una ruta inexistente devuelve **404** con la página propia; `/500` sigue devolviendo 500 con su botón de WhatsApp; ninguna de las dos emite consultas a Supabase. `npm run check` en 0 errores sobre 99 archivos y el resto de rutas sin cambios (`/`, `/nosotros`, `/galeria`, `/admin/login`, `/api/productos`, `/api/diagnostico` en 200).
+
+---
+
+## ✅ Cerradas en la sesión anterior (2026-08-13)
 
 ### BZ-35 · Endpoint `GET /api/diagnostico` 🔴
 Dos caídas seguidas, dos causas distintas, y en las dos el log de despliegue terminó en `✨ Success! Build completed.`. Ese log responde "¿se subió el código?"; la pregunta cuando el sitio falla es "¿qué configuración recibe el worker al atender una petición?", y no había forma de responderla sin sondear rutas a ciegas.
@@ -202,6 +298,40 @@ Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configu
 
 ## 🚧 Bloqueante
 
+### BZ-38 · Los despliegues no se están ejecutando 🔴
+**Es el bloqueante de verdad, y hasta resolverlo `BZ-34` no puede completarse.** El worker corre código de hace dos commits, así que el `keep_vars: true` que evita el borrado de variables **todavía no llegó a producción**. Recargar variables sin esto es trabajo perdido: el siguiente despliegue las borra igual.
+
+**Evidencia:** `/api/diagnostico` existe en `origin/main` (confirmado con `git cat-file -e origin/main:src/pages/api/diagnostico.ts`) y devuelve **404** en producción. `/500`, que llegó dos commits antes, sí responde.
+
+**Hipótesis principal:** el repositorio se movió a **`Core-Tech-Group/barzol-web`**. GitHub redirige los `push` —por eso los commits sí llegan al remoto— pero la integración de Workers Builds puede haber quedado apuntando al repositorio anterior y dejado de dispararse.
+
+**Cómo verificarlo, en orden:**
+
+1. Cloudflare → Workers & Pages → `barzol-web` → **Deployments**: ¿hay despliegues después del `2026-08-12`? Si el último coincide con esa fecha, los push posteriores no dispararon nada.
+2. Settings → **Builds**: comprobar a qué repositorio y rama está conectado. Si dice `gmarapiortiz/barzol-web`, reconectarlo a `Core-Tech-Group/barzol-web`.
+3. Si hay despliegues pero fallaron, abrir el log del último — el problema sería otro y hay que traerlo.
+
+**Salida de emergencia si la integración tarda en arreglarse:** desplegar a mano con `npx wrangler login && npx wrangler deploy`. Sirve para desbloquear, pero conviene arreglar la automatización: un despliegue manual no queda registrado en el historial del repositorio.
+
+**Criterio de aceptación:** `/api/diagnostico` responde **200** en producción. Ese endpoint es exactamente la señal de que el código nuevo llegó.
+**Bloquea:** BZ-34, y por lo tanto BZ-24 y BZ-25.
+
+### BZ-39 · Actualizar el remoto git a `Core-Tech-Group` 🟠
+`git remote -v` sigue apuntando a `https://github.com/gmarapiortiz/barzol-web.git`. Los push funcionan sólo por el redirect de GitHub, que no es permanente y muestra el aviso *"This repository moved"* en cada push.
+
+```bash
+git remote set-url origin https://github.com/Core-Tech-Group/barzol-web.git
+```
+
+Relacionado con `BZ-38`: si el remoto local quedó desactualizado, es probable que la integración de Cloudflare también.
+
+### BZ-44 · Verificar qué commit corre en producción 🟠
+Esta sesión perdió tiempo diagnosticando variables cuando el problema era que el código nuevo no estaba desplegado. **No hay forma de saber qué versión atiende las peticiones sin adivinar por rutas.**
+
+Agregar a `/api/diagnostico` el SHA del commit y la fecha de build, inyectados como variable en tiempo de compilación (`astro.config.mjs` → `vite.define`, leyendo `CF_PAGES_COMMIT_SHA` o `WORKERS_CI_COMMIT_SHA`, que Cloudflare expone durante el build).
+
+Con eso, la primera pregunta ante cualquier fallo —"¿estoy mirando el código que creo?"— se responde en una petición.
+
 ### BZ-34 · `wrangler deploy` borra las variables del panel 🔴
 **Es lo único que separa al sitio de estar funcionando**, y explica por qué cargarlas a mano "no servía": servía, hasta el siguiente push.
 
@@ -209,11 +339,12 @@ Wrangler trata `wrangler.jsonc` como fuente de verdad al estilo terraform. Sin b
 
 **Ya corregido en el código:** `"keep_vars": true` en `wrangler.jsonc`.
 
-**Falta la parte manual, en este orden:**
+**Falta la parte manual, en este orden — y el orden importa:**
 
-1. Cargar de nuevo `BARZOL_SUPABASE_URL` y `BARZOL_SUPABASE_ANON_KEY` en Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets** (verificar que `BARZOL_R2_PUBLIC_URL` siga ahí).
-2. Redesplegar. El `keep_vars` sólo protege a partir del despliegue que lo incluya, así que **este primer redespliegue es el que lo activa**.
-3. Abrir `/api/diagnostico` y confirmar `"ok": true`.
+1. **Primero resolver `BZ-38`**, o los pasos siguientes no sirven de nada: el `keep_vars` está en un commit que todavía no se desplegó, así que hoy cualquier despliegue sigue borrando las variables.
+2. Cargar de nuevo `BARZOL_SUPABASE_URL` y `BARZOL_SUPABASE_ANON_KEY` en Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets** (verificar que `BARZOL_R2_PUBLIC_URL` siga ahí).
+3. Redesplegar. El `keep_vars` sólo protege a partir del despliegue que lo incluya, así que **este primer redespliegue es el que lo activa**.
+4. Abrir `/api/diagnostico` y confirmar `"ok": true`.
 
 > **Alternativa considerada y descartada:** declarar las variables en `wrangler.jsonc`, que las dejaría versionadas y reproducibles. Se descartó porque mete la anon key de Supabase al repositorio. Si más adelante se prefiere ese camino, la decisión es sólo sobre la anon key — `BARZOL_SUPABASE_URL` y `BARZOL_R2_PUBLIC_URL` son públicas y podrían ir al archivo sin discusión.
 
@@ -266,10 +397,11 @@ Checklist de humo contra el dominio de producción, no sólo la home:
 /api/productos          JSON con datos
 /admin                  302 → /admin/login
 /admin/login            200 y permite iniciar sesión
-/una-ruta-inventada     404 (no 500)
+/una-ruta-inventada     404 con la página propia (no la de Astro)
+/api/diagnostico        200 con "ok": true
 ```
 
-El último caso importa: hay `500.astro` pero **no hay `404.astro`**, así que conviene comprobar qué devuelve hoy una ruta inexistente.
+El caso del 404 ya se resolvió en `BZ-40`: producción servía el 404 por defecto de Astro y ahora hay una página propia. Falta confirmarlo en producción una vez que los despliegues vuelvan (`BZ-38`).
 
 ### BZ-25 · Probar la subida a R2 en producción 🟠
 La escritura en R2 se verificó contra el **bucket simulado en local** (`put`/`get`/`delete`), nunca contra el bucket real desde el worker desplegado. Falta cerrar ese hueco: subir una imagen real y comprobar que se ve desde `BARZOL_R2_PUBLIC_URL`.
@@ -362,25 +494,33 @@ Faltan `Product` JSON-LD, `BreadcrumbList` y `Organization`, además de canonica
 ### BZ-20 · Arranque lento del servidor de desarrollo ⚪
 `npm run dev` tarda ~31s y el CLI corta a los 30s: **el primer intento falla casi siempre**, el segundo funciona. Se confirmó de nuevo en esta sesión.
 
+### BZ-43 · Caché de catálogo en Workers KV ⚪
+Surge de descartar `BZ-41`: KV no sirve como base de datos, pero **sí como caché de lectura en el borde**. Hoy cada visita al catálogo va a Supabase, y el plan Free pausa el proyecto por inactividad — una caché ahorraría viajes y amortiguaría ese riesgo.
+
+Candidatos naturales: el árbol de categorías del `Header` (cambia poquísimo y lo consulta *toda* página del sitio) y los listados de catálogo.
+
+**No empezar por acá.** Requiere decidir invalidación —qué pasa cuando el admin edita una categoría— y la consistencia eventual de KV significa que el cambio puede tardar en verse en otras regiones. Se evalúa cuando el sitio esté estable y haya tráfico real que lo justifique.
+
 ---
 
 ## Mapa de dependencias
 
 ```
+BZ-38 (despliegues detenidos) ── BZ-34 (recargar variables) ┬─ BZ-24 (verificación)
+   └── BZ-39 (remoto git), misma causa raíz              └─ BZ-25 (subida real a R2)
 BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── hacer YA, es seguridad
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
-
-BZ-34 (recargar variables) ┬── BZ-24 (verificación post-deploy)
-                           └── BZ-25 (subida real a R2) ── depende también de BZ-10
-BZ-35 (/api/diagnostico) ────── verifica BZ-34 ── se cierra con BZ-37
+BZ-35 (/api/diagnostico) ────── verifica BZ-38 y BZ-34 ── se cierra con BZ-37
+BZ-44 (SHA en diagnóstico) ──── evita repetir el diagnóstico de BZ-38
 BZ-10 (subida en admin) ─────── BZ-11 (borrado) ── habilita BZ-28
 BZ-27 (dominio sitio) ───────── BZ-19 (SEO)
 BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido real
+BZ-43 (caché KV) ────────────── sólo con el sitio estable
 ```
 
-**Orden sugerido:** BZ-34 → BZ-24 → BZ-32 → BZ-07 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-38 → BZ-39 → BZ-34 → BZ-24 → BZ-32 → BZ-07 → BZ-44 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
 
-Las tres primeras son de panel, no de código: se hacen en una sola visita a Cloudflare y un redespliegue.
+**BZ-38 va primero y no es negociable:** mientras los despliegues no corran, cualquier arreglo en el repositorio —incluido el `keep_vars` que ya está commiteado— no llega al worker. Las tres siguientes son de panel, no de código.
 
 ---
 
