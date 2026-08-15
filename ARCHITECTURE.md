@@ -51,6 +51,8 @@ En local viven en `.env` (ignorado por git), que wrangler carga dentro del worke
 
 > **`keep_vars: true` en `wrangler.jsonc` no es opcional mientras las variables vivan en el panel.** Por defecto wrangler trata ese archivo como única fuente de verdad, al estilo terraform: como no declara ningún bloque `vars`, cada `wrangler deploy` **borra** las variables cargadas desde el panel. El pipeline de Cloudflare corre `npx wrangler deploy` en cada push, así que el sitio se caía solo al desplegar. Los Secrets no se ven afectados. Si algún día se decide versionar las variables en el archivo, esa línea deja de hacer falta.
 
+> **Única excepción a la regla anterior: `shared/lib/build/buildInfo.ts`.** El SHA del commit y la fecha de compilación se inyectan en tiempo de build desde `astro.config.mjs` (`vite.define`), no se leen con `serverEnv.ts`. No es una inconsistencia: `WORKERS_CI_COMMIT_SHA` existe **sólo en el entorno de build** de Cloudflare y no en el runtime del worker, así que leerlo desde `cloudflare:workers` devolvería siempre `undefined`. Por eso vive en su propio archivo, con la excepción explicada, en vez de mezclarse con la lectura de configuración normal. Lo consume `/api/diagnostico` para poder responder qué versión del código está atendiendo.
+
 > **Nota sobre `worker-configuration.d.ts`:** lo genera `npm run generate-types` a partir de `wrangler.jsonc` y **se versiona**, porque `tsconfig.json` lo incluye: sin él, `npm run check` falla en un clon recién hecho. Hay que regenerarlo cada vez que cambien los bindings.
 
 ## Estructura de Carpetas
@@ -133,6 +135,8 @@ src/
     │   │   └── client.ts            # `getSupabase()` — instancia perezosa, única para todo el server
     │   ├── env/
     │   │   └── serverEnv.ts         # ÚNICA lectura de variables de entorno del servidor
+    │   ├── build/
+    │   │   └── buildInfo.ts         # Commit y fecha del bundle — inyectados en build (ver excepción arriba)
     │   ├── productos/
     │   │   ├── productoService.ts   # ÚNICA fuente de productos (mock hoy, Supabase mañana)
     │   │   └── productoMapper.ts    # fila cruda de `product` (+ joins) → `Product` — sin usar hasta que exista la consulta real
@@ -358,3 +362,4 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Despliegue (2026-08-14) | Se **descartó migrar a Cloudflare Pages** y se confirmó Workers con assets | La documentación de Cloudflare recomienda Workers para proyectos nuevos y sólo publica guía de migración *desde* Pages *hacia* Workers. Pages sigue soportado, pero todo el desarrollo de features va a Workers |
 | Despliegue (2026-08-14) | Se **descartó migrar a Workers KV** como almacén de datos | KV es clave-valor de consistencia eventual (hasta 60s de propagación): no admite filtros, joins ni RLS, que es justo lo que usa el catálogo. Ya está en uso donde corresponde — el binding `SESSION` de las sesiones de Astro. Queda como posible caché de lectura, no como base de datos |
 | Despliegue (2026-08-14) | `landing/layout/ErrorLayout.astro` compartido por `404.astro` y `500.astro` | Las dos páginas necesitan el mismo cascarón autónomo; duplicarlo habría dejado dos copias que se desincronizan. Las páginas quedan en ~15 líneas y sólo declaran su texto e icono |
+| Despliegue (2026-08-15) | El commit y la fecha del build se inyectan con `vite.define` y se exponen en `/api/diagnostico` | Una sesión entera se fue en descubrir que el worker corría código de dos commits atrás, adivinando por rutas. La identidad del bundle desplegado tiene que poder consultarse en una petición |

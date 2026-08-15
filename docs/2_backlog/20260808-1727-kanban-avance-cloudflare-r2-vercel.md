@@ -1,7 +1,40 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-14 (3ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-15 (4ª revisión) · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
+
+## Estado del despliegue — 2026-08-15, 4ª revisión
+
+**Tres de los cuatro problemas se cerraron. Queda uno, y es una acción de panel de dos minutos.**
+
+El despliegue del `2026-08-14T04:09Z` sí corrió y subió el código nuevo: en la lista de módulos aparecen `chunks/404_…`, `chunks/500_…`, `chunks/ErrorLayout_…`, `chunks/diagnostico_…` y `chunks/logServerError_…`. Verificado además contra producción:
+
+| Comprobación | Resultado | Cierra |
+|---|---|---|
+| `/api/diagnostico` | **200** (antes 404) | `BZ-38` — los despliegues volvieron |
+| Ruta inexistente | `<title>Página no encontrada — Barzol</title>` | `BZ-40` — el 404 propio está en producción |
+| Observability | Stack trace completo del `MissingEnvError` | `BZ-36` — el rastreo funciona |
+| `keep_vars` en el config del deploy | `"keep_vars":true` presente | `BZ-34` (parte de código) |
+
+**Lo que sigue fallando, y por qué.** El diagnóstico de producción responde:
+
+```json
+{ "ok": false,
+  "variables": { "BARZOL_SUPABASE_URL": { "presente": false },
+                 "BARZOL_SUPABASE_ANON_KEY": { "presente": false },
+                 "BARZOL_R2_PUBLIC_URL": { "presente": false } },
+  "bindings": { "MEDIA": true, "SESSION": true, "IMAGES": true, "ASSETS": true } }
+```
+
+**Ninguna de las tres variables está cargada en el worker** — ni siquiera `BARZOL_R2_PUBLIC_URL`, que antes sí figuraba. Los bindings, en cambio, llegan los cuatro: eso descarta un problema de configuración general y deja el foco en las variables.
+
+**`keep_vars` conserva lo que hay; no repone lo que ya se borró.** El despliegue anterior —el que aún no lo incluía— dejó el panel vacío, y el siguiente, ya con `keep_vars`, preservó fielmente ese vacío. No es que la corrección haya fallado: llegó un despliegue tarde. La acción pendiente es cargar las tres variables **ahora**, con `keep_vars` ya activo, y a partir de ahí sobreviven a los push. Ver `BZ-34`.
+
+**Una comprobación que valía la pena hacer.** El log de deploy dice `Using redirected Wrangler configuration → dist/server/wrangler.json`: wrangler **no lee `wrangler.jsonc`**, sino un archivo que genera el adaptador de Astro. Cabía que `keep_vars` se perdiera en esa traducción, lo que habría invalidado toda la corrección. Se inspeccionó el archivo generado y **`"keep_vars":true` está presente**. La sospecha era razonable y quedó descartada con evidencia.
+
+**Confirmación de identidad del código.** El stack trace de Observability apunta a `chunks/serverEnv_BCEz3PHr.mjs`, exactamente el nombre que figura en el log de build de ese despliegue. Es prueba directa de que el worker corre ese bundle y no uno anterior — la ambigüedad que costó la sesión pasada. Para no depender de cruzar hashes a mano, `BZ-44` agrega el commit al diagnóstico.
+
+**Un detalle del stack que conviene retener:** el error sube desde `renderStreamToStream`, es decir con el streaming ya en curso. Es el borde que `BZ-36` documentó como límite del middleware, y confirma por qué el rastreo no debía depender sólo de ahí.
 
 ## Estado del despliegue — 2026-08-14, 3ª revisión
 
@@ -115,15 +148,16 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-35 | Endpoint `GET /api/diagnostico` | ✅ Hecho | 🔴 |
 | BZ-36 | Rastreo de errores en los logs del worker | ✅ Hecho | 🟠 |
 | BZ-37 | Proteger o retirar `/api/diagnostico` | ⬜ Pendiente | 🟡 |
-| BZ-38 | **Los despliegues no se están ejecutando** | ⬜ **Bloqueante** | 🔴 |
+| BZ-38 | Los despliegues no se están ejecutando | ✅ Hecho | 🔴 |
 | BZ-39 | Actualizar el remoto git a `Core-Tech-Group` | ⬜ Pendiente | 🟠 |
-| BZ-40 | Página 404 propia | ✅ Hecho | 🟠 |
+| BZ-40 | Página 404 propia | ✅ Hecho y verificado en prod | 🟠 |
 | BZ-41 | Evaluación: ¿migrar a Workers KV? | ✅ Hecho (descartado) | 🟠 |
 | BZ-42 | Evaluación: ¿volver a Cloudflare Pages? | ✅ Hecho (descartado) | 🟠 |
 | BZ-43 | Caché de catálogo en KV | ⬜ Pendiente | ⚪ |
-| BZ-44 | Verificar qué commit corre en producción | ⬜ Pendiente | 🟠 |
+| BZ-44 | Commit y fecha de build en el diagnóstico | ✅ Hecho | 🟠 |
+| BZ-45 | Verificar que `keep_vars` funciona de verdad | ⬜ Pendiente | 🔴 |
 
-**Progreso:** 22 de 44 hechas. Bloqueante activo: **BZ-38** — y hasta resolverlo, `BZ-34` no puede completarse: el `keep_vars` que conserva las variables sólo entra en vigor con un despliegue que lo incluya.
+**Progreso:** 25 de 45 hechas. Bloqueante activo: **BZ-34** — cargar las tres variables en el panel. Es lo único que separa al sitio de estar funcionando, y ya no hay nada de código en el camino.
 
 `BZ-31` quedó cerrada: el valor con corchetes ya se corrigió. Lo que quedó abierto es que el despliegue borra lo que se corrija.
 
@@ -136,7 +170,50 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 
 ---
 
-## ✅ Cerradas en esta sesión (2026-08-14)
+## ✅ Cerradas en esta sesión (2026-08-15)
+
+### BZ-38 · Los despliegues volvieron a ejecutarse ✅ 🔴
+El despliegue del `2026-08-14T04:09Z` corrió y subió el código nuevo. La lista de módulos del log incluye `chunks/404_8h2rJZsd.mjs`, `chunks/500_BK3FtEDX.mjs`, `chunks/ErrorLayout_VD4ephtM.mjs`, `chunks/diagnostico_D6so2-Sx.mjs` y `chunks/logServerError_B0VNaf_6.mjs` — todo lo de los dos commits que faltaban.
+
+**Verificado contra producción:** `/api/diagnostico` responde **200** (antes 404), y una ruta inexistente devuelve la página propia en español en vez del 404 por defecto de Astro.
+
+Queda sin confirmar **por qué** se habían detenido. Si fue el cambio de repositorio a `Core-Tech-Group`, se resolvió solo o alguien reconectó la integración. Conviene igual atender `BZ-39`, que sigue abierto.
+
+### BZ-44 · Commit y fecha de build en el diagnóstico 🟠
+La sesión anterior se fue en descubrir que el worker corría código viejo, y el único método disponible fue adivinar por rutas: pedir una que sólo existiera en el código nuevo y ver si daba 404. La primera pregunta ante cualquier fallo —*"¿estoy mirando el código que creo?"*— no tenía respuesta directa.
+
+`/api/diagnostico` ahora abre con:
+
+```json
+"build": { "commit": "abc1234", "compiladoEn": "2026-08-15T03:36:23.304Z" }
+```
+
+Nuevo `shared/lib/build/buildInfo.ts` (28 líneas). Los valores se congelan en tiempo de compilación desde `astro.config.mjs` vía `vite.define`, y **tiene que ser así**: `WORKERS_CI_COMMIT_SHA` sólo existe en el entorno de build de Cloudflare, no en el runtime del worker, así que leerlo con `serverEnv.ts` devolvería siempre `undefined`. Es la única excepción documentada a la regla de leer configuración por ahí, y por eso vive en su propio archivo en vez de mezclarse con `serverEnv`.
+
+Se contemplan tres orígenes con respaldo: `WORKERS_CI_COMMIT_SHA` (el que usa Workers Builds, [confirmado en la documentación](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)), `CF_PAGES_COMMIT_SHA` y `GITHUB_SHA`. En un build local sin ninguna, informa `"desconocido"` en vez de romper.
+
+**Verificado** levantando el servidor con `WORKERS_CI_COMMIT_SHA=abc1234567890def`: el diagnóstico devolvió `"commit": "abc1234"`, recortado a 7 caracteres. `npm run check` en 0 errores sobre 100 archivos y las 6 rutas de humo sin cambios.
+
+### BZ-36 · El rastreo de errores funciona en producción ✅
+No es una tarjeta nueva, pero merece registro: **es la primera vez que un error de producción queda legible**. Observability capturó el stack completo:
+
+```
+MissingEnvError: Faltan variables de entorno: BARZOL_SUPABASE_URL, ...
+    at requireServerEnv (chunks/serverEnv_BCEz3PHr.mjs:93:34)
+    at getSupabase (chunks/client_D0-cckc9.mjs:9:14)
+    at getHomeItems (chunks/homeService_DrMjFYGD.mjs:39:32)
+    ...
+    at async renderStreamToStream
+```
+
+Dos lecturas útiles más allá del error en sí:
+
+1. **Confirma qué bundle corre.** `chunks/serverEnv_BCEz3PHr.mjs` es exactamente el nombre que figura en el log de build de ese despliegue. Prueba directa de identidad del código, que es justo lo que faltó la sesión pasada.
+2. **El error sube desde `renderStreamToStream`**, con el streaming ya en curso — el borde que `BZ-36` había documentado como límite del middleware. Confirma que el rastreo no debía depender sólo de ahí, y valida haber construido `/api/diagnostico` como vía independiente.
+
+---
+
+## ✅ Cerradas en la sesión anterior (2026-08-14)
 
 ### BZ-41 · Evaluación: ¿migrar a Workers KV? — **descartado** 🟠
 Se planteó mover el proyecto a Workers KV. **No corresponde, y en parte ya está hecho.**
@@ -298,7 +375,39 @@ Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configu
 
 ## 🚧 Bloqueante
 
-### BZ-38 · Los despliegues no se están ejecutando 🔴
+### BZ-34b · Cargar las tres variables en el panel 🔴
+**Es lo único que separa al sitio de estar funcionando.** Ya no queda nada de código en el camino: `keep_vars: true` está desplegado y verificado en el config que usa wrangler.
+
+Estado actual según `/api/diagnostico` en producción: las **tres** variables ausentes, los cuatro bindings presentes.
+
+**Ruta:** Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**.
+
+| Variable | Tipo | Valor |
+|---|---|---|
+| `BARZOL_SUPABASE_URL` | Variable | `https://rnfcccnesxunjtpwahce.supabase.co` |
+| `BARZOL_SUPABASE_ANON_KEY` | Variable | la publishable key del proyecto |
+| `BARZOL_R2_PUBLIC_URL` | Variable | `https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev` |
+
+**Al pegar los valores:** en crudo, sin corchetes de markdown, sin comillas y sin barra final. Es el error que ya costó una sesión (`BZ-31`); ahora `readServerEnv()` lo detecta y lo nombra, pero mejor no llegar a eso.
+
+Después: **redesplegar** —editar variables no redespliega solo— y abrir `/api/diagnostico`, que debe responder `"ok": true` con las tres en `"presente": true`.
+
+**Por qué esta vez sí van a quedar:** `keep_vars` conserva lo que hay, no repone lo borrado. El despliegue anterior dejó el panel vacío y el siguiente preservó ese vacío fielmente. Cargándolas ahora, con `keep_vars` ya activo, sobreviven a los push siguientes — lo comprueba `BZ-45`.
+
+**Bloquea:** BZ-24, BZ-25, BZ-45.
+
+### BZ-45 · Verificar que `keep_vars` funciona de verdad 🔴
+La corrección está desplegada pero **nunca se probó su efecto**, porque no había variables que conservar. Es una hipótesis bien fundada, no un hecho comprobado.
+
+**Prueba, después de `BZ-34b`:**
+
+1. `/api/diagnostico` → `"ok": true`.
+2. Empujar cualquier commit trivial y esperar el despliegue.
+3. `/api/diagnostico` de nuevo → debe seguir en `"ok": true`, y `build.commit` debe mostrar el commit nuevo.
+
+El paso 3 es el que importa: si las variables vuelven a `"presente": false`, `keep_vars` no está surtiendo efecto con el config generado por el adaptador y hay que pasar al plan B — declarar en `wrangler.jsonc` las dos que son públicas (`BARZOL_SUPABASE_URL` y `BARZOL_R2_PUBLIC_URL`), que no tienen ningún reparo en estar versionadas.
+
+### BZ-38 · Los despliegues no se están ejecutando ✅ *(cerrada — ver arriba)*
 **Es el bloqueante de verdad, y hasta resolverlo `BZ-34` no puede completarse.** El worker corre código de hace dos commits, así que el `keep_vars: true` que evita el borrado de variables **todavía no llegó a producción**. Recargar variables sin esto es trabajo perdido: el siguiente despliegue las borra igual.
 
 **Evidencia:** `/api/diagnostico` existe en `origin/main` (confirmado con `git cat-file -e origin/main:src/pages/api/diagnostico.ts`) y devuelve **404** en producción. `/500`, que llegó dos commits antes, sí responde.
@@ -506,21 +615,22 @@ Candidatos naturales: el árbol de categorías del `Header` (cambia poquísimo y
 ## Mapa de dependencias
 
 ```
-BZ-38 (despliegues detenidos) ── BZ-34 (recargar variables) ┬─ BZ-24 (verificación)
-   └── BZ-39 (remoto git), misma causa raíz              └─ BZ-25 (subida real a R2)
+BZ-34b (cargar variables) ──┬── BZ-45 (probar que keep_vars aguanta)
+                            ├── BZ-24 (verificación post-deploy)
+                            └── BZ-25 (subida real a R2) ── también BZ-10
 BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── hacer YA, es seguridad
+BZ-39 (remoto git) ──────────── independiente, 1 comando
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
-BZ-35 (/api/diagnostico) ────── verifica BZ-38 y BZ-34 ── se cierra con BZ-37
-BZ-44 (SHA en diagnóstico) ──── evita repetir el diagnóstico de BZ-38
+BZ-35 (/api/diagnostico) ────── verifica BZ-34b y BZ-45 ── se cierra con BZ-37
 BZ-10 (subida en admin) ─────── BZ-11 (borrado) ── habilita BZ-28
 BZ-27 (dominio sitio) ───────── BZ-19 (SEO)
 BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido real
 BZ-43 (caché KV) ────────────── sólo con el sitio estable
 ```
 
-**Orden sugerido:** BZ-38 → BZ-39 → BZ-34 → BZ-24 → BZ-32 → BZ-07 → BZ-44 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-34b → BZ-45 → BZ-24 → BZ-32 → BZ-07 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
 
-**BZ-38 va primero y no es negociable:** mientras los despliegues no corran, cualquier arreglo en el repositorio —incluido el `keep_vars` que ya está commiteado— no llega al worker. Las tres siguientes son de panel, no de código.
+**Las dos primeras son la misma visita al panel:** cargar las tres variables, redesplegar, mirar `/api/diagnostico`, empujar un commit cualquiera y volver a mirarlo. No hay más código pendiente para poner el sitio en pie.
 
 ---
 

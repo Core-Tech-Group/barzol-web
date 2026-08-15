@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { inspeccionarVariable, hayBinding, type InspeccionVariable } from '@shared/lib/env/serverEnv';
 import { getSupabase } from '@shared/lib/db/client';
 import { logServerError } from '@shared/lib/errors/logServerError';
+import { getBuildInfo, type BuildInfo } from '@shared/lib/build/buildInfo';
 
 // Rastreo de la configuración del worker DESPLEGADO, sin abrir el panel ni tener
 // wrangler instalado: `GET /api/diagnostico`.
@@ -41,6 +42,8 @@ interface EstadoSupabase {
 interface Diagnostico {
   ok: boolean;
   momento: string;
+  /** Qué commit generó el bundle que está respondiendo. */
+  build: BuildInfo;
   variables: Record<string, InspeccionVariable>;
   bindings: Record<string, boolean>;
   supabase: EstadoSupabase;
@@ -148,6 +151,7 @@ export const GET: APIRoute = async () => {
   const cuerpo: Diagnostico = {
     ok: supabase.ok && Object.values(variables).every((v) => v.presente && !v.problemas?.length),
     momento: new Date().toISOString(),
+    build: getBuildInfo(),
     variables,
     bindings,
     supabase,
