@@ -1,39 +1,121 @@
 {
   "level": "error",
-  "message": "05:32:56 [ERROR] MissingEnvError: Faltan variables de entorno: BARZOL_SUPABASE_ANON_KEY. En local se declaran en `.env` (copiá `.env.example`); en producción, en Cloudflare → Workers & Pages → barzol-web → Settings → Variables and Secrets.\n    at requireServerEnv (chunks/serverEnv_BCEz3PHr.mjs:93:34)\n    at getSupabase (chunks/client_D0-cckc9.mjs:9:14)\n    at getHomeItems (chunks/homeService_DrMjFYGD.mjs:39:32)\n    at chunks/index_CKOVv1w5.mjs:23:33\n    at AstroComponentInstance.HomeView [as factory] (chunks/compiler_DcMSGxau.mjs:18:10)\n    at AstroComponentInstance.init (chunks/server_Dv7iLfkM.mjs:1706:27)\n    at collectPropagatedHeadParts (chunks/server_Dv7iLfkM.mjs:550:40)\n    at async bufferPropagatedHead (chunks/server_Dv7iLfkM.mjs:580:20)\n    at async bufferHeadContent (chunks/server_Dv7iLfkM.mjs:2095:2)\n    at async renderStreamToStream (chunks/server_Dv7iLfkM.mjs:1955:14)",
+  "message": "GET https://barzol-web.willymichael-cardenas.workers.dev/",
   "$workers": {
     "truncated": false,
+    "event": {
+      "request": {
+        "cf": {
+          "isEUCountry": false,
+          "tlsClientAuth": {
+            "certRFC9440TooLarge": false,
+            "certChainRFC9440TooLarge": false,
+            "certPresented": "0",
+            "certVerified": "NONE",
+            "certRevoked": "0",
+            "certIssuerDN": "",
+            "certSubjectDN": "",
+            "certIssuerDNRFC2253": "",
+            "certSubjectDNRFC2253": "",
+            "certIssuerDNLegacy": "",
+            "certSubjectDNLegacy": "",
+            "certSerial": "",
+            "certIssuerSerial": "",
+            "certSKI": "",
+            "certIssuerSKI": "",
+            "certFingerprintSHA1": "",
+            "certFingerprintSHA256": "",
+            "certNotBefore": "",
+            "certNotAfter": "",
+            "certRFC9440": "",
+            "certChainRFC9440": ""
+          },
+          "httpProtocol": "HTTP/3",
+          "clientAcceptEncoding": "gzip, deflate, br",
+          "requestPriority": "",
+          "colo": "EZE",
+          "asOrganization": "DESARROLLO DE INFRAESTRUCTURA DE TELECOMUNICACIONES PERU S.A.C. (INFRATEL)",
+          "country": "PE",
+          "city": "Ayacucho",
+          "continent": "SA",
+          "region": "Ayacucho",
+          "regionCode": "AYA",
+          "timezone": "America/Lima",
+          "longitude": "-74.22345",
+          "latitude": "-13.1638",
+          "postalCode": "05001",
+          "tlsVersion": "TLSv1.3",
+          "tlsCipher": "AEAD-AES128-GCM-SHA256",
+          "tlsClientRandom": "/BySqYCGvovRTptKHZMAIGyGx9nAlWxg0wW8RCSa3es=",
+          "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+          "tlsClientExtensionsSha1": "i9fZiyorquO54Fu+6UineXtxVa4=",
+          "tlsClientExtensionsSha1Le": "oc/WS0mJsQS7Zf6nQldnRQJ/R2Q=",
+          "tlsClientHelloLength": "2052",
+          "verifiedBotCategory": "",
+          "edgeRequestKeepAliveStatus": 1,
+          "clientTcpRtt": 0,
+          "clientQuicRtt": 143,
+          "asn": 270068,
+          "edgeL4": {
+            "deliveryRate": 10755
+          }
+        },
+        "headers": {
+          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "accept-encoding": "gzip, br",
+          "accept-language": "es-419,es;q=0.9",
+          "cf-connecting-ip": "2803:a3e0:141:e880:2dd9:4773:fefb:539",
+          "cf-ipcountry": "PE",
+          "cf-ray": "a2b7bb56cabc892e",
+          "cf-visitor": "{\"scheme\":\"https\"}",
+          "connection": "Keep-Alive",
+          "host": "barzol-web.willymichael-cardenas.workers.dev",
+          "priority": "u=0, i",
+          "sec-ch-ua": "\"Chromium\";v=\"151\", \"Not=A?Brand\";v=\"99\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Windows\"",
+          "sec-fetch-dest": "document",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-site": "cross-site",
+          "sec-fetch-user": "?1",
+          "upgrade-insecure-requests": "1",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+          "x-forwarded-proto": "https",
+          "x-real-ip": "2803:a3e0:141:e880:2dd9:4773:fefb:539"
+        },
+        "method": "GET",
+        "url": "https://barzol-web.willymichael-cardenas.workers.dev/"
+      },
+      "path": "/",
+      "response": {
+        "status": 500
+      }
+    },
     "scriptName": "barzol-web",
     "scriptVersion": {
-      "id": "571e7959-c1b0-46fb-b864-fa65e781dd22"
+      "id": "e366fd7e-e101-4ed9-b63e-b0205eee0e8a"
     },
     "eventType": "fetch",
     "executionModel": "stateless",
-    "requestId": "93d72d3626a2de0de57e07188709cf2f",
-    "event": {
-      "request": {
-        "method": "GET",
-        "url": "https://barzol-web.willymichael-cardenas.workers.dev/",
-        "path": "/"
-      }
-    },
-    "traceId": "46bcb31746eec2d8a75ae49c328df626",
-    "spanId": "76015ed37ace62cc"
+    "requestId": "64e5050f49714e9be199158c20038883",
+    "traceId": "0eced274fcb368e0b250747de465b64b",
+    "outcome": "ok",
+    "wallTimeMs": 9,
+    "cpuTimeMs": 7
   },
   "$metadata": {
-    "id": "01M01YHC2P0000000000000002",
-    "requestId": "93d72d3626a2de0de57e07188709cf2f",
-    "rayId": "a2b5d2535ab91eab",
-    "traceId": "46bcb31746eec2d8a75ae49c328df626",
-    "spanId": "76015ed37ace62cc",
+    "id": "01M02HMMM40000000000000004",
+    "requestId": "64e5050f49714e9be199158c20038883",
+    "rayId": "a2b7bb56cabc892e",
+    "traceId": "0eced274fcb368e0b250747de465b64b",
     "trigger": "GET /",
     "service": "barzol-web",
     "level": "error",
-    "error": "05:32:56 [ERROR] MissingEnvError: Faltan variables de entorno: BARZOL_SUPABASE_ANON_KEY. En local se declaran en `.env` (copiá `.env.example`); en producción, en Cloudflare → Workers & Pages → barzol-web → Settings → Variables and Secrets.\n    at requireServerEnv (chunks/serverEnv_BCEz3PHr.mjs:93:34)\n    at getSupabase (chunks/client_D0-cckc9.mjs:9:14)\n    at getHomeItems (chunks/homeService_DrMjFYGD.mjs:39:32)\n    at chunks/index_CKOVv1w5.mjs:23:33\n    at AstroComponentInstance.HomeView [as factory] (chunks/compiler_DcMSGxau.mjs:18:10)\n    at AstroComponentInstance.init (chunks/server_Dv7iLfkM.mjs:1706:27)\n    at collectPropagatedHeadParts (chunks/server_Dv7iLfkM.mjs:550:40)\n    at async bufferPropagatedHead (chunks/server_Dv7iLfkM.mjs:580:20)\n    at async bufferHeadContent (chunks/server_Dv7iLfkM.mjs:2095:2)\n    at async renderStreamToStream (chunks/server_Dv7iLfkM.mjs:1955:14)",
-    "message": "05:32:56 [ERROR] MissingEnvError: Faltan variables de entorno: BARZOL_SUPABASE_ANON_KEY. En local se declaran en `.env` (copiá `.env.example`); en producción, en Cloudflare → Workers & Pages → barzol-web → Settings → Variables and Secrets.\n    at requireServerEnv (chunks/serverEnv_BCEz3PHr.mjs:93:34)\n    at getSupabase (chunks/client_D0-cckc9.mjs:9:14)\n    at getHomeItems (chunks/homeService_DrMjFYGD.mjs:39:32)\n    at chunks/index_CKOVv1w5.mjs:23:33\n    at AstroComponentInstance.HomeView [as factory] (chunks/compiler_DcMSGxau.mjs:18:10)\n    at AstroComponentInstance.init (chunks/server_Dv7iLfkM.mjs:1706:27)\n    at collectPropagatedHeadParts (chunks/server_Dv7iLfkM.mjs:550:40)\n    at async bufferPropagatedHead (chunks/server_Dv7iLfkM.mjs:580:20)\n    at async bufferHeadContent (chunks/server_Dv7iLfkM.mjs:2095:2)\n    at async renderStreamToStream (chunks/server_Dv7iLfkM.mjs:1955:14)",
+    "error": "GET https://barzol-web.willymichael-cardenas.workers.dev/",
+    "message": "GET https://barzol-web.willymichael-cardenas.workers.dev/",
     "account": "156f0abd69402bcc35274807f251d1d5",
-    "type": "cf-worker",
-    "fingerprint": "2c42b77ba4a9993e77121a2fe25f3f5c",
+    "type": "cf-worker-event",
+    "fingerprint": "2d7c8ce844dfcc7e6c3489693af0fd50",
     "origin": "fetch"
   }
 }

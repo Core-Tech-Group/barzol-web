@@ -18,9 +18,9 @@
 	// de Supabase y el segundo, el dominio público desde el que se sirven las
 	// imágenes. Ambos ya viajan al navegador en cada visita.
 	//
-	// La anon key NO está acá: va como **Secret** en el panel. Los secretos son
-	// inmunes a este problema — wrangler no los borra nunca al desplegar, sólo
-	// con `wrangler secret delete`.
+	// La anon key NO está acá: va como **Secret** en el panel. Ver BZ-49 en el
+	// kanban — hoy el despliegue no se la está entregando al worker y hay dos
+	// caminos posibles para resolverlo, uno de ellos pendiente de decisión.
 	"vars": {
 		"BARZOL_SUPABASE_URL": "https://rnfcccnesxunjtpwahce.supabase.co",
 		"BARZOL_R2_PUBLIC_URL": "https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev"
