@@ -1,7 +1,31 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-15 (5ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-15 (6ª revisión) · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
+
+## Estado del despliegue — 2026-08-15, 6ª revisión
+
+**De tres variables ausentes quedó una. `BZ-47` funcionó.**
+
+```json
+"build": { "commit": "9ec6b93", "compiladoEn": "2026-08-15T05:32:28.294Z" },
+"variables": {
+  "BARZOL_SUPABASE_URL":      { "presente": true,  "longitud": 40 },
+  "BARZOL_R2_PUBLIC_URL":     { "presente": true,  "longitud": 51 },
+  "BARZOL_SUPABASE_ANON_KEY": { "presente": false }
+}
+```
+
+Las dos declaradas en `wrangler.jsonc` **llegan solas y sin intervención manual**, que era exactamente el objetivo: dejaron de depender del panel y ya no hay despliegue que las borre. El error de producción lo confirma — pasó de nombrar tres variables a nombrar una sola.
+
+**Lo que queda: el secreto no llega al worker.** La captura del panel muestra `BARZOL_SUPABASE_ANON_` con tipo *Secret* y "Value encrypted", así que a simple vista está bien cargado. Pero el worker no lo recibe, y desde afuera hay dos causas indistinguibles:
+
+1. El **nombre** quedó mal escrito o cortado al guardarlo. El panel recorta los nombres largos en pantalla: `BARZOL_SUPABASE_ANON_` y `BARZOL_SUPABASE_ANON_KEY` se ven idénticos.
+2. El **valor** no se aplicó al worker desplegado.
+
+Adivinar entre las dos ya costó varias iteraciones, así que en vez de proponer otra prueba a ciegas se agregó al diagnóstico la lista de nombres que el worker realmente recibe (`BZ-48`). En la próxima consulta a `/api/diagnostico` la respuesta señala cuál de las dos es, sin abrir el panel.
+
+**Detalle secundario, ya resuelto por el propio cambio:** las variables `R2_*` residuales de `BZ-32` desaparecieron del panel entre una captura y otra — el despliegue las borró, que es el comportamiento esperado al no estar declaradas en `wrangler.jsonc`. Conviene confirmarlo con `clavesRecibidas`.
 
 ## Estado del despliegue — 2026-08-15, 5ª revisión
 
@@ -185,10 +209,11 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-43 | Caché de catálogo en KV | ⬜ Pendiente | ⚪ |
 | BZ-44 | Commit y fecha de build en el diagnóstico | ✅ Hecho y verificado en prod | 🟠 |
 | BZ-45 | Verificar que `keep_vars` funciona de verdad | ⚫ Anulada por BZ-46 | 🔴 |
-| BZ-46 | **Cargar la anon key como Secret** | ⬜ **Bloqueante** | 🔴 |
-| BZ-47 | Variables públicas en `wrangler.jsonc` | ✅ Hecho | 🔴 |
+| BZ-46 | **Cargar la anon key como Secret** | 🔶 Cargada, no llega al worker | 🔴 |
+| BZ-47 | Variables públicas en `wrangler.jsonc` | ✅ Hecho y verificado en prod | 🔴 |
+| BZ-48 | Listar en el diagnóstico las claves recibidas | ✅ Hecho | 🔴 |
 
-**Progreso:** 27 de 47 hechas. Bloqueante activo: **BZ-46** — un único secreto en el panel, una sola vez. Las otras dos variables ya no requieren intervención: las establece el propio despliegue.
+**Progreso:** 28 de 48 hechas. Bloqueante activo: **BZ-46**, reducido a una sola variable — y con `BZ-48` desplegado, la próxima consulta al diagnóstico dice exactamente qué corregir.
 
 `BZ-45` queda anulada: probaba si `keep_vars` conservaba las variables del panel, pero con `BZ-47` las públicas ya no viven ahí y la anon key pasa a ser un secreto, categoría que wrangler no borra. El escenario que iba a verificar dejó de existir.
 
@@ -406,7 +431,27 @@ Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configu
 
 ---
 
-## ✅ Cerradas en esta sesión (2026-08-15, 5ª revisión)
+## ✅ Cerradas en esta sesión (2026-08-15, 6ª revisión)
+
+### BZ-48 · El diagnóstico lista las claves que recibe el worker 🔴
+El panel de Cloudflare recorta los nombres largos en pantalla: `BARZOL_SUPABASE_ANON_KEY` se muestra como `BARZOL_SUPABASE_ANON_`, idéntico a un nombre guardado a medias. Esa ambigüedad hacía imposible distinguir dos causas muy distintas —el valor no se aplicó, o se cargó con el nombre equivocado— y llevaba a probar a ciegas.
+
+`/api/diagnostico` agrega ahora `clavesRecibidas`: los **nombres** de todas las variables de texto que el worker recibió, incluidas las que nadie esperaba. Nunca los valores — la regla del endpoint sigue intacta, verificado con un barrido de la respuesta contra los tres valores reales.
+
+Dos piezas nuevas, cada una en su archivo:
+
+| Archivo | Responsabilidad |
+|---|---|
+| `shared/lib/env/serverEnv.ts` → `listarClavesEnv()` | Nombres de las entradas de texto del entorno; excluye los bindings, que son objetos |
+| `shared/lib/env/nombresParecidos.ts` (46 líneas) | Detecta nombres "casi correctos" comparando sólo nombres |
+
+Cuando una variable esperada falta pero llegó otra parecida, la pista lo dice y **cambia la acción**: corregir el nombre en vez de volver a cargar el valor. Se agregó además una pista específica para la anon key, recordando que debe ser de tipo *Secret* y no *Variable*.
+
+**Verificado con 7 casos** contra la lógica real: nombre cortado, minúsculas, espacio final, sufijo mal escrito y guion faltante se detectan; un conjunto sin parecidos y el caso exacto no producen falsos positivos. En el servidor de desarrollo, `clavesRecibidas` devuelve las cuatro variables por su nombre, `ok: true`, y las rutas de humo sin cambios.
+
+---
+
+## ✅ Cerradas en la sesión anterior (2026-08-15, 5ª revisión)
 
 ### BZ-47 · Variables públicas declaradas en `wrangler.jsonc` 🔴
 `wrangler.jsonc` gana un bloque `vars` con `BARZOL_SUPABASE_URL` y `BARZOL_R2_PUBLIC_URL`. Ninguna de las dos es secreta: la primera es la URL pública del proyecto de Supabase y la segunda el dominio desde el que se sirven las imágenes al visitante. Las dos ya viajan al navegador en cada visita, así que versionarlas no expone nada nuevo — de hecho ya estaban en `.env.example`, que sí se commitea.
@@ -432,8 +477,31 @@ Verificado contra el worker desplegado, no sólo en local:
 
 ## 🚧 Bloqueante
 
-### BZ-46 · Cargar la anon key como Secret 🔴
-**Última acción de panel pendiente, y es una sola vez.** Las otras dos variables ya las establece el despliegue (`BZ-47`).
+### BZ-46 · La anon key está cargada pero no llega al worker 🔴
+**Es lo único que falta.** Está cargada como *Secret* según el panel, pero el worker no la recibe: `/api/diagnostico` la reporta `"presente": false` mientras las otras dos llegan bien.
+
+**Primer paso — no tocar nada todavía.** Esperar a que se despliegue `BZ-48` y abrir `/api/diagnostico`. El campo `clavesRecibidas` decide entre las dos causas posibles:
+
+| Lo que muestra `clavesRecibidas` | Qué pasó | Qué hacer |
+|---|---|---|
+| Aparece algo como `BARZOL_SUPABASE_ANON_` o similar | El **nombre** quedó cortado o mal escrito al guardarlo | Corregir el nombre en el panel. El valor está bien |
+| Sólo aparecen las dos URLs | El **secreto no se aplicó** al worker | Volver a crearlo y redesplegar |
+
+La pista del propio endpoint ya lo dice en castellano; la tabla es para no tener que interpretarla.
+
+**Si resulta ser el segundo caso**, la alternativa es cargarlo por línea de comandos, que evita por completo los recortes del panel:
+
+```bash
+npx wrangler login
+npx wrangler secret put BARZOL_SUPABASE_ANON_KEY
+```
+
+**Recordatorio de por qué Secret y no Variable:** las variables de texto del panel se borran en cada `wrangler deploy`; los secretos no. Cargarla como *Variable* la haría desaparecer en el próximo push.
+
+---
+
+### BZ-46 (versión anterior) · Cargar la anon key como Secret
+Las otras dos variables ya las establece el despliegue (`BZ-47`).
 
 **Ruta:** Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets → **Add** → tipo **Secret** (no *Variable*).
 
@@ -689,8 +757,9 @@ Candidatos naturales: el árbol de categorías del `Header` (cambia poquísimo y
 ## Mapa de dependencias
 
 ```
-BZ-46 (anon key como Secret) ─┬── BZ-24 (verificación post-deploy)
-                              └── BZ-25 (subida real a R2) ── también BZ-10
+BZ-48 (claves recibidas) ───── DIAGNOSTICA BZ-46, hacer primero
+BZ-46 (anon key al worker) ──┬── BZ-24 (verificación post-deploy)
+                             └── BZ-25 (subida real a R2) ── también BZ-10
 BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── misma visita, es seguridad
 BZ-39 (remoto git) ──────────── independiente, 1 comando
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
@@ -701,9 +770,11 @@ BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido 
 BZ-43 (caché KV) ────────────── sólo con el sitio estable
 ```
 
-**Orden sugerido:** BZ-46 → BZ-24 → BZ-32 → BZ-07 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-48 (esperar el despliegue) → BZ-46 → BZ-24 → BZ-07 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
 
-**BZ-46, BZ-32 y BZ-07 son la misma visita al panel:** agregar un secreto, borrar cinco variables que ya no se usan y revocar un token. Después, mirar `/api/diagnostico`. No queda código pendiente para poner el sitio en pie.
+**El primer paso ya no es tocar el panel, es mirar el diagnóstico.** Con `clavesRecibidas` desplegado, `/api/diagnostico` dice si el problema es el nombre del secreto o su valor, y recién ahí conviene entrar al panel — con la corrección exacta en mano en vez de probando.
+
+`BZ-32` (borrar las `R2_*` residuales) parece haberse resuelto sola: el despliegue las eliminó al no estar declaradas en `wrangler.jsonc`. Confirmarlo con `clavesRecibidas` y, si es así, sólo queda revocar el token (`BZ-07`).
 
 ---
 
