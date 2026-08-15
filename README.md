@@ -55,6 +55,26 @@ El contenido multimedia vive en **Cloudflare R2** (bucket `barzol-web`), enlazad
 
 Tras cambiar bindings en `wrangler.jsonc`, correr `npm run generate-types` y commitear `worker-configuration.d.ts`.
 
+### Cargar los secretos en Cloudflare
+
+Las variables **públicas** se declaran en `wrangler.jsonc` → `vars` y las establece el propio despliegue. Las **secretas** se cargan aparte, una sola vez:
+
+```bash
+npx wrangler login                  # una vez por máquina
+node scripts/subir-secretos.mjs     # lee .env y sube sólo las secretas
+npx wrangler secret list            # confirma
+```
+
+El script no imprime los valores ni los pasa por la línea de comandos —donde quedarían en el historial del shell—: los entrega por stdin. Se prefiere a cargarlos desde el panel porque ahí el campo recorta los nombres largos y no hay forma de auditar qué quedó guardado.
+
+Para comprobar qué recibió el worker, sin exponer ningún valor:
+
+```bash
+curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+```
+
+El campo `clavesRecibidas` lista los **nombres** de las variables que llegaron.
+
 ### Diagnosticar un fallo en producción
 
 `observability` está activada en `wrangler.jsonc`, así que los `console.error` del servidor quedan registrados:

@@ -242,10 +242,11 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-46 | **Cargar la anon key como Secret** | 🔶 Cargada, no llega al worker | 🔴 |
 | BZ-47 | Variables públicas en `wrangler.jsonc` | ✅ Hecho y verificado en prod | 🔴 |
 | BZ-48 | Listar en el diagnóstico las claves recibidas | ✅ Hecho y verificado en prod | 🔴 |
-| BZ-49 | **Entregar la anon key al worker** | ⬜ **Bloqueante — requiere decisión** | 🔴 |
+| BZ-49 | **Entregar la anon key al worker** | 🔶 Camino A en curso | 🔴 |
 | BZ-50 | Verificar que RLS esté activo en Supabase | ⬜ Pendiente | 🔴 |
+| BZ-51 | Script para cargar secretos desde `.env` | ✅ Hecho | 🟠 |
 
-**Progreso:** 30 de 50 hechas. Bloqueante activo: **BZ-49**. El diagnóstico está cerrado —el despliegue no le entrega el secreto al worker— y hay dos caminos; el segundo necesita una decisión que no es técnica.
+**Progreso:** 31 de 51 hechas. Bloqueante activo: **BZ-49**, camino A. Falta un paso que sólo puede hacer una persona: autorizar `wrangler login` en el navegador. El resto está automatizado en `scripts/subir-secretos.mjs`.
 
 `BZ-46` queda absorbida por `BZ-49`: no era que faltara cargar el secreto, sino que cargarlo no alcanza.
 
@@ -509,21 +510,40 @@ Verificado contra el worker desplegado, no sólo en local:
 
 ---
 
+## ✅ Cerradas en esta sesión (2026-08-15, 7ª revisión)
+
+### BZ-51 · Script para cargar secretos desde `.env` 🟠
+Cargar el secreto a mano por el panel falló repetidamente, y el diagnóstico de `BZ-49` apunta justamente ahí. `scripts/subir-secretos.mjs` (69 líneas) reemplaza ese paso manual.
+
+Decisiones que lo hacen seguro:
+
+- **El valor viaja por stdin al proceso hijo**, nunca como argumento de la línea de comandos: ahí quedaría en el historial del shell y en los logs del sistema.
+- **Nunca se imprime.** El script informa el nombre y la cantidad de caracteres, que alcanza para detectar un valor truncado sin revelarlo.
+- **Lista blanca explícita** de qué es secreto (`BARZOL_SUPABASE_ANON_KEY`, `BARZOL_SUPABASE_SERVICE_ROLE_KEY`). Las públicas no se tocan: viven en `wrangler.jsonc` → `vars`. Así el reparto documentado en ARCHITECTURE.md queda también expresado en código.
+- Omite las que estén ausentes o vacías en `.env` en vez de fallar, para poder correrlo aunque `SERVICE_ROLE_KEY` todavía no se use.
+
+Documentado en el README junto al resto del flujo de despliegue.
+
+---
+
 ## 🚧 Bloqueante
 
 ### BZ-49 · Entregar la anon key al worker 🔴
 **Diagnóstico cerrado, dos caminos posibles.** Está descartado que sea el nombre, el valor o el código: el secreto sencillamente no llega, y las dos fuentes independientes coinciden (ver el estado de la 7ª revisión).
 
-#### Camino A — cargar el secreto por línea de comandos *(recomendado, empezar por acá)*
+#### Camino A — cargar el secreto por línea de comandos *(elegido, en curso)*
 
 El panel es el sospechoso: es el único punto donde se cargó el secreto y el único que no se puede auditar desde afuera. `wrangler secret put` habla directo con la API y evita cualquier recorte o rareza de la interfaz.
 
+Se automatizó en **`scripts/subir-secretos.mjs`** (`BZ-51`) para no volver a depender de copiar y pegar:
+
 ```bash
-npx wrangler login
-npx wrangler secret put BARZOL_SUPABASE_ANON_KEY
-# pega el valor cuando lo pida, sin comillas
-npx wrangler secret list          # confirma que quedó registrado
+npx wrangler login                  # una vez por máquina — abre el navegador
+node scripts/subir-secretos.mjs     # lee .env y sube sólo las secretas
+npx wrangler secret list            # confirma
 ```
+
+El script lee el valor de `.env`, lo entrega **por stdin** —nunca por la línea de comandos, donde quedaría en el historial del shell— y no lo imprime: sólo informa cuántos caracteres tenía.
 
 Después, abrir `/api/diagnostico` y mirar `clavesRecibidas`.
 
