@@ -1,7 +1,36 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-15 (4ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-15 (5ª revisión) · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
+
+## Estado del despliegue — 2026-08-15, 5ª revisión
+
+**Se dejó de depender del panel para las variables.** Tres despliegues seguidos terminaron con las tres variables ausentes; repetir "cargalas a mano" una cuarta vez no era una solución, era un procedimiento frágil.
+
+**Primero, la buena noticia — `BZ-44` funciona en producción:**
+
+```json
+"build": { "commit": "086d962", "compiladoEn": "2026-08-15T03:44:35.884Z" }
+```
+
+`WORKERS_CI_COMMIT_SHA` se inyecta de verdad en el entorno de Workers Builds, y `compiladoEn` coincide al segundo con la línea `03:44:35` del log de build. La pregunta *"¿qué código está corriendo?"* ya se responde en una petición, y ese commit es exactamente el último de `main`. **El despliegue funciona; lo que faltaba era configuración.**
+
+**El cambio de fondo de esta revisión.** Las variables pasan a repartirse según su naturaleza, en vez de vivir todas en el panel:
+
+| Variable | Antes | Ahora |
+|---|---|---|
+| `BARZOL_SUPABASE_URL` | Panel (se borraba) | **`wrangler.jsonc` → `vars`** |
+| `BARZOL_R2_PUBLIC_URL` | Panel (se borraba) | **`wrangler.jsonc` → `vars`** |
+| `BARZOL_SUPABASE_ANON_KEY` | Panel como *Variable* | **Secret** en el panel |
+
+Lo que hace que esto cierre el problema de raíz, y no sea otra mitigación:
+
+- Las dos URLs **no son secretas** —son la URL pública del proyecto de Supabase y el dominio público de las imágenes, ambos ya viajan al navegador— así que versionarlas no expone nada. El despliegue las establece solo: no hay paso manual que recordar ni nada que se pueda borrar.
+- La anon key va como **Secret**, y la documentación de Cloudflare es explícita: *"Wrangler will not delete your secrets unless you run `wrangler secret delete`"*. Los secretos son la única categoría inmune al borrado.
+
+**Resultado: ninguna variable queda expuesta al borrado**, y el trabajo manual pasa de "cargar tres variables después de cada despliegue" a "cargar un secreto, una vez".
+
+Ver `BZ-46`. Es la última acción de panel pendiente.
 
 ## Estado del despliegue — 2026-08-15, 4ª revisión
 
@@ -154,10 +183,14 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-41 | Evaluación: ¿migrar a Workers KV? | ✅ Hecho (descartado) | 🟠 |
 | BZ-42 | Evaluación: ¿volver a Cloudflare Pages? | ✅ Hecho (descartado) | 🟠 |
 | BZ-43 | Caché de catálogo en KV | ⬜ Pendiente | ⚪ |
-| BZ-44 | Commit y fecha de build en el diagnóstico | ✅ Hecho | 🟠 |
-| BZ-45 | Verificar que `keep_vars` funciona de verdad | ⬜ Pendiente | 🔴 |
+| BZ-44 | Commit y fecha de build en el diagnóstico | ✅ Hecho y verificado en prod | 🟠 |
+| BZ-45 | Verificar que `keep_vars` funciona de verdad | ⚫ Anulada por BZ-46 | 🔴 |
+| BZ-46 | **Cargar la anon key como Secret** | ⬜ **Bloqueante** | 🔴 |
+| BZ-47 | Variables públicas en `wrangler.jsonc` | ✅ Hecho | 🔴 |
 
-**Progreso:** 25 de 45 hechas. Bloqueante activo: **BZ-34** — cargar las tres variables en el panel. Es lo único que separa al sitio de estar funcionando, y ya no hay nada de código en el camino.
+**Progreso:** 27 de 47 hechas. Bloqueante activo: **BZ-46** — un único secreto en el panel, una sola vez. Las otras dos variables ya no requieren intervención: las establece el propio despliegue.
+
+`BZ-45` queda anulada: probaba si `keep_vars` conservaba las variables del panel, pero con `BZ-47` las públicas ya no viven ahí y la anon key pasa a ser un secreto, categoría que wrangler no borra. El escenario que iba a verificar dejó de existir.
 
 `BZ-31` quedó cerrada: el valor con corchetes ya se corrigió. Lo que quedó abierto es que el despliegue borra lo que se corrija.
 
@@ -373,9 +406,50 @@ Existen `productoSchema.ts`, `categoriaSchema.ts`, `galeriaSchema.ts` y `configu
 
 ---
 
+## ✅ Cerradas en esta sesión (2026-08-15, 5ª revisión)
+
+### BZ-47 · Variables públicas declaradas en `wrangler.jsonc` 🔴
+`wrangler.jsonc` gana un bloque `vars` con `BARZOL_SUPABASE_URL` y `BARZOL_R2_PUBLIC_URL`. Ninguna de las dos es secreta: la primera es la URL pública del proyecto de Supabase y la segunda el dominio desde el que se sirven las imágenes al visitante. Las dos ya viajan al navegador en cada visita, así que versionarlas no expone nada nuevo — de hecho ya estaban en `.env.example`, que sí se commitea.
+
+Lo que se gana es que **el despliegue las establece solo**. Desaparece el paso manual y desaparece la posibilidad de que un despliegue las borre, que es lo que venía pasando.
+
+**Verificado:** `dist/server/wrangler.json` —el archivo que wrangler realmente usa, no `wrangler.jsonc`— contiene el bloque `vars` con los dos valores. Ese detalle importaba: ya se había comprobado que el adaptador de Astro reescribe la configuración, y valía confirmar que los `vars` sobreviven a esa traducción igual que `keep_vars`.
+
+`npm run generate-types` regeneró `worker-configuration.d.ts` y las variables ahora aparecen tipadas en `Env`. `npm run check` en 0 errores sobre 100 archivos, y en desarrollo el diagnóstico sigue en `"ok": true` con las tres presentes y las 6 rutas de humo sin cambios.
+
+**Corrección de un defecto propio detectado al verificar:** el respaldo del SHA salía como `"descono"` — el recorte a 7 caracteres se aplicaba también al texto `'desconocido'`, que parecía un hash corrupto. Ahora sólo se recorta cuando hay SHA real.
+
+### BZ-44 · Commit del build, confirmado en producción ✅
+Verificado contra el worker desplegado, no sólo en local:
+
+```json
+"build": { "commit": "086d962", "compiladoEn": "2026-08-15T03:44:35.884Z" }
+```
+
+`WORKERS_CI_COMMIT_SHA` se inyecta realmente en Workers Builds, y la fecha coincide al segundo con la línea `03:44:35` del log. El commit corresponde al último de `main`, lo que confirma que el despliegue automático está al día.
+
+---
+
 ## 🚧 Bloqueante
 
-### BZ-34b · Cargar las tres variables en el panel 🔴
+### BZ-46 · Cargar la anon key como Secret 🔴
+**Última acción de panel pendiente, y es una sola vez.** Las otras dos variables ya las establece el despliegue (`BZ-47`).
+
+**Ruta:** Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets → **Add** → tipo **Secret** (no *Variable*).
+
+| Campo | Valor |
+|---|---|
+| Nombre | `BARZOL_SUPABASE_ANON_KEY` |
+| Tipo | **Secret** |
+| Valor | la publishable key del proyecto de Supabase, en crudo |
+
+**Que sea Secret y no Variable es el punto entero de la tarjeta.** La documentación de Cloudflare: *"Wrangler will not delete your secrets unless you run `wrangler secret delete`"*. Cargada como *Variable*, el próximo despliegue la borraría igual que las tres anteriores.
+
+**Antes de guardar:** verificar que en la sección no queden las viejas `BARZOL_SUPABASE_URL` ni `BARZOL_R2_PUBLIC_URL` como variables del panel. Ya no hacen falta y tener el mismo nombre en dos sitios sólo genera confusión sobre cuál manda. Aprovechar para borrar también las `R2_*` residuales (`BZ-32`).
+
+**Criterio de aceptación:** `/api/diagnostico` responde `"ok": true` con las tres variables en `"presente": true`, y **sigue respondiendo `ok: true` después del siguiente push**. Esa segunda parte es la que prueba que el problema quedó cerrado de raíz.
+
+### BZ-34b · Cargar las tres variables en el panel ⚫ *(reemplazada por BZ-46 y BZ-47)*
 **Es lo único que separa al sitio de estar funcionando.** Ya no queda nada de código en el camino: `keep_vars: true` está desplegado y verificado en el config que usa wrangler.
 
 Estado actual según `/api/diagnostico` en producción: las **tres** variables ausentes, los cuatro bindings presentes.
@@ -615,22 +689,21 @@ Candidatos naturales: el árbol de categorías del `Header` (cambia poquísimo y
 ## Mapa de dependencias
 
 ```
-BZ-34b (cargar variables) ──┬── BZ-45 (probar que keep_vars aguanta)
-                            ├── BZ-24 (verificación post-deploy)
-                            └── BZ-25 (subida real a R2) ── también BZ-10
-BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── hacer YA, es seguridad
+BZ-46 (anon key como Secret) ─┬── BZ-24 (verificación post-deploy)
+                              └── BZ-25 (subida real a R2) ── también BZ-10
+BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── misma visita, es seguridad
 BZ-39 (remoto git) ──────────── independiente, 1 comando
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
-BZ-35 (/api/diagnostico) ────── verifica BZ-34b y BZ-45 ── se cierra con BZ-37
+BZ-35 (/api/diagnostico) ────── verifica BZ-46 ── se cierra con BZ-37
 BZ-10 (subida en admin) ─────── BZ-11 (borrado) ── habilita BZ-28
 BZ-27 (dominio sitio) ───────── BZ-19 (SEO)
 BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido real
 BZ-43 (caché KV) ────────────── sólo con el sitio estable
 ```
 
-**Orden sugerido:** BZ-34b → BZ-45 → BZ-24 → BZ-32 → BZ-07 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-46 → BZ-24 → BZ-32 → BZ-07 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
 
-**Las dos primeras son la misma visita al panel:** cargar las tres variables, redesplegar, mirar `/api/diagnostico`, empujar un commit cualquiera y volver a mirarlo. No hay más código pendiente para poner el sitio en pie.
+**BZ-46, BZ-32 y BZ-07 son la misma visita al panel:** agregar un secreto, borrar cinco variables que ya no se usan y revocar un token. Después, mirar `/api/diagnostico`. No queda código pendiente para poner el sitio en pie.
 
 ---
 

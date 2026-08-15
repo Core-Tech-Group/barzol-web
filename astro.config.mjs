@@ -17,12 +17,13 @@ const srcDir = fileURLToPath(new URL('./src', import.meta.url));
 // `WORKERS_CI_COMMIT_SHA` lo inyecta Workers Builds; `CF_PAGES_COMMIT_SHA`
 // queda por si el proyecto se desplegara alguna vez desde Pages, y `GITHUB_SHA`
 // cubre una ejecución desde GitHub Actions.
-const commitSha = (
+// El recorte a 7 caracteres se aplica sólo cuando hay SHA: si no, el texto de
+// respaldo saldría cortado ("descono") y parecería un hash corrupto.
+const shaCompleto =
   process.env.WORKERS_CI_COMMIT_SHA ??
   process.env.CF_PAGES_COMMIT_SHA ??
-  process.env.GITHUB_SHA ??
-  'desconocido'
-).slice(0, 7);
+  process.env.GITHUB_SHA;
+const commitSha = shaCompleto ? shaCompleto.slice(0, 7) : 'desconocido';
 
 // https://astro.build/config
 export default defineConfig({

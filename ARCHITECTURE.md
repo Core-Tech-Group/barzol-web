@@ -49,6 +49,17 @@ R2 **no** aparece con credenciales: la escritura va por el binding `MEDIA`, no p
 
 En local viven en `.env` (ignorado por git), que wrangler carga dentro del worker — el build lo confirma con `Using secrets defined in .env`. En producción, en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets. `.env.example` es la plantilla y sí se versiona.
 
+**Dónde vive cada variable en producción.** No están todas en el mismo sitio, y el reparto es deliberado:
+
+| Variable | Dónde | Por qué |
+|---|---|---|
+| `BARZOL_SUPABASE_URL` | `wrangler.jsonc` → `vars` | Pública. Versionada y establecida por el propio despliegue |
+| `BARZOL_R2_PUBLIC_URL` | `wrangler.jsonc` → `vars` | Pública. Igual que la anterior |
+| `BARZOL_SUPABASE_ANON_KEY` | **Secret** en el panel | Es una clave, aunque esté pensada para exponerse. Los secretos son los únicos que `wrangler deploy` nunca borra |
+| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | **Secret**, si algún día se usa | Salta RLS. Jamás como variable ni en el archivo |
+
+La razón del reparto es operativa, no estética: wrangler trata `wrangler.jsonc` como única fuente de verdad al estilo terraform y **borra en cada despliegue las variables cargadas desde el panel**. Eso tumbó el sitio tres despliegues seguidos. Los valores públicos se declaran en el archivo, donde el despliegue los establece solo; el que es una clave va como secreto, categoría que wrangler no toca (sólo se borra con `wrangler secret delete`). Así no queda ninguna variable expuesta al borrado.
+
 > **`keep_vars: true` en `wrangler.jsonc` no es opcional mientras las variables vivan en el panel.** Por defecto wrangler trata ese archivo como única fuente de verdad, al estilo terraform: como no declara ningún bloque `vars`, cada `wrangler deploy` **borra** las variables cargadas desde el panel. El pipeline de Cloudflare corre `npx wrangler deploy` en cada push, así que el sitio se caía solo al desplegar. Los Secrets no se ven afectados. Si algún día se decide versionar las variables en el archivo, esa línea deja de hacer falta.
 
 > **Única excepción a la regla anterior: `shared/lib/build/buildInfo.ts`.** El SHA del commit y la fecha de compilación se inyectan en tiempo de build desde `astro.config.mjs` (`vite.define`), no se leen con `serverEnv.ts`. No es una inconsistencia: `WORKERS_CI_COMMIT_SHA` existe **sólo en el entorno de build** de Cloudflare y no en el runtime del worker, así que leerlo desde `cloudflare:workers` devolvería siempre `undefined`. Por eso vive en su propio archivo, con la excepción explicada, en vez de mezclarse con la lectura de configuración normal. Lo consume `/api/diagnostico` para poder responder qué versión del código está atendiendo.
