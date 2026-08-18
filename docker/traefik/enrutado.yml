@@ -1,0 +1,86 @@
+# Configuración dinámica de Traefik: quién atiende qué. Se recarga sola al
+# guardar, sin reiniciar el contenedor.
+#
+# Reemplaza punto por punto lo que hacían los dos nginx:
+#
+#   edge/nginx.conf     →  router `sitio`   (entrypoint público)
+#   gateway/nginx.conf  →  routers `rest` y `auth` (entrypoint interno)
+#
+# Lo único que no se pudo trasladar es el `location /media/`, porque Traefik no
+# sirve archivos: esa entrega la hace ahora `pages/media/[...ruta].ts` dentro de
+# la aplicación, y por eso el router `sitio` la cubre sin nada especial.
+
+http:
+  routers:
+    # ─── Público ─────────────────────────────────────────────────────────
+    sitio:
+      rule: PathPrefix(`/`)
+      entryPoints: [publica]
+      service: sitio
+      middlewares: [comprimir]
+
+    # ─── Interno: la API de datos que consume @supabase/supabase-js ──────
+    #
+    # No llevan `Host(...)` en la regla: el aislamiento lo da el entrypoint, que
+    # no está publicado. Añadir un Host haría creer que la protección viene de
+    # ahí, y una cabecera se falsea; un puerto que no existe hacia afuera, no.
+    rest:
+      rule: PathPrefix(`/rest/v1`)
+      entryPoints: [interna]
+      service: rest
+      middlewares: [quitar-prefijo-rest]
+
+    auth:
+      rule: PathPrefix(`/auth/v1`)
+      entryPoints: [interna]
+      service: auth
+      middlewares: [quitar-prefijo-auth]
+
+    # ─── Panel de control de Traefik ─────────────────────────────────────
+    #
+    # Sólo en el entrypoint interno: desde el anfitrión, en
+    # http://127.0.0.1:8111/dashboard/ — nunca por el túnel.
+    panel:
+      rule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+      entryPoints: [interna]
+      service: api@internal
+
+  services:
+    sitio:
+      loadBalancer:
+        servers:
+          - url: http://web:4321
+        # Si el sitio se está reiniciando, Traefik lo saca de rotación en vez de
+        # devolver un 502 por cada petición.
+        healthCheck:
+          path: /api/diagnostico
+          interval: 15s
+          timeout: 5s
+
+    rest:
+      loadBalancer:
+        servers:
+          - url: http://rest:3000
+
+    auth:
+      loadBalancer:
+        servers:
+          - url: http://auth:9999
+
+  middlewares:
+    # PostgREST y GoTrue no conocen el prefijo `/rest/v1` ni `/auth/v1`: son una
+    # convención de la API de Supabase que el gateway traduce. `/rest/v1/product`
+    # llega a PostgREST como `/product`.
+    quitar-prefijo-rest:
+      stripPrefix:
+        prefixes: ['/rest/v1']
+
+    quitar-prefijo-auth:
+      stripPrefix:
+        prefixes: ['/auth/v1']
+
+    # Cloudflare ya comprime en su borde, pero el túnel viaja hasta esta casa:
+    # comprimir de este lado ahorra ancho de banda del tramo lento, que es la
+    # subida de la conexión doméstica.
+    comprimir:
+      compress: {}

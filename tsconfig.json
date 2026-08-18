@@ -13,6 +13,12 @@
     "jsxImportSource": "react",
     "baseUrl": ".",
     "paths": {
+      // Los dos módulos que cambian según DEPLOY_TARGET (ver astro.config.mjs).
+      // Acá se apuntan siempre a la variante de Cloudflare, que es el objetivo
+      // por defecto: `npm run check` valida ese camino. La variante de Node se
+      // compila igual, porque tsconfig la incluye por el patrón "**/*".
+      "@shared/lib/env/envSource": ["src/shared/lib/env/envSource.cloudflare.ts"],
+      "@shared/lib/storage/mediaDriver": ["src/shared/lib/storage/mediaDriver.cloudflare.ts"],
       "@/*": ["src/*"],
       "@landing/*": ["src/landing/*"],
       "@admin/*": ["src/admin/*"],

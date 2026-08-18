@@ -1,0 +1,71 @@
+# Configuración estática de Traefik (lo que sólo se puede cambiar reiniciando).
+#
+# Traefik reemplaza a los dos nginx que había antes —el de borde y el gateway de
+# datos— en un solo contenedor. Lo que NO hace, y hay que tener presente, es
+# servir archivos estáticos: no tiene proveedor de ficheros. Por eso `/media/*`
+# pasó a ser una ruta de la propia aplicación (`pages/media/[...ruta].ts`).
+#
+# El enrutado vive aparte, en `enrutado.yml`, y se recarga solo al editarlo.
+
+# ─── Puntos de entrada ────────────────────────────────────────────────────
+#
+# DOS entrypoints, y la separación es de seguridad, no de orden. Cada router se
+# declara en uno solo, así que la API de datos es inalcanzable desde el túnel
+# aunque alguien acierte la ruta o falsee la cabecera `Host`: simplemente no hay
+# nada escuchando esas rutas en el puerto que el túnel puede tocar.
+entryPoints:
+  # Lo que ve el visitante. Es el único puerto publicado fuera del contenedor.
+  publica:
+    address: ':8080'
+    # Se confía en las cabeceras X-Forwarded-* que llegan porque el único
+    # cliente que alcanza este puerto dentro de la red es `cloudflared`, y es
+    # justamente el que sabe el esquema real: la conexión del visitante fue
+    # HTTPS aunque este tramo sea HTTP plano. Sin esto, las URL absolutas y las
+    # redirecciones que arma Astro saldrían con http:// detrás del túnel.
+    forwardedHeaders:
+      insecure: true
+
+  # Sólo dentro de la red de Docker. Es lo que vale `BARZOL_SUPABASE_URL`.
+  #
+  # Va en el puerto 80 —y la pública en el 8080, al revés de lo intuitivo— por
+  # un detalle concreto: `@supabase/ssr` deriva el nombre de la cookie de sesión
+  # del host de esa URL. Con un puerto explícito el nombre saldría
+  # `sb-supabase:8000-auth-token`, y los dos puntos no son válidos en el nombre
+  # de una cookie: el login parecería andar y la sesión nunca persistiría.
+  interna:
+    address: ':80'
+
+# ─── Panel de control ─────────────────────────────────────────────────────
+#
+# Sirve para ver, sin leer archivos, a qué contenedor resuelve cada router — en
+# particular que el router `sitio` apunta de verdad a `http://web:4321`.
+#
+# `insecure: true` NO se usa: esa opción publica el panel en un entrypoint
+# propio sin control de acceso. Acá lo expone un router explícito
+# (`panel`, en enrutado.yml) atado al entrypoint INTERNO, que sólo escucha en
+# 127.0.0.1 del anfitrión. Por el túnel es inalcanzable, que es como debe ser:
+# el panel enumera toda la topología interna del despliegue.
+api:
+  dashboard: true
+
+providers:
+  # Proveedor de ARCHIVO, no de Docker, y es deliberado: el proveedor de Docker
+  # exige montarle a Traefik el socket del demonio, que equivale a darle acceso
+  # de root al anfitrión. Acá los destinos son tres contenedores fijos con
+  # nombres estables — no hay nada que descubrir dinámicamente y no vale la pena
+  # pagar ese precio.
+  file:
+    filename: /etc/traefik/enrutado.yml
+    watch: true
+
+# Sonda del healthcheck de compose (`traefik healthcheck --ping`). Va en el
+# entrypoint interno para no publicar el estado del proxy hacia el túnel.
+ping:
+  entryPoint: interna
+
+log:
+  level: INFO
+
+# El registro de accesos queda apagado a propósito. Por el entrypoint interno
+# pasa cada consulta a la API de datos, y en esta máquina el disco es el recurso
+# escaso. Para depurar, se enciende acá y se reinicia el contenedor.

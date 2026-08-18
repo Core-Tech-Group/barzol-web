@@ -6,8 +6,24 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 
 import cloudflare from '@astrojs/cloudflare';
+import node from '@astrojs/node';
 
 const srcDir = fileURLToPath(new URL('./src', import.meta.url));
+
+// Objetivo de despliegue. `cloudflare` (el de producción) es el valor por
+// defecto a propósito: un build sin `DEPLOY_TARGET` compila exactamente igual
+// que antes de que existiera el despliegue local, adaptador y binding R2
+// incluidos. `node` lo activa el despliegue en Docker sobre la Orange Pi
+// (scripts/desplegar-local.sh).
+//
+// Sólo dos módulos del proyecto dependen del runtime, y ninguno de los dos es
+// una vista, un service ni un mapper: de dónde salen las variables de entorno y
+// dónde se escriben los bytes del multimedia. Se resuelven por alias en el
+// build y no con un `if` en tiempo de ejecución porque `cloudflare:workers` se
+// importa de forma estática: en un build de Node el módulo no existe y la
+// compilación falla al resolverlo, antes de que ninguna condición se evalúe.
+// Ver la ficha OP-04 en docs/2_backlog/20260818-0520-kanban-despliegue-local-orangepi.md
+const objetivo = process.env.DEPLOY_TARGET === 'node' ? 'node' : 'cloudflare';
 
 // SHA del commit que generó este bundle, para que `/api/diagnostico` pueda
 // decir qué versión está atendiendo. Se resuelve acá, en tiempo de build,
@@ -44,6 +60,11 @@ export default defineConfig({
       // ("paths"): tsconfig solo cubre el chequeo de tipos, Vite
       // necesita esta entrada aparte para resolverlos en build/dev.
       alias: {
+        // Los dos alias por objetivo van PRIMERO: el orden importa. Vite
+        // resuelve el primer alias cuyo prefijo coincida, y `@shared` también
+        // coincidiría con estas rutas — declarado después, nunca las intercepta.
+        '@shared/lib/env/envSource': `${srcDir}/shared/lib/env/envSource.${objetivo}.ts`,
+        '@shared/lib/storage/mediaDriver': `${srcDir}/shared/lib/storage/mediaDriver.${objetivo}.ts`,
         '@': srcDir,
         '@landing': `${srcDir}/landing`,
         '@admin': `${srcDir}/admin`,
@@ -52,5 +73,8 @@ export default defineConfig({
     }
   },
 
-  adapter: cloudflare()
+  // `standalone` levanta su propio servidor HTTP y es lo que arranca el
+  // contenedor (`node dist/server/entry.mjs`); no hace falta un Express que lo
+  // envuelva. Escucha en HOST/PORT, que fija docker-compose.
+  adapter: objetivo === 'node' ? node({ mode: 'standalone' }) : cloudflare()
 });

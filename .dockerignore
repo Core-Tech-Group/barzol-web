@@ -1,0 +1,17 @@
+# Contexto de build del contenedor del sitio (docker/web.Dockerfile).
+# Cuanto más chico, más rápido arranca el build en la Orange Pi.
+node_modules
+dist
+.git
+.wrangler
+.astro
+.vscode
+.env
+.env.*
+!.env.example
+docs
+design-reference
+supabase/seed-data
+docker/datos
+*.md
+!README.md

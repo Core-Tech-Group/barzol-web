@@ -1,0 +1,281 @@
+# Despliegue local completo del sitio sobre la Orange Pi 5 Max, publicado por un
+# túnel de Cloudflare Zero Trust.
+#
+# Se levanta con `scripts/desplegar-local.sh`, no a mano: ese script genera las
+# claves JWT, aplica el schema, carga el catálogo de prueba y da de alta al
+# admin — pasos que compose no puede expresar porque dependen de que GoTrue haya
+# migrado primero (ver fichas OP-13 a OP-15).
+#
+# Regla de exposición: el ÚNICO servicio que publica un puerto accesible desde
+# fuera de la máquina es `proxy`. Todo lo demás está en la red interna, o
+# publicado sólo en 127.0.0.1 para poder diagnosticarlo desde el anfitrión.
+#
+# Esta máquina tiene el plugin `docker compose` ausente y el binario
+# `docker-compose` (v2.40.2) presente. El script usa el que encuentre.
+
+name: barzol-local
+
+services:
+  # ─── Base de datos ────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: barzol-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-barzol}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Corre una sola vez, con el volumen vacío: roles, esquema auth y las
+      # funciones auth.uid()/auth.role() que exige la RLS de schema.sql.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Sólo desde el anfitrión, para poder abrir psql sin entrar al contenedor.
+      - "127.0.0.1:${PUERTO_DB:-8112}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-barzol}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [barzol]
+
+  # ─── Autenticación (el /auth/v1 que usa @supabase/ssr) ────────────────
+  auth:
+    image: supabase/gotrue:v2.184.0
+    container_name: barzol-auth
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-barzol}?search_path=auth&sslmode=disable
+      # Este secreto es el que ata las tres piezas: GoTrue firma los JWT con él,
+      # PostgREST los verifica con él y las claves anon/service_role están
+      # firmadas con él. Cambiarlo invalida las tres cosas a la vez.
+      GOTRUE_JWT_SECRET: ${BARZOL_JWT_SECRET:?falta BARZOL_JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_SITE_URL: ${BARZOL_PUBLIC_URL:-http://localhost:8110}
+      API_EXTERNAL_URL: ${BARZOL_PUBLIC_URL:-http://localhost:8110}
+      # No hay registro público: el único usuario es el admin, y lo crea el
+      # script de despliegue con la clave service_role. Dejar el alta abierta
+      # sobre un túnel público sería una puerta trasera al panel.
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      # El admin entra con usuario, no con email: la aplicación arma un email
+      # sintético `<usuario>@barzol.internal` (ver authClient.ts). Ese dominio no
+      # existe ni recibe correo, así que la confirmación por mail tiene que ser
+      # automática o el usuario nunca quedaría habilitado.
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_LOG_LEVEL: info
+    healthcheck:
+      # 127.0.0.1 y no `localhost`: en estos contenedores `localhost` resuelve
+      # primero a ::1, y los servidores escuchan sólo en IPv4. El sondeo
+      # fallaba con "connection refused" mientras el servicio atendía bien —
+      # y compose, al no verlo sano, no arrancaba nada de lo que depende de él.
+      # Vale para los cinco healthchecks de este archivo.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks: [barzol]
+
+  # ─── Datos (el /rest/v1 que usa @supabase/supabase-js) ────────────────
+  rest:
+    image: postgrest/postgrest:v12.2.12
+    container_name: barzol-rest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Se conecta como `authenticator`, un rol que no puede hacer nada por sí
+      # mismo: sólo cambiar a anon / authenticated / service_role según el JWT.
+      # Es lo que hace que la RLS del schema siga siendo la autorización real.
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-barzol}
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${BARZOL_JWT_SECRET}
+      # Publica los claims en `request.jwt.claims` (JSON completo). La función
+      # auth.uid() del init lee esa forma y también la antigua, para que una
+      # subida de versión de esta imagen no apague la autorización en silencio.
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_DB_POOL: 10
+      PGRST_LOG_LEVEL: error
+      # Servidor de administración, sólo para el healthcheck de abajo. Expone
+      # /ready, que además de responder comprueba que la conexión a PostgreSQL
+      # y la caché de esquema estén realmente cargadas.
+      PGRST_ADMIN_SERVER_PORT: 3001
+    healthcheck:
+      # La imagen de PostgREST no trae curl ni wget: es una imagen de
+      # distribución, no una de utilidades. Sí trae bash, así que la petición se
+      # hace con su redirección /dev/tcp — sin instalar nada dentro del
+      # contenedor sólo para poder sondearlo.
+      test:
+        - CMD
+        - bash
+        - -c
+        - 'exec 3<>/dev/tcp/127.0.0.1/3001 && printf "GET /ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -q " 200 "'
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [barzol]
+
+  # ─── El sitio ─────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+    image: barzol-web:local
+    container_name: barzol-web
+    restart: unless-stopped
+    depends_on:
+      # `service_started` y no `service_healthy` a propósito: el proxy enruta
+      # HACIA este contenedor, así que exigir que esté sano primero sería una
+      # dependencia circular. Traefik devuelve 503 durante los pocos segundos
+      # que el sitio tarda en levantar, y se recupera solo.
+      proxy:
+        condition: service_started
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4321
+      # Sin puerto en la URL, a propósito: ver traefik/traefik.yml.
+      BARZOL_SUPABASE_URL: http://supabase
+      BARZOL_SUPABASE_ANON_KEY: ${BARZOL_SUPABASE_ANON_KEY:?falta BARZOL_SUPABASE_ANON_KEY}
+      # Base pública de lectura del multimedia. Reemplaza al subdominio de R2 y
+      # tiene que ser la URL por la que el VISITANTE llega —la del túnel—,
+      # porque este valor termina dentro del `src` de cada <img> del HTML.
+      BARZOL_R2_PUBLIC_URL: ${BARZOL_PUBLIC_URL:-http://localhost:8110}/media
+      # Dónde escribe los bytes `mediaDriver.node.ts`.
+      BARZOL_MEDIA_DIR: /data/media
+    volumes:
+      - media:/data/media
+    healthcheck:
+      # /api/diagnostico responde 200 siempre, incluso con la base caída: el
+      # estado real va en el campo `ok` del cuerpo. Es exactamente lo que se
+      # quiere de un healthcheck de proceso — dice si el servidor atiende, sin
+      # confundirse con el estado de sus dependencias, que tienen el suyo.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:4321/api/diagnostico || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [barzol]
+
+  # ─── Proxy: único ingreso Y puerta de la API de datos ─────────────────
+  #
+  # Un solo Traefik cumple los dos papeles que antes hacían dos nginx, y los
+  # mantiene separados por ENTRYPOINT, no por reglas de `Host`:
+  #
+  #   :8080 (publicado)     el sitio. Es a donde apunta el túnel.
+  #   :80   (sólo interno)  /rest/v1 y /auth/v1 — o sea, `BARZOL_SUPABASE_URL`.
+  #
+  # La separación por puerto es más fuerte que una por cabecera: aunque alguien
+  # falsee el `Host` a través del túnel, en el puerto público no hay ningún
+  # router que atienda /rest/v1, así que no hay nada que alcanzar.
+  #
+  # NO se le monta el socket de Docker: el enrutado va por archivo. El proveedor
+  # de Docker de Traefik necesita ese socket, que equivale a acceso de root al
+  # anfitrión, y acá los tres destinos son fijos y conocidos.
+  proxy:
+    image: traefik:v3.4
+    container_name: barzol-proxy
+    restart: unless-stopped
+    depends_on:
+      rest:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/enrutado.yml:/etc/traefik/enrutado.yml:ro
+    ports:
+      # Único puerto accesible desde fuera de la máquina.
+      - "${PUERTO_EDGE:-8110}:8080"
+      # Entrypoint interno, publicado sólo en el anfitrión: lo usa el script de
+      # despliegue para dar de alta al admin y sirve para diagnosticar con curl.
+      - "127.0.0.1:${PUERTO_GATEWAY:-8111}:80"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      barzol:
+        aliases:
+          # `supabase` ES el host de BARZOL_SUPABASE_URL, y de él deriva
+          # @supabase/ssr el nombre de la cookie de sesión — por eso no lleva
+          # puerto (ver traefik/traefik.yml). `edge` se conserva como nombre del
+          # destino del túnel.
+          - supabase
+          - edge
+
+  # ─── Túnel de Cloudflare Zero Trust ───────────────────────────────────
+  #
+  # En perfil aparte: `docker-compose up` levanta el sistema sin túnel (útil
+  # para probar en la red local), y `--profile tunel` lo publica. El script lo
+  # activa solo si hay token configurado.
+  #
+  # Con token, toda la configuración del túnel vive en el panel de Cloudflare
+  # (Zero Trust → Networks → Tunnels): ahí se elige el hostname público y se
+  # apunta al servicio HTTP `http://proxy:8080`. No hace falta ningún archivo de
+  # credenciales en el disco de esta máquina.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: barzol-tunnel
+    restart: unless-stopped
+    profiles: [tunel]
+    depends_on:
+      proxy:
+        condition: service_healthy
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks: [barzol]
+
+  # ─── Quick Tunnel (túnel de prueba, sin dominio propio) ───────────────
+  #
+  # Alternativa al túnel con nombre de arriba para cuando todavía no hay
+  # dominio: Cloudflare inventa un hostname `*.trycloudflare.com` y lo publica
+  # sin configurar nada en el panel.
+  #
+  # Diferencias que importan, y no son menores:
+  #   · El hostname CAMBIA en cada arranque. Como la URL pública queda escrita
+  #     dentro de la base en cada imagen, `scripts/tunel-rapido.sh` reescribe
+  #     esas URLs al vuelo — a mano esto se convierte en un catálogo con las
+  #     fotos rotas.
+  #   · No hay políticas de Access: cualquiera con el enlace entra. Sirve para
+  #     enseñárselo al cliente, no para dejarlo publicado.
+  #
+  # `restart: no` a propósito: si el contenedor se reinicia, Cloudflare le da
+  # OTRO hostname y el que se repartió deja de funcionar. Es mejor que muera
+  # visiblemente a que siga vivo sirviendo una URL que ya no existe.
+  tunel-rapido:
+    image: cloudflare/cloudflared:latest
+    container_name: barzol-tunel-rapido
+    restart: "no"
+    profiles: [rapido]
+    depends_on:
+      proxy:
+        condition: service_healthy
+    # Apunta al ENTRYPOINT PÚBLICO de Traefik por nombre de contenedor, no a
+    # localhost: el conector corre dentro de la red de Docker, donde
+    # `localhost` es él mismo.
+    command: tunnel --no-autoupdate --url http://proxy:8080
+    networks: [barzol]
+
+volumes:
+  db-data:
+  media:
+
+networks:
+  barzol:
+    name: barzol-local
+    driver: bridge

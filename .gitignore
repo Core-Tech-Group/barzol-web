@@ -27,3 +27,6 @@ pnpm-debug.log*
 
 #.env.example
 .env.example
+# Despliegue local en Docker (rama orangepi_feature)
+docker/.env
+docker/generado/

@@ -1,21 +1,35 @@
-import { env as workerEnv } from 'cloudflare:workers';
+import { getEnvRecord } from '@shared/lib/env/envSource';
 
 // Lectura de variables de entorno del lado servidor, con una sola
 // implementación para todo el proyecto.
 //
-// El sitio corre sobre workerd, donde el entorno llega por el objeto `env` de
-// `cloudflare:workers`: ahí aparecen los `vars` de wrangler.jsonc, los secretos
-// del panel de Cloudflare y, en desarrollo, lo que se cargue desde `.env`.
+// En producción el sitio corre sobre workerd, donde el entorno llega por el
+// objeto `env` de `cloudflare:workers`: ahí aparecen los `vars` de
+// wrangler.jsonc, los secretos del panel de Cloudflare y, en desarrollo, lo que
+// se cargue desde `.env`. En el despliegue local sobre Docker corre sobre Node
+// y el entorno llega por `process.env`, poblado por docker-compose.
 //
-// Se lee de ahí y NO de `import.meta.env.BARZOL_*`. Vite reemplaza esos accesos
-// por su valor de build time, y las variables de Cloudflare son invisibles en
-// ese momento: quedan como `undefined` fijo dentro del bundle. Tampoco se usa
-// `process.env`, que en el worker se compila a un objeto vacío.
+// Esa —y sólo esa— diferencia vive detrás de `@shared/lib/env/envSource`, que
+// `astro.config.mjs` resuelve a una implementación o a la otra según
+// `DEPLOY_TARGET`. Todo lo demás (validación, mensajes de error, diagnóstico)
+// existe una sola vez, acá, y es idéntico en los dos objetivos.
+//
+// Lo que NO cambia en ninguno de los dos: no se usa `import.meta.env.BARZOL_*`.
+// Vite reemplaza esos accesos por su valor de build time, y las variables de
+// Cloudflare son invisibles en ese momento: quedan como `undefined` fijo dentro
+// del bundle.
 //
 // Este archivo NUNCA debe importarse desde componentes de cliente: filtraría
 // secretos al bundle del navegador.
 
-type EnvRecord = Record<string, string | undefined>;
+/**
+ * Valor crudo de una variable de texto, o `undefined` si no está definida o si
+ * el nombre corresponde a un binding (un objeto, no configuración de texto).
+ */
+function leerCrudo(name: string): string | undefined {
+  const valor = getEnvRecord()[name];
+  return typeof valor === 'string' ? valor : undefined;
+}
 
 /**
  * Devuelve la variable, o `undefined` si no está definida o está vacía.
@@ -24,7 +38,7 @@ type EnvRecord = Record<string, string | undefined>;
  * URL absoluta http(s).
  */
 export function readServerEnv(name: string): string | undefined {
-  const valor = (workerEnv as unknown as EnvRecord)[name]?.trim();
+  const valor = leerCrudo(name)?.trim();
   if (!valor) return undefined;
 
   assertUrlIfNeeded(name, valor);
@@ -108,7 +122,7 @@ export interface InspeccionVariable {
 
 /** Radiografía de una variable, sin revelar su contenido. */
 export function inspeccionarVariable(name: string): InspeccionVariable {
-  const crudo = (workerEnv as unknown as EnvRecord)[name];
+  const crudo = leerCrudo(name);
   const valor = crudo?.trim();
   if (!valor) return { presente: false };
 
@@ -145,7 +159,7 @@ export function inspeccionarVariable(name: string): InspeccionVariable {
  * Se excluyen los bindings, que son objetos y no configuración de texto.
  */
 export function listarClavesEnv(): string[] {
-  const env = workerEnv as unknown as Record<string, unknown>;
+  const env = getEnvRecord();
   return Object.keys(env)
     .filter((clave) => typeof env[clave] === 'string')
     .sort();
@@ -153,7 +167,7 @@ export function listarClavesEnv(): string[] {
 
 /** ¿El worker recibió este binding (R2, KV, Images, Assets)? */
 export function hayBinding(name: string): boolean {
-  const valor = (workerEnv as unknown as Record<string, unknown>)[name];
+  const valor = getEnvRecord()[name];
   return valor !== undefined && valor !== null && typeof valor === 'object';
 }
 

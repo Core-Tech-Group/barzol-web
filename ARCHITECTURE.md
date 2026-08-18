@@ -20,6 +20,7 @@ Sitio web tipo catálogo para Barzol: home, catálogo de productos por categorí
 | Validación de datos | Zod |
 | Hosting | Cloudflare Workers con assets estáticos (plan Free) — se despliega con `wrangler deploy`, no con Pages |
 | Modo de renderizado | `output: 'server'` + `@astrojs/cloudflare` (requerido por el admin: POST/PUT/DELETE no funcionan en modo estático puro) |
+| Segundo objetivo de despliegue | Docker sobre Node + túnel de Cloudflare Zero Trust — mismo código, `DEPLOY_TARGET=node`. Ver [Segundo objetivo de despliegue](#segundo-objetivo-de-despliegue--local-en-docker) |
 | Dominio | Registrador a definir (~S/. 40-70/año) |
 | Color primario de marca | `#1e4d8c` |
 
@@ -35,7 +36,7 @@ Hosting, almacenamiento de multimedia y CDN son **todos de Cloudflare**. No es u
 
 Todas las variables son **de servidor**: al no llevar el prefijo `PUBLIC_`, Astro no las incluye en el bundle del navegador. Renombrar cualquiera a `PUBLIC_*` filtraría el secreto al cliente.
 
-Se leen **siempre** con `requireServerEnv()` / `readServerEnv()` de `shared/lib/env/serverEnv.ts`, que las toma del objeto `env` de `cloudflare:workers`. Nunca con `import.meta.env.BARZOL_*` directo: Vite sustituye cada acceso `import.meta.env.X` por su valor **de build time**, y las variables de Cloudflare son invisibles en ese momento, así que quedan como `undefined` fijo dentro del bundle. Con un patrón como `if (!url) throw ...` eso pliega la condición en un `throw` incondicional y elimina el resto como código muerto — el despliegue falla en cada request aunque las variables estén bien cargadas. Tampoco se usa `process.env`: en el worker se compila a un objeto vacío.
+Se leen **siempre** con `requireServerEnv()` / `readServerEnv()` de `shared/lib/env/serverEnv.ts`, que las toma del objeto `env` de `cloudflare:workers` (o de `process.env` cuando se compila para el despliegue local en Docker — ver [Segundo objetivo de despliegue](#segundo-objetivo-de-despliegue--local-en-docker); esa es la única diferencia entre ambos, y vive detrás de un alias). Nunca con `import.meta.env.BARZOL_*` directo: Vite sustituye cada acceso `import.meta.env.X` por su valor **de build time**, y las variables de Cloudflare son invisibles en ese momento, así que quedan como `undefined` fijo dentro del bundle. Con un patrón como `if (!url) throw ...` eso pliega la condición en un `throw` incondicional y elimina el resto como código muerto — el despliegue falla en cada request aunque las variables estén bien cargadas. Tampoco se usa `process.env`: en el worker se compila a un objeto vacío.
 
 | Variable | Uso |
 |---|---|
@@ -222,6 +223,7 @@ src/
 | `/busqueda` | PublicLayout | `landing/busqueda/BusquedaView.astro` | Resultados de búsqueda, usa `Pagination.astro` |
 | `/500` | ErrorLayout | `pages/500.astro` | Error de servidor |
 | `/404` | ErrorLayout | `pages/404.astro` | Ruta inexistente |
+| `/media/[...ruta]` | — (endpoint) | `pages/media/[...ruta].ts` | Entrega de multimedia. Sólo activa en el despliegue local; bajo Cloudflare responde 404 |
 | `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (Supabase Auth real) |
 | `/admin` | AdminLayout | `admin/dashboard/DashboardView.astro` | Dashboard del panel |
 | `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD de productos |
@@ -266,6 +268,8 @@ Reglas que sostienen el diseño:
 - **El límite de tamaño es real**: 10 MB para imagen, 100 MB para video, que es el tope de cuerpo de request en el plan Free de Workers.
 
 El binding sirve para escribir, no para publicar: las imágenes se sirven desde la base pública del bucket (`BARZOL_R2_PUBLIC_URL`), no proxeadas por el worker.
+
+> **Lectura en el despliegue local.** Ahí no hay dominio de bucket, así que las sirve la aplicación en `pages/media/[...ruta].ts`, leyendo del disco por el driver `mediaDriver.node.ts`. La ruta existe en los dos objetivos para que el código compile igual, pero bajo Cloudflare el driver devuelve `null` y responde 404 — el comportamiento de siempre. Añade dos cabeceras que el bucket no ponía: `X-Content-Type-Options: nosniff` y una `Content-Security-Policy` con `sandbox`, que neutralizan un SVG malicioso servido desde nuestro propio dominio (el motivo por el que la allow-list de subida no acepta SVG).
 
 ## Manejo de Errores
 
@@ -321,6 +325,57 @@ export interface ApiResponse<T> {
 Ver [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md) — diagrama entidad-relación completo (con Mermaid) derivado de todas las pantallas del admin ya construidas (categorías de 2 niveles, fotos/características múltiples de producto, secciones+banners de la página de inicio, galería, configuración, perfil de admin). El borrador de 3 tablas que vivía antes en esta sección quedó obsoleto frente a la UI real y fue reemplazado por ese archivo.
 
 > Nota: las imágenes **nunca** se guardan como binarios en la base de datos ni en el repositorio — solo la URL apunta a Cloudflare R2.
+
+## Segundo Objetivo de Despliegue — local en Docker
+
+Además del despliegue en Cloudflare, el mismo código compila para correr **sobre Node dentro de Docker**, en una Orange Pi 5 Max, publicado por un túnel de Cloudflare Zero Trust. Se levanta con `./scripts/desplegar-local.sh`, y el tablero de trabajo es `docs/2_backlog/20260818-0520-kanban-despliegue-local-orangepi.md`.
+
+**Por qué existe:** el despliegue en Cloudflare quedó bloqueado en `BZ-49` —el worker no recibe `BARZOL_SUPABASE_ANON_KEY`— y desbloquearlo depende de una decisión de plataforma. Este objetivo permite mostrar el sistema funcionando mientras tanto, sin tocar lo que ya está hecho.
+
+**Regla que lo gobierna: no hay dos versiones del código.** `DEPLOY_TARGET` sin definir compila exactamente igual que antes de que este objetivo existiera. Sólo tres cosas cambian, y las tres se resuelven en `astro.config.mjs`:
+
+| Qué | `cloudflare` (por defecto) | `node` |
+|---|---|---|
+| Adaptador | `@astrojs/cloudflare` | `@astrojs/node` en modo `standalone` |
+| `@shared/lib/env/envSource` | `envSource.cloudflare.ts` (`cloudflare:workers`) | `envSource.node.ts` (`process.env`) |
+| `@shared/lib/storage/mediaDriver` | `mediaDriver.cloudflare.ts` (binding R2) | `mediaDriver.node.ts` (disco, servido por `pages/media/[...ruta].ts`) |
+
+La selección va por **alias de Vite y no por un `if` en tiempo de ejecución**: el `import` de `cloudflare:workers` es estático y en un build de Node falla al resolverse, antes de que ninguna condición llegue a evaluarse. Cada implementación es un archivo corto detrás de la misma interfaz; la lógica no se duplica. Toda la validación de variables, los mensajes de error y el diagnóstico siguen viviendo una sola vez en `serverEnv.ts`, y el nombrado de claves, la sanitización y el armado de la URL pública, una sola vez en `mediaKey.ts` / `mediaUrl.ts`. Lo intercambiable es únicamente *de dónde salen los valores* y *dónde se escriben los bytes*.
+
+**Ningún service, mapper, vista, endpoint ni política de RLS cambia entre los dos objetivos.** Eso incluye la capa de datos completa: en local no se levanta otro motor sino **la API de Supabase con sus componentes de código abierto** — PostgreSQL con el mismo `supabase/schema.sql`, PostgREST como `/rest/v1` y GoTrue como `/auth/v1`, unidos por Traefik en su entrypoint interno — que es lo que vale `BARZOL_SUPABASE_URL`. Para `@supabase/supabase-js` es indistinguible del servicio gestionado.
+
+Composición de contenedores (`docker/docker-compose.yml`):
+
+```
+                       ┌─ :8080 público ─────────► web (Astro sobre Node)
+cloudflared ──► proxy ─┤                             │        │
+   túnel      (Traefik)│                             │        └─► /media/*  (volumen en disco)
+                       └─ :80 interno ◄──────────────┘
+                          /rest/v1 ─► rest (PostgREST) ─┐
+                          /auth/v1 ─► auth (GoTrue) ────┴─► db (PostgreSQL)
+```
+
+**Un solo Traefik cumple los dos papeles, separados por entrypoint y no por reglas de `Host`:**
+
+| Entrypoint | Puerto | Publicado | Atiende |
+|---|---|---|---|
+| `publica` | `:8080` | sí, es el ingreso del túnel | el sitio |
+| `interna` | `:80` | sólo en `127.0.0.1`, para diagnóstico | `/rest/v1` y `/auth/v1` — o sea, `BARZOL_SUPABASE_URL` |
+
+La separación por puerto es más fuerte que una por cabecera: aunque alguien falsee el `Host` a través del túnel, **en el puerto público no existe ningún router que atienda `/rest/v1`**, así que no hay nada que alcanzar. El sitio y los tres servicios de datos no publican ningún puerto.
+
+Dos decisiones de Traefik que conviene no revertir sin pensarlo:
+
+- **Proveedor de archivo, no de Docker.** El proveedor de Docker exige montarle a Traefik el socket del demonio, que equivale a darle acceso de root al anfitrión. Acá los destinos son tres contenedores fijos con nombres estables: no hay nada que descubrir dinámicamente y no vale la pena pagar ese precio.
+- **El entrypoint interno va en el puerto 80 y el público en el 8080**, al revés de lo intuitivo. `@supabase/ssr` deriva el nombre de la cookie de sesión del host de `BARZOL_SUPABASE_URL`; con un puerto explícito saldría `sb-supabase:8000-auth-token`, y los dos puntos no son válidos en el nombre de una cookie — el login parecería andar y la sesión nunca persistiría.
+
+**Traefik no sirve archivos estáticos** (no tiene proveedor de ficheros), así que `/media/*` lo entrega la propia aplicación desde `pages/media/[...ruta].ts`, leyendo el volumen por el mismo driver intercambiable que usa la escritura. Bajo el objetivo `cloudflare` ese driver devuelve `null` y la ruta responde 404: ahí las imágenes las sirve el bucket desde su dominio público, y proxearlas por el worker gastaría CPU facturable para entregar lo que R2 ya entrega solo.
+
+Diferencias operativas que conviene tener presentes:
+
+- **La URL pública queda escrita en la base.** Igual que con el dominio de R2, cada imagen guarda su URL completa a partir de `BARZOL_PUBLIC_URL`. Cambiar el hostname del túnel después de haber subido imágenes deja las viejas apuntando al valor anterior; hay que reescribirlas con un `UPDATE`. Es la misma limitación que ya tiene el despliegue en Cloudflare, no una nueva.
+- **El `Content-Type` del multimedia se resuelve por la extensión** (`shared/lib/storage/mediaMime.ts`), no por un metadato del objeto: un archivo en disco no tiene dónde guardarlo. Por eso la allow-list de MIME de `mediaSchema.ts` sigue siendo la que hace el trabajo al subir.
+- **Las claves JWT se generan, no se copian de un panel.** `scripts/generar-claves-jwt.mjs` produce el secreto y las claves `anon` / `service_role` firmadas con él; las tres están atadas entre sí.
 
 ## Riesgos y Mitigaciones
 

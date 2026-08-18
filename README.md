@@ -75,6 +75,29 @@ curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
 
 El campo `clavesRecibidas` lista los **nombres** de las variables que llegaron.
 
+## Despliegue local en Docker (Orange Pi + Cloudflare Zero Trust)
+
+Segundo objetivo de despliegue: **el mismo código** corriendo sobre Node dentro de Docker y publicado por un túnel de Cloudflare Zero Trust, con la base de datos, la autenticación y el multimedia en la propia máquina. Sirve para mostrarle el sistema funcionando al cliente sin depender del despliegue en Cloudflare.
+
+```bash
+./scripts/desplegar-local.sh          # levanta todo (la primera vez compila el sitio)
+./scripts/desplegar-local.sh --estado # qué está corriendo
+./scripts/desplegar-local.sh --logs   # seguir los registros
+./scripts/desplegar-local.sh --detener
+```
+
+El script es idempotente: crea `docker/.env` la primera vez, genera ahí las claves JWT y la contraseña del admin, aplica `supabase/schema.sql`, carga el catálogo de prueba y da de alta al administrador. Correrlo otra vez no duplica nada ni cambia las contraseñas.
+
+¿Sin dominio propio todavía? `./scripts/tunel-rapido.sh` lo publica por un **Quick Tunnel** de Cloudflare (`*.trycloudflare.com`), reescribiendo de paso las URL de las imágenes ya guardadas en la base — el hostname cambia en cada arranque y sin eso el catálogo queda con las fotos rotas. Es para enseñar el sistema en una sesión: el enlace es público y sin control de acceso.
+
+> **Ojo con el puerto.** El `--url http://localhost:8080` de la documentación de Cloudflare apunta, en esta máquina, al Traefik de otro proyecto. El entrypoint público de Barzol es el `8110` del anfitrión, o `proxy:8080` dentro de la red de Docker — que es lo que usa el script.
+
+El proxy es **Traefik**: un solo contenedor que hace de ingreso público (`:8080`, es a donde apunta el túnel) y de puerta interna de la API de datos (`:80`, no publicado). No lleva montado el socket de Docker — el enrutado va por archivo, en `docker/traefik/`.
+
+Para publicarlo por el túnel hace falta poner dos valores en `docker/.env` — `CLOUDFLARE_TUNNEL_TOKEN` y `BARZOL_PUBLIC_URL` — y apuntar el servicio del túnel a `http://proxy:8080`. El procedimiento completo está en la ficha OP-21 de [docs/2_backlog/20260818-0520-kanban-despliegue-local-orangepi.md](./docs/2_backlog/20260818-0520-kanban-despliegue-local-orangepi.md).
+
+> `DEPLOY_TARGET` sin definir compila para Cloudflare, exactamente como antes. Todo lo de arriba en esta página sigue valiendo igual. Ver ARCHITECTURE.md § Segundo Objetivo de Despliegue.
+
 ### Diagnosticar un fallo en producción
 
 `observability` está activada en `wrangler.jsonc`, así que los `console.error` del servidor quedan registrados:
