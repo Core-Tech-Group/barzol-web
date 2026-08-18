@@ -1,0 +1,21 @@
+---
+import ErrorLayout from '@landing/layout/ErrorLayout.astro';
+
+// Página para rutas inexistentes. Hasta ahora el sitio servía el 404 por
+// defecto de Astro —fondo oscuro, tipografía monoespaciada, en inglés—, que no
+// se parece en nada al resto del sitio.
+//
+// Comparte layout con 500.astro, así que tampoco consulta Supabase: un slug de
+// producto mal escrito no debe depender de que la base responda para mostrar
+// una página decente.
+//
+// Sin WhatsApp a propósito: una URL mal tipeada no amerita empujar al visitante
+// a escribir por soporte, sólo devolverlo al catálogo.
+---
+
+<ErrorLayout
+	titulo="Página no encontrada"
+	encabezado="No encontramos esta página"
+	mensaje="El enlace puede estar mal escrito o el contenido ya no existe. Volvé al inicio para seguir viendo el catálogo."
+	icono="brujula"
+/>

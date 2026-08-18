@@ -1,7 +1,14 @@
 import type { APIRoute } from 'astro';
-import { inspeccionarVariable, hayBinding, type InspeccionVariable } from '@shared/lib/env/serverEnv';
+import {
+  inspeccionarVariable,
+  hayBinding,
+  listarClavesEnv,
+  type InspeccionVariable,
+} from '@shared/lib/env/serverEnv';
+import { buscarNombresParecidos } from '@shared/lib/env/nombresParecidos';
 import { getSupabase } from '@shared/lib/db/client';
 import { logServerError } from '@shared/lib/errors/logServerError';
+import { getBuildInfo, type BuildInfo } from '@shared/lib/build/buildInfo';
 
 // Rastreo de la configuración del worker DESPLEGADO, sin abrir el panel ni tener
 // wrangler instalado: `GET /api/diagnostico`.
@@ -41,7 +48,15 @@ interface EstadoSupabase {
 interface Diagnostico {
   ok: boolean;
   momento: string;
+  /** Qué commit generó el bundle que está respondiendo. */
+  build: BuildInfo;
   variables: Record<string, InspeccionVariable>;
+  /**
+   * Nombres de TODAS las variables de texto que recibió el worker, incluidas
+   * las que no se esperaban. Sin valores. Es lo que permite distinguir "no se
+   * cargó" de "se cargó con otro nombre".
+   */
+  clavesRecibidas: string[];
   bindings: Record<string, boolean>;
   supabase: EstadoSupabase;
   pistas: string[];
@@ -70,6 +85,7 @@ async function probarSupabase(): Promise<EstadoSupabase> {
 // convierte el endpoint en un diagnóstico y no en un volcado de estado.
 function armarPistas(
   variables: Record<string, InspeccionVariable>,
+  clavesRecibidas: readonly string[],
   bindings: Record<string, boolean>,
   supabase: EstadoSupabase
 ): string[] {
@@ -78,6 +94,19 @@ function armarPistas(
   const ausentes = Object.entries(variables)
     .filter(([, v]) => !v.presente)
     .map(([nombre]) => nombre);
+
+  // Antes que nada: si falta una y llegó otra parecida, el problema es el
+  // nombre y no el valor. Va primero porque cambia por completo qué hacer.
+  for (const nombre of ausentes) {
+    const parecidas = buscarNombresParecidos(nombre, clavesRecibidas);
+    if (parecidas.length > 0) {
+      pistas.push(
+        `${nombre} no llegó, pero sí llegó ${parecidas.join(', ')}. El nombre está mal ` +
+          'escrito o quedó cortado al guardarlo: corregilo en el panel en vez de volver ' +
+          'a cargar el valor.'
+      );
+    }
+  }
 
   if (ausentes.length === VARIABLES.length) {
     pistas.push(
@@ -91,6 +120,18 @@ function armarPistas(
       `Faltan ${ausentes.join(', ')} en Workers & Pages → barzol-web → Settings → ` +
         'Variables and Secrets. Hay que redesplegar después de guardarlas.'
     );
+
+    // BARZOL_SUPABASE_ANON_KEY es la única que vive como Secret: las otras dos
+    // las declara wrangler.jsonc y llegan solas. Si es la que falta, el
+    // problema está en el panel y no en el repositorio.
+    if (ausentes.includes('BARZOL_SUPABASE_ANON_KEY')) {
+      pistas.push(
+        'BARZOL_SUPABASE_ANON_KEY debe cargarse con tipo **Secret**, no Variable: ' +
+          'las variables de texto del panel se borran en cada `wrangler deploy`, los ' +
+          'secretos no. Verificá también que el nombre esté completo — el panel recorta ' +
+          'los nombres largos en pantalla y `..._ANON_` se ve igual que `..._ANON_KEY`.'
+      );
+    }
   }
 
   for (const [nombre, v] of Object.entries(variables)) {
@@ -142,16 +183,19 @@ function armarPistas(
 
 export const GET: APIRoute = async () => {
   const variables = Object.fromEntries(VARIABLES.map((n) => [n, inspeccionarVariable(n)]));
+  const clavesRecibidas = listarClavesEnv();
   const bindings = Object.fromEntries(BINDINGS.map((n) => [n, hayBinding(n)]));
   const supabase = await probarSupabase();
 
   const cuerpo: Diagnostico = {
     ok: supabase.ok && Object.values(variables).every((v) => v.presente && !v.problemas?.length),
     momento: new Date().toISOString(),
+    build: getBuildInfo(),
     variables,
+    clavesRecibidas,
     bindings,
     supabase,
-    pistas: armarPistas(variables, bindings, supabase),
+    pistas: armarPistas(variables, clavesRecibidas, bindings, supabase),
   };
 
   return new Response(JSON.stringify(cuerpo, null, 2), {

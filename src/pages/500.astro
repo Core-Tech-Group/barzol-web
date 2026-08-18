@@ -1,76 +1,14 @@
 ---
-import '@shared/styles/tokens.css';
+import ErrorLayout from '@landing/layout/ErrorLayout.astro';
 
 // Página que Astro sirve ante cualquier error no capturado en el servidor.
-//
-// NO usa PublicLayout a propósito, y no debe hacerlo nunca: ese layout monta
-// Header, que lee las categorías desde Supabase. Si la causa del error es
-// justamente que falta configuración o que la base no responde, el layout
-// volvería a fallar y el visitante recibiría un 500 vacío — que es exactamente
-// lo que pasaba antes de que existiera este archivo. Todo lo que hay acá es
-// autónomo: sin datos, sin islas, sin red.
-//
-// El detalle técnico del error NO se muestra: puede contener nombres de
-// variables o mensajes internos. Queda en los logs del worker, que tiene la
-// observabilidad activada en wrangler.jsonc y se consultan con `wrangler tail`.
-
-const WHATSAPP = 'https://wa.me/51950759032';
+// El motivo por el que no usa PublicLayout está explicado en ErrorLayout.astro.
 ---
 
-<html lang="es">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="robots" content="noindex" />
-		<title>Algo salió mal — Barzol</title>
-	</head>
-	<!-- tokens.css ya fija margin, font-family, background y color en body -->
-	<body style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
-		<main style="max-width:520px; text-align:center;">
-			<div
-				aria-hidden="true"
-				style="width:64px; height:64px; margin:0 auto 24px; border-radius:16px; background:var(--color-danger-bg); display:flex; align-items:center; justify-content:center;"
-			>
-				<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-					<path
-						d="M12 8v5"
-						stroke="var(--color-danger)"
-						stroke-width="2"
-						stroke-linecap="round"></path>
-					<circle cx="12" cy="16.5" r="1.2" fill="var(--color-danger)"></circle>
-					<path
-						d="M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20.2h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
-						stroke="var(--color-danger)"
-						stroke-width="1.8"
-						stroke-linejoin="round"></path>
-				</svg>
-			</div>
-
-			<h1 style="font-size:26px; font-weight:700; color:var(--color-text); margin:0 0 12px;">
-				Algo salió mal
-			</h1>
-			<p style="font-size:15px; color:var(--color-text-muted); line-height:1.7; margin:0 0 28px;">
-				No pudimos cargar esta página. Es un problema nuestro, no tuyo. Volvé a
-				intentarlo en unos minutos o escribinos por WhatsApp y te atendemos.
-			</p>
-
-			<div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-				<a
-					href="/"
-					style="display:inline-block; padding:12px 22px; border-radius:10px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none;"
-				>
-					Volver al inicio
-				</a>
-				<a
-					href={WHATSAPP}
-					rel="noopener noreferrer"
-					target="_blank"
-					style="display:inline-block; padding:12px 22px; border-radius:10px; border:1px solid var(--color-border); background:white; color:var(--color-text); font-size:14px; font-weight:600; text-decoration:none;"
-				>
-					Escribir por WhatsApp
-				</a>
-			</div>
-		</main>
-	</body>
-</html>
+<ErrorLayout
+	titulo="Algo salió mal"
+	encabezado="Algo salió mal"
+	mensaje="No pudimos cargar esta página. Es un problema nuestro, no tuyo. Volvé a intentarlo en unos minutos o escribinos por WhatsApp y te atendemos."
+	icono="alerta"
+	mostrarWhatsapp
+/>

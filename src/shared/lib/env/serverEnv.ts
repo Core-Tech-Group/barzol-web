@@ -132,6 +132,25 @@ export function inspeccionarVariable(name: string): InspeccionVariable {
   return { presente: true, longitud: valor.length, problemas };
 }
 
+/**
+ * NOMBRES —nunca valores— de las variables de texto que recibió el worker.
+ *
+ * Sirve para una pregunta que ninguna otra función responde: *"¿con qué nombre
+ * llegó realmente?"*. El panel de Cloudflare recorta los nombres largos en
+ * pantalla, así que un `BARZOL_SUPABASE_ANON_KEY` mal escrito o guardado a
+ * medias se ve idéntico al correcto. Comparar lo esperado contra lo recibido
+ * distingue en una sola mirada entre "el valor no llegó" y "llegó con otro
+ * nombre".
+ *
+ * Se excluyen los bindings, que son objetos y no configuración de texto.
+ */
+export function listarClavesEnv(): string[] {
+  const env = workerEnv as unknown as Record<string, unknown>;
+  return Object.keys(env)
+    .filter((clave) => typeof env[clave] === 'string')
+    .sort();
+}
+
 /** ¿El worker recibió este binding (R2, KV, Images, Assets)? */
 export function hayBinding(name: string): boolean {
   const valor = (workerEnv as unknown as Record<string, unknown>)[name];

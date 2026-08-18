@@ -49,7 +49,24 @@ R2 **no** aparece con credenciales: la escritura va por el binding `MEDIA`, no p
 
 En local viven en `.env` (ignorado por git), que wrangler carga dentro del worker — el build lo confirma con `Using secrets defined in .env`. En producción, en Cloudflare → Workers & Pages → `barzol-web` → Settings → Variables and Secrets. `.env.example` es la plantilla y sí se versiona.
 
+**Dónde vive cada variable en producción.** No están todas en el mismo sitio, y el reparto es deliberado:
+
+| Variable | Dónde | Por qué |
+|---|---|---|
+| `BARZOL_SUPABASE_URL` | `wrangler.jsonc` → `vars` | Pública. Versionada y establecida por el propio despliegue |
+| `BARZOL_R2_PUBLIC_URL` | `wrangler.jsonc` → `vars` | Pública. Igual que la anterior |
+| `BARZOL_SUPABASE_ANON_KEY` | **Secret**, vía `scripts/subir-secretos.mjs` | Es una clave, aunque esté pensada para exponerse. Los secretos son los únicos que `wrangler deploy` nunca borra |
+| `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | **Secret**, si algún día se usa | Salta RLS. Jamás como variable ni en el archivo |
+
+> **Los secretos se cargan por línea de comandos, no por el panel.** `node scripts/subir-secretos.mjs` los lee de `.env` y los entrega por stdin. No es una preferencia de estilo: el panel confirma que guardó, pero no contra qué recurso, y con un proyecto de Pages y un Worker llamados igual conviviendo en la cuenta, un secreto cargado "correctamente" puede terminar en el recurso equivocado sin ningún aviso. Pasó, y costó siete revisiones de diagnóstico.
+>
+> Ante una variable que no llega al worker, el **primer** comando es `npx wrangler secret list`: es la única fuente que dice qué tiene realmente el worker desplegado.
+
+La razón del reparto es operativa, no estética: wrangler trata `wrangler.jsonc` como única fuente de verdad al estilo terraform y **borra en cada despliegue las variables cargadas desde el panel**. Eso tumbó el sitio tres despliegues seguidos. Los valores públicos se declaran en el archivo, donde el despliegue los establece solo; el que es una clave va como secreto, categoría que wrangler no toca (sólo se borra con `wrangler secret delete`). Así no queda ninguna variable expuesta al borrado.
+
 > **`keep_vars: true` en `wrangler.jsonc` no es opcional mientras las variables vivan en el panel.** Por defecto wrangler trata ese archivo como única fuente de verdad, al estilo terraform: como no declara ningún bloque `vars`, cada `wrangler deploy` **borra** las variables cargadas desde el panel. El pipeline de Cloudflare corre `npx wrangler deploy` en cada push, así que el sitio se caía solo al desplegar. Los Secrets no se ven afectados. Si algún día se decide versionar las variables en el archivo, esa línea deja de hacer falta.
+
+> **Única excepción a la regla anterior: `shared/lib/build/buildInfo.ts`.** El SHA del commit y la fecha de compilación se inyectan en tiempo de build desde `astro.config.mjs` (`vite.define`), no se leen con `serverEnv.ts`. No es una inconsistencia: `WORKERS_CI_COMMIT_SHA` existe **sólo en el entorno de build** de Cloudflare y no en el runtime del worker, así que leerlo desde `cloudflare:workers` devolvería siempre `undefined`. Por eso vive en su propio archivo, con la excepción explicada, en vez de mezclarse con la lectura de configuración normal. Lo consume `/api/diagnostico` para poder responder qué versión del código está atendiendo.
 
 > **Nota sobre `worker-configuration.d.ts`:** lo genera `npm run generate-types` a partir de `wrangler.jsonc` y **se versiona**, porque `tsconfig.json` lo incluye: sin él, `npm run check` falla en un clon recién hecho. Hay que regenerarlo cada vez que cambien los bindings.
 
@@ -87,7 +104,8 @@ src/
 │
 ├── landing/                      # TODO lo del visitante — una carpeta por vista, nada más entra aquí
 │   ├── layout/
-│   │   └── PublicLayout.astro      # Header + <slot /> + Footer, usado por TODAS las vistas de landing/
+│   │   ├── PublicLayout.astro      # Header + <slot /> + Footer, usado por TODAS las vistas de landing/
+│   │   └── ErrorLayout.astro       # 404 y 500 — autónomo, SIN Header ni acceso a datos (ver abajo)
 │   ├── shared/                     # Compartido SOLO entre vistas del landing (no lo usa admin/)
 │   │   ├── Header.astro             # Barra de anuncio + mega menú categorías + mega menú servicios
 │   │   ├── Footer.astro
@@ -132,6 +150,8 @@ src/
     │   │   └── client.ts            # `getSupabase()` — instancia perezosa, única para todo el server
     │   ├── env/
     │   │   └── serverEnv.ts         # ÚNICA lectura de variables de entorno del servidor
+    │   ├── build/
+    │   │   └── buildInfo.ts         # Commit y fecha del bundle — inyectados en build (ver excepción arriba)
     │   ├── productos/
     │   │   ├── productoService.ts   # ÚNICA fuente de productos (mock hoy, Supabase mañana)
     │   │   └── productoMapper.ts    # fila cruda de `product` (+ joins) → `Product` — sin usar hasta que exista la consulta real
@@ -204,7 +224,8 @@ src/
 | `/servicios` | PublicLayout | `landing/servicios/ServiciosView.astro` | Institucional |
 | `/nosotros` | PublicLayout | `landing/nosotros/NosotrosView.astro` | Institucional |
 | `/busqueda` | PublicLayout | `landing/busqueda/BusquedaView.astro` | Resultados de búsqueda, usa `Pagination.astro` |
-| `/500` | — (autónoma) | `pages/500.astro` | Error de servidor. **Sin layout a propósito:** `PublicLayout` monta `Header`, que consulta Supabase; si el error viene de ahí, la página de error volvería a fallar |
+| `/500` | ErrorLayout | `pages/500.astro` | Error de servidor |
+| `/404` | ErrorLayout | `pages/404.astro` | Ruta inexistente |
 | `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (Supabase Auth real) |
 | `/admin` | AdminLayout | `admin/dashboard/DashboardView.astro` | Dashboard del panel |
 | `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD de productos |
@@ -353,3 +374,7 @@ Registro de decisiones tomadas durante la construcción que no estaban explícit
 | Despliegue (2026-08-11) | Se documenta el hosting como **Workers con assets**, no Pages | El despliegue real corre `wrangler deploy` sobre `*.workers.dev`. La distinción no es cosmética: cambia dónde se cargan las variables de entorno en el panel |
 | Despliegue (2026-08-11) | `src/pages/500.astro` **sin layout**, autónoma y sin acceso a datos | El primer despliegue devolvió 500 con cuerpo vacío. Una página de error que dependa de `PublicLayout` → `Header` → Supabase volvería a fallar justo cuando la causa es la base o la configuración |
 | Despliegue (2026-08-11) | La página de error no muestra el detalle técnico | El mensaje puede contener nombres de variables o estado interno; va a los logs del worker, que ya tiene observabilidad activada |
+| Despliegue (2026-08-14) | Se **descartó migrar a Cloudflare Pages** y se confirmó Workers con assets | La documentación de Cloudflare recomienda Workers para proyectos nuevos y sólo publica guía de migración *desde* Pages *hacia* Workers. Pages sigue soportado, pero todo el desarrollo de features va a Workers |
+| Despliegue (2026-08-14) | Se **descartó migrar a Workers KV** como almacén de datos | KV es clave-valor de consistencia eventual (hasta 60s de propagación): no admite filtros, joins ni RLS, que es justo lo que usa el catálogo. Ya está en uso donde corresponde — el binding `SESSION` de las sesiones de Astro. Queda como posible caché de lectura, no como base de datos |
+| Despliegue (2026-08-14) | `landing/layout/ErrorLayout.astro` compartido por `404.astro` y `500.astro` | Las dos páginas necesitan el mismo cascarón autónomo; duplicarlo habría dejado dos copias que se desincronizan. Las páginas quedan en ~15 líneas y sólo declaran su texto e icono |
+| Despliegue (2026-08-15) | El commit y la fecha del build se inyectan con `vite.define` y se exponen en `/api/diagnostico` | Una sesión entera se fue en descubrir que el worker corría código de dos commits atrás, adivinando por rutas. La identidad del bundle desplegado tiene que poder consultarse en una petición |

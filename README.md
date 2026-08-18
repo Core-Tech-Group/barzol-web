@@ -46,14 +46,35 @@ Se despliega como **Worker de Cloudflare con assets estáticos** (`wrangler depl
 
 > **Un build verde no significa un sitio funcionando.** Las variables de entorno son de *runtime*: si faltan, el despliegue sale correcto y el sitio responde 500 en todas las rutas. Es el fallo más probable de un primer deploy.
 
-**Antes del primer despliegue**, cargar todas las variables de `.env.example` en
-Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**, y volver a desplegar para que el Worker las tome. `BARZOL_R2_PUBLIC_URL` es tan obligatoria como las de Supabase: sin ella la subida funciona pero falla al construir la URL de la imagen.
+Las variables **públicas** (`BARZOL_SUPABASE_URL`, `BARZOL_R2_PUBLIC_URL`) ya están declaradas en `wrangler.jsonc` → `vars`, así que las establece el propio despliegue y no hay que cargar nada a mano. Las **secretas** se cargan una sola vez con el script de la sección siguiente. `BARZOL_R2_PUBLIC_URL` es tan obligatoria como las de Supabase: sin ella la subida funciona pero falla al construir la URL de la imagen.
 
 `BARZOL_SUPABASE_SERVICE_ROLE_KEY` va siempre como **Secret**, nunca como variable en texto plano — salta las políticas RLS.
 
 El contenido multimedia vive en **Cloudflare R2** (bucket `barzol-web`), enlazado como binding `MEDIA` en `wrangler.jsonc`. Al estar hosting y storage en la misma plataforma, la escritura no usa credenciales: el acceso lo concede el binding. Ver ARCHITECTURE.md § Storage de multimedia.
 
 Tras cambiar bindings en `wrangler.jsonc`, correr `npm run generate-types` y commitear `worker-configuration.d.ts`.
+
+### Cargar los secretos en Cloudflare
+
+Las variables **públicas** se declaran en `wrangler.jsonc` → `vars` y las establece el propio despliegue. Las **secretas** se cargan aparte, una sola vez:
+
+```bash
+npx wrangler login                  # una vez por máquina
+node scripts/subir-secretos.mjs     # lee .env y sube sólo las secretas
+npx wrangler secret list            # confirma
+```
+
+El script no imprime los valores ni los pasa por la línea de comandos —donde quedarían en el historial del shell—: los entrega por stdin. Se prefiere a cargarlos desde el panel porque ahí el campo recorta los nombres largos y no hay forma de auditar qué quedó guardado.
+
+Para comprobar qué recibió el worker, sin exponer ningún valor:
+
+```bash
+curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+```
+
+El campo `clavesRecibidas` lista los **nombres** de las variables que llegaron.
+
+> **Si una variable no llega al worker, empezar por `npx wrangler secret list`.** El panel de Cloudflare confirma que guardó, pero no contra qué recurso: si en la cuenta conviven un proyecto de Pages y un Worker con el mismo nombre, un secreto puede quedar cargado en el equivocado sin ningún aviso. Ese comando es la única fuente que dice qué tiene realmente el Worker desplegado.
 
 ### Diagnosticar un fallo en producción
 

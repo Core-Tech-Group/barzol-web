@@ -4,17 +4,30 @@
 	"compatibility_flags": ["global_fetch_strictly_public"],
 	"name": "barzol-web",
 	"main": "@astrojs/cloudflare/entrypoints/server",
-	// Conserva las variables cargadas en el panel de Cloudflare.
+	// ─── Configuración pública del sitio ──────────────────────────────────
 	//
-	// Por defecto wrangler trata este archivo como única fuente de verdad, al
-	// estilo terraform: como acá no hay bloque `vars`, cada `wrangler deploy`
-	// BORRA las variables que se hayan cargado desde el panel. Eso fue lo que
-	// dejó el sitio en 500 el 2026-08-13 — las variables estaban bien puestas y
-	// el propio despliegue las eliminó (ver BZ-34 en el kanban).
+	// Estos dos valores viven acá, versionados, y NO en el panel de Cloudflare.
+	// El motivo es concreto: wrangler trata este archivo como única fuente de
+	// verdad al estilo terraform, así que cada `wrangler deploy` BORRA las
+	// variables cargadas desde el panel. Eso tumbó el sitio tres despliegues
+	// seguidos (ver BZ-34 y BZ-46 en el kanban). Declarándolas acá el problema
+	// desaparece: el propio despliegue las establece y no hay paso manual que
+	// recordar ni nada que se pueda borrar.
 	//
-	// La alternativa es declararlas acá, pero eso mete la anon key de Supabase
-	// al repositorio; se prefiere que el panel mande. Los secretos (Secrets) no
-	// se ven afectados por esto: wrangler nunca los toca.
+	// Ninguno de los dos es secreto: el primero es la URL pública del proyecto
+	// de Supabase y el segundo, el dominio público desde el que se sirven las
+	// imágenes. Ambos ya viajan al navegador en cada visita.
+	//
+	// La anon key NO está acá: va como **Secret** en el panel. Ver BZ-49 en el
+	// kanban — hoy el despliegue no se la está entregando al worker y hay dos
+	// caminos posibles para resolverlo, uno de ellos pendiente de decisión.
+	"vars": {
+		"BARZOL_SUPABASE_URL": "https://rnfcccnesxunjtpwahce.supabase.co",
+		"BARZOL_R2_PUBLIC_URL": "https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev"
+	},
+	// Protege cualquier otra variable que se cargue desde el panel a futuro.
+	// Con el bloque `vars` de arriba ya es redundante para esas dos, pero
+	// evita repetir el mismo accidente con una tercera.
 	"keep_vars": true,
 	"assets": {
 		"directory": "./dist",
