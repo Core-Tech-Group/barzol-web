@@ -55,8 +55,12 @@ En local viven en `.env` (ignorado por git), que wrangler carga dentro del worke
 |---|---|---|
 | `BARZOL_SUPABASE_URL` | `wrangler.jsonc` → `vars` | Pública. Versionada y establecida por el propio despliegue |
 | `BARZOL_R2_PUBLIC_URL` | `wrangler.jsonc` → `vars` | Pública. Igual que la anterior |
-| `BARZOL_SUPABASE_ANON_KEY` | **Secret** en el panel | Es una clave, aunque esté pensada para exponerse. Los secretos son los únicos que `wrangler deploy` nunca borra |
+| `BARZOL_SUPABASE_ANON_KEY` | **Secret**, vía `scripts/subir-secretos.mjs` | Es una clave, aunque esté pensada para exponerse. Los secretos son los únicos que `wrangler deploy` nunca borra |
 | `BARZOL_SUPABASE_SERVICE_ROLE_KEY` | **Secret**, si algún día se usa | Salta RLS. Jamás como variable ni en el archivo |
+
+> **Los secretos se cargan por línea de comandos, no por el panel.** `node scripts/subir-secretos.mjs` los lee de `.env` y los entrega por stdin. No es una preferencia de estilo: el panel confirma que guardó, pero no contra qué recurso, y con un proyecto de Pages y un Worker llamados igual conviviendo en la cuenta, un secreto cargado "correctamente" puede terminar en el recurso equivocado sin ningún aviso. Pasó, y costó siete revisiones de diagnóstico.
+>
+> Ante una variable que no llega al worker, el **primer** comando es `npx wrangler secret list`: es la única fuente que dice qué tiene realmente el worker desplegado.
 
 La razón del reparto es operativa, no estética: wrangler trata `wrangler.jsonc` como única fuente de verdad al estilo terraform y **borra en cada despliegue las variables cargadas desde el panel**. Eso tumbó el sitio tres despliegues seguidos. Los valores públicos se declaran en el archivo, donde el despliegue los establece solo; el que es una clave va como secreto, categoría que wrangler no toca (sólo se borra con `wrangler secret delete`). Así no queda ninguna variable expuesta al borrado.
 

@@ -46,8 +46,7 @@ Se despliega como **Worker de Cloudflare con assets estáticos** (`wrangler depl
 
 > **Un build verde no significa un sitio funcionando.** Las variables de entorno son de *runtime*: si faltan, el despliegue sale correcto y el sitio responde 500 en todas las rutas. Es el fallo más probable de un primer deploy.
 
-**Antes del primer despliegue**, cargar todas las variables de `.env.example` en
-Cloudflare → Workers & Pages → `barzol-web` → Settings → **Variables and Secrets**, y volver a desplegar para que el Worker las tome. `BARZOL_R2_PUBLIC_URL` es tan obligatoria como las de Supabase: sin ella la subida funciona pero falla al construir la URL de la imagen.
+Las variables **públicas** (`BARZOL_SUPABASE_URL`, `BARZOL_R2_PUBLIC_URL`) ya están declaradas en `wrangler.jsonc` → `vars`, así que las establece el propio despliegue y no hay que cargar nada a mano. Las **secretas** se cargan una sola vez con el script de la sección siguiente. `BARZOL_R2_PUBLIC_URL` es tan obligatoria como las de Supabase: sin ella la subida funciona pero falla al construir la URL de la imagen.
 
 `BARZOL_SUPABASE_SERVICE_ROLE_KEY` va siempre como **Secret**, nunca como variable en texto plano — salta las políticas RLS.
 
@@ -74,6 +73,8 @@ curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
 ```
 
 El campo `clavesRecibidas` lista los **nombres** de las variables que llegaron.
+
+> **Si una variable no llega al worker, empezar por `npx wrangler secret list`.** El panel de Cloudflare confirma que guardó, pero no contra qué recurso: si en la cuenta conviven un proyecto de Pages y un Worker con el mismo nombre, un secreto puede quedar cargado en el equivocado sin ningún aviso. Ese comando es la única fuente que dice qué tiene realmente el Worker desplegado.
 
 ### Diagnosticar un fallo en producción
 

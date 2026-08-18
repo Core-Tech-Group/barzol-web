@@ -1,7 +1,49 @@
 # Scrumban — Despliegue en Cloudflare (Workers + R2)
 
-> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-15 (7ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-08 · **Última actualización:** 2026-08-18 (8ª revisión) · **Rama:** `main`
 > **Alcance:** puesta en producción del sitio sobre Cloudflare y del contenido multimedia sobre R2.
+
+## Estado del despliegue — 2026-08-18, 8ª revisión
+
+**`BZ-49` resuelto. El sitio está en pie: `supabase.ok: true` y ninguna ruta devuelve 500.**
+
+La causa era más simple —y más difícil de ver desde afuera— de lo que suponían las siete revisiones anteriores. Al autenticarse con `wrangler login` y preguntarle a la API qué secretos tenía el worker, la respuesta fue:
+
+```
+$ npx wrangler secret list
+[]
+```
+
+**El worker no tenía ningún secreto.** Ninguno. No era un nombre cortado ni un valor mal pegado ni un despliegue que lo descartaba: nunca hubo nada que descartar. La subida lo confirmó desde el otro lado, porque wrangler informó `Creating the secret` y no `Updating` — para la API, esa clave no existía hasta ese momento.
+
+Eso reconcilia las dos evidencias que parecían contradecirse: el panel mostraba `BARZOL_SUPABASE_ANON_KEY` con "Value encrypted", y el worker no la recibía. Ambas eran ciertas. Lo guardado en el panel no llegó a *este* worker — el candidato más probable es que se cargara sobre otro recurso de nombre idéntico (el proyecto de Pages `barzol-web` que quedó del intento anterior, que en el panel se ve casi igual que el Worker).
+
+**La lección para el runbook:** el panel confirma que guardó algo, pero no contra qué recurso. `wrangler secret list` sí, y es la única fuente que hay que creerle. Ese comando debería haber sido el primer paso del diagnóstico, no el séptimo.
+
+**Verificado en producción** tras cargar el secreto con `scripts/subir-secretos.mjs` (`BZ-51`):
+
+```json
+"clavesRecibidas": ["BARZOL_R2_PUBLIC_URL", "BARZOL_SUPABASE_ANON_KEY", "BARZOL_SUPABASE_URL"],
+"bindings":  { "MEDIA": true, "SESSION": true, "IMAGES": true, "ASSETS": true },
+"supabase":  { "ok": true, "motivo": null, "codigo": null },
+"pistas":    ["Sin problemas detectados: configuración completa y Supabase responde."]
+```
+
+Y las rutas reales, que es la prueba que importa:
+
+| Ruta | Respuesta |
+|---|---|
+| `/` | 200 — lista categorías traídas de Supabase (`clarinete`, `euphonium`, `saxo`) |
+| `/galeria`, `/nosotros`, `/servicios`, `/busqueda` | 200 |
+| `/catalogo/clarinete`, `/catalogo/euphonium`, `/catalogo/saxo` | 200 — ruta dinámica con consulta real |
+| `/admin` | 302 → login, como corresponde |
+| ruta inexistente | 404 con la página propia |
+
+Que la home liste categorías reales es lo que cierra el caso: no es sólo que la clave llegó, es que **el sitio está leyendo datos**. El camino B (declarar la clave en `wrangler.jsonc`) queda descartado y no hace falta ninguna decisión de postura: la clave vive como Secret, que era el lugar correcto desde el principio.
+
+**Nota sobre los 404 de `/productos` y `/contacto`:** no son un fallo. Esas rutas no existen en el proyecto; las equivalentes son `/catalogo/[categoria]` y `/servicios`. Se anota para no volver a perseguirlas como si fueran un error.
+
+**Lo único que queda por confirmar es la estabilidad:** que el secreto sobreviva al próximo despliegue. La teoría dice que sí —wrangler no borra secretos, sólo variables, y por eso `BZ-45` quedó anulada— pero después de siete revisiones conviene comprobarlo en vez de suponerlo. Este mismo push es la prueba: al terminar el build de Workers Builds, `clavesRecibidas` debe seguir mostrando las tres. Queda como `BZ-52`.
 
 ## Estado del despliegue — 2026-08-15, 7ª revisión
 
@@ -242,13 +284,16 @@ Ver `BZ-31` (bloqueante), `BZ-32` (variables R2 residuales, riesgo de seguridad)
 | BZ-46 | **Cargar la anon key como Secret** | 🔶 Cargada, no llega al worker | 🔴 |
 | BZ-47 | Variables públicas en `wrangler.jsonc` | ✅ Hecho y verificado en prod | 🔴 |
 | BZ-48 | Listar en el diagnóstico las claves recibidas | ✅ Hecho y verificado en prod | 🔴 |
-| BZ-49 | **Entregar la anon key al worker** | 🔶 Camino A en curso | 🔴 |
+| BZ-49 | **Entregar la anon key al worker** | ✅ Hecho | 🔴 |
 | BZ-50 | Verificar que RLS esté activo en Supabase | ⬜ Pendiente | 🔴 |
 | BZ-51 | Script para cargar secretos desde `.env` | ✅ Hecho | 🟠 |
+| BZ-52 | Confirmar que el secreto sobrevive al despliegue | 🔶 En verificación | 🔴 |
 
-**Progreso:** 31 de 51 hechas. Bloqueante activo: **BZ-49**, camino A. Falta un paso que sólo puede hacer una persona: autorizar `wrangler login` en el navegador. El resto está automatizado en `scripts/subir-secretos.mjs`.
+**Progreso:** 32 de 52 hechas. **Sin bloqueantes: el sitio responde y lee datos de Supabase.** Lo que sigue deja de ser "levantar el despliegue" y pasa a ser cerrar seguridad y funcionalidad — `BZ-50` (RLS), `BZ-07` (revocar el token de R2 expuesto), `BZ-14` (dejar de filtrar mensajes internos de error) y `BZ-37` (proteger o retirar `/api/diagnostico`).
 
-`BZ-46` queda absorbida por `BZ-49`: no era que faltara cargar el secreto, sino que cargarlo no alcanza.
+`BZ-52` es lo único que queda del hilo del despliegue: comprobar que el secreto sigue ahí después de este push.
+
+`BZ-46` queda absorbida por `BZ-49`. Su título —«está cargada pero no llega»— resultó ser falso en la primera mitad: nunca estuvo cargada en este worker.
 
 `BZ-45` queda anulada: probaba si `keep_vars` conservaba las variables del panel, pero con `BZ-47` las públicas ya no viven ahí y la anon key pasa a ser un secreto, categoría que wrangler no borra. El escenario que iba a verificar dejó de existir.
 
@@ -528,14 +573,10 @@ Documentado en el README junto al resto del flujo de despliegue.
 
 ## 🚧 Bloqueante
 
-### BZ-49 · Entregar la anon key al worker 🔴
-**Diagnóstico cerrado, dos caminos posibles.** Está descartado que sea el nombre, el valor o el código: el secreto sencillamente no llega, y las dos fuentes independientes coinciden (ver el estado de la 7ª revisión).
+### BZ-49 · Entregar la anon key al worker ✅ 🔴
+**Resuelto por el camino A.** El worker no tenía ningún secreto cargado: `wrangler secret list` devolvió `[]`, y al subirlo wrangler informó `Creating the secret`, no `Updating`. Lo que mostraba el panel no correspondía a este worker. Ver el estado de la 8ª revisión.
 
-#### Camino A — cargar el secreto por línea de comandos *(elegido, en curso)*
-
-El panel es el sospechoso: es el único punto donde se cargó el secreto y el único que no se puede auditar desde afuera. `wrangler secret put` habla directo con la API y evita cualquier recorte o rareza de la interfaz.
-
-Se automatizó en **`scripts/subir-secretos.mjs`** (`BZ-51`) para no volver a depender de copiar y pegar:
+**Cómo se resolvió:**
 
 ```bash
 npx wrangler login                  # una vez por máquina — abre el navegador
@@ -543,30 +584,28 @@ node scripts/subir-secretos.mjs     # lee .env y sube sólo las secretas
 npx wrangler secret list            # confirma
 ```
 
-El script lee el valor de `.env`, lo entrega **por stdin** —nunca por la línea de comandos, donde quedaría en el historial del shell— y no lo imprime: sólo informa cuántos caracteres tenía.
+El script (`BZ-51`) lee el valor de `.env`, lo entrega **por stdin** —nunca por la línea de comandos, donde quedaría en el historial del shell— y no lo imprime: sólo informa cuántos caracteres tenía.
 
-Después, abrir `/api/diagnostico` y mirar `clavesRecibidas`.
+**Verificado:** `/api/diagnostico` devuelve las tres variables presentes y `supabase.ok: true`; la home lista categorías reales traídas de Supabase. Falta sólo confirmar que sobrevive al despliegue (`BZ-52`).
 
-- **Si aparece la clave:** el problema era el flujo del panel. Queda por comprobar que sobreviva al siguiente push — si se borra, el camino B pasa a ser la única salida estable.
-- **Si no aparece:** el despliegue está descartando el secreto, y el camino A no tiene arreglo desde nuestro lado.
+**El camino B queda descartado.** Consistía en declarar la anon key en `wrangler.jsonc` junto a las públicas, y existía sólo por si el despliegue estuviera descartando el secreto — cosa que resultó falsa. La clave se queda como Secret, fuera del repositorio, que era el lugar correcto. Con esto **no hace falta ninguna decisión de postura** del dueño del proyecto, y `BZ-50` (verificar RLS) vuelve a ser lo que era: muy recomendable, pero no una obligación derivada de haber versionado una credencial.
 
-**Ventaja:** mantiene la clave fuera del repositorio. **Riesgo:** si `wrangler deploy` la sigue descartando, se repite el ciclo.
+**Lo que hay que recordar de todo esto:** el panel de Cloudflare confirma que guardó, pero no contra qué recurso, y con un proyecto de Pages y un Worker del mismo nombre conviviendo, eso alcanzó para costar siete revisiones. `wrangler secret list` es la única fuente confiable y debe ser el **primer** paso ante una variable que no llega, no el último.
 
-#### Camino B — declarar la anon key en `wrangler.jsonc` junto a las otras dos
+### BZ-52 · Confirmar que el secreto sobrevive al despliegue 🔶 🔴
+El secreto se cargó fuera del ciclo de despliegue, así que queda comprobar que un `wrangler deploy` no lo borre — que es exactamente lo que pasó tres veces con las variables del panel (`BZ-34`, `BZ-46`).
 
-Usa el mecanismo **ya demostrado** en este proyecto: las dos variables declaradas ahí llegan sin fallar, despliegue tras despliegue. Elimina el paso manual y el problema de raíz.
+La documentación de Cloudflare dice que no ocurre: *"Wrangler will not delete your secrets unless you run `wrangler secret delete`"*. Y el reparto actual lo refuerza: las públicas viven en `wrangler.jsonc` y no dependen de nada manual. Pero después de siete revisiones basadas en lo que debería pasar, corresponde mirarlo.
 
-**Es una decisión de postura, no técnica, y por eso queda abierta.** Los hechos para tomarla:
+**Prueba:** este mismo push dispara un build de Workers Builds. Al terminar:
 
-- La clave es la **publishable** de Supabase, diseñada para exponerse: viaja al navegador en cualquier aplicación de Supabase. Lo que protege los datos es RLS, no el secreto de esta clave.
-- **Ya está versionada** en `.env.example`, que se commitea. Ponerla en `wrangler.jsonc` no agrega exposición nueva sobre el mismo repositorio.
-- En contra: deja una credencial en texto plano en el repositorio, y eso vuelve la rotación más incómoda y depende por completo de que el repositorio siga siendo privado.
+```bash
+curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+```
 
-> Se intentó aplicar este camino durante la sesión y **el propio entorno lo bloqueó** al detectar la escritura de una credencial en un archivo versionado. El bloqueo es razonable: coincide con que la decisión corresponde al dueño del proyecto, no a quien implementa. Queda documentado y sin aplicar.
+**Se cierra si** `clavesRecibidas` sigue mostrando las tres claves y `supabase.ok` sigue en `true`, con un `build.commit` distinto al de ahora — ese último detalle importa, porque si el commit no cambió la prueba no ocurrió.
 
-**Si se elige el camino B**, `BZ-50` (verificar RLS) deja de ser recomendable y pasa a ser obligatorio antes de publicar el sitio.
-
-**Criterio de aceptación, para cualquiera de los dos:** `/api/diagnostico` responde `"ok": true` con las tres variables presentes, **y sigue en `ok: true` después del siguiente push**.
+**Si el secreto desapareciera**, la salida no es volver al panel: es agregar la carga del secreto al flujo de despliegue, o reabrir el camino B de `BZ-49` con RLS verificado como condición previa.
 
 ### BZ-50 · Verificar que RLS esté activo en Supabase 🔴
 Toda la seguridad de los datos descansa en las policies de RLS, no en el secreto de la anon key — que ya está en el repositorio vía `.env.example` y viaja al navegador por diseño. Nadie verificó todavía que RLS esté realmente habilitado en las tablas.
@@ -575,7 +614,7 @@ Toda la seguridad de los datos descansa en las policies de RLS, no en el secreto
 
 **Prueba rápida:** con la anon key, intentar un `INSERT` contra `product` desde fuera de la aplicación. Debe fallar. Si funciona, cualquiera con la clave puede escribir en el catálogo.
 
-Se vuelve **obligatorio** si se elige el camino B de `BZ-49`.
+Deja de ser una obligación derivada de `BZ-49` —el camino B se descartó y la clave quedó como Secret—, pero sigue siendo lo más importante del lote de seguridad: el sitio ya está sirviendo datos a cualquiera que lo visite.
 
 ---
 
@@ -862,8 +901,8 @@ Candidatos naturales: el árbol de categorías del `Header` (cambia poquísimo y
 ## Mapa de dependencias
 
 ```
-BZ-49 (anon key al worker) ──┬── BZ-24 (verificación post-deploy)
-   └── camino B exige BZ-50  └── BZ-25 (subida real a R2) ── también BZ-10
+BZ-49 (anon key al worker) ✅ ─┬── BZ-52 (¿sobrevive al deploy?) ── BZ-24
+                               └── BZ-25 (subida real a R2) ── también BZ-10
 BZ-32 (borrar R2_* del panel) ─ BZ-07 (revocar token) ── misma visita, es seguridad
 BZ-39 (remoto git) ──────────── independiente, 1 comando
 BZ-14 (fuga de mensajes) ────── independiente, ya ocurrió en producción
@@ -874,9 +913,9 @@ BZ-28 (dominio bucket) ──────── hacer ANTES de cargar contenido 
 BZ-43 (caché KV) ────────────── sólo con el sitio estable
 ```
 
-**Orden sugerido:** BZ-49 (camino A primero) → BZ-50 → BZ-24 → BZ-07 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
+**Orden sugerido:** BZ-52 → BZ-07 → BZ-50 → BZ-24 → BZ-39 → BZ-14 → BZ-37 → BZ-26 → BZ-10 → BZ-25 → BZ-28 → BZ-11 → BZ-27.
 
-**Empezar por el camino A de `BZ-49`**, que no compromete nada: si `wrangler secret put` resuelve la entrega, el sitio levanta sin poner credenciales en el repositorio. El camino B queda como respaldo si el despliegue sigue descartando el secreto.
+**Con el sitio en pie, lo urgente cambia de naturaleza.** `BZ-52` va primero porque es sólo mirar el diagnóstico después de este push. Enseguida `BZ-07`: el token de R2 quedó expuesto en una captura y sigue vivo — es lo único de la lista que empeora con el tiempo. Después `BZ-50`, porque el sitio ya sirve datos públicamente y nadie verificó todavía que RLS impida escribirlos.
 
 **`BZ-32` se resolvió sola.** `clavesRecibidas` lo confirma: el worker sólo recibe `BARZOL_R2_PUBLIC_URL` y `BARZOL_SUPABASE_URL`. Las tres variables `R2_*` residuales ya no llegan — el despliegue las eliminó al no estar declaradas en `wrangler.jsonc`. Queda únicamente revocar el token en R2 (`BZ-07`).
 
