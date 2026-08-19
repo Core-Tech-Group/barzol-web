@@ -7,11 +7,12 @@ import type { CategoryRow } from '../categorias/categoriaMapper';
 // product_feature(content, sort_order)')`.
 //
 // `category_id` es la ÚNICA FK de `product` hacia `category` (ver
-// DATABASE_SCHEMA.md) — apunta siempre a una categoría hoja (el trigger
-// `trg_product_category_leaf` lo exige), es decir, a lo que la app llama
-// "subcategoría". El instrumento (`Product.categoriaId`) no se guarda aparte:
-// se deriva subiendo un nivel por `parent_category_id`, por eso el mapper
-// necesita también las filas de `category` (para resolver ese padre).
+// DATABASE_SCHEMA.md) — puede apuntar a una subcategoría (categoría hoja) o
+// directo al instrumento, cuando el producto no tiene subcategoría asignada.
+// El instrumento (`Product.categoriaId`) no se guarda aparte: se deriva
+// subiendo un nivel por `parent_category_id` si `category_id` tiene padre;
+// si no tiene padre, `category_id` YA ES el instrumento y no hay
+// subcategoría. Por eso el mapper necesita también las filas de `category`.
 export interface ProductoRow {
   id: string;
   code: number;

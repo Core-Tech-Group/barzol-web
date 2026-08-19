@@ -98,7 +98,11 @@ CREATE TRIGGER trg_category_updated_at
 
 -- =========================================================
 -- 6. PRODUCT
--- category_id debe apuntar a una categoría "hoja" (sin subcategorías)
+-- category_id puede apuntar a cualquier nivel del árbol de category —
+-- instrumento o subcategoría — no solo a una hoja: hay instrumentos sin
+-- subcategorías definidas todavía, y un producto tiene que poder asociarse
+-- igual. Hasta el 2026-08-14 un trigger (trg_product_category_leaf, abajo
+-- eliminado) lo exigía; se sacó a pedido explícito para permitir esto.
 -- vendor_id / category_id usan RESTRICT: no se puede borrar una marca
 -- o categoría mientras tenga productos asociados
 -- code autogenerado por secuencia
@@ -135,26 +139,6 @@ CREATE INDEX idx_product_status ON product(status) WHERE is_active = true;
 CREATE TRIGGER trg_product_updated_at
     BEFORE UPDATE ON product
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- Regla de negocio: category_id debe ser una categoría "hoja"
--- (sin subcategorías propias) — no se puede validar con un CHECK simple
-CREATE OR REPLACE FUNCTION check_product_category_is_leaf()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM category WHERE parent_category_id = NEW.category_id
-    ) THEN
-        RAISE EXCEPTION
-            'category_id % no es una categoría hoja (tiene subcategorías)',
-            NEW.category_id;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_product_category_leaf
-    BEFORE INSERT OR UPDATE OF category_id ON product
-    FOR EACH ROW EXECUTE FUNCTION check_product_category_is_leaf();
 
 
 -- =========================================================

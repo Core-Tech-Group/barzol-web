@@ -53,11 +53,13 @@ interface Props {
 const PAGE_SIZE = 10;
 const EMPTY_PHOTOS: (string | null)[] = [null, null, null, null, null];
 
-function emptyDraft(category: string, instrumentsByCategory: Record<string, string[]>, vendor: string): EditDraft {
+function emptyDraft(category: string, vendor: string): EditDraft {
   return {
     name: '',
     category,
-    instrument: (instrumentsByCategory[category] || [])[0] || '',
+    // La subcategoría es opcional — arranca sin elegir, no con la primera
+    // de la lista (ver productoService.ts: resolveCategoryLeafId).
+    instrument: '',
     vendor,
     price: '',
     originalPrice: '',
@@ -211,7 +213,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   function openNewProduct() {
     resetPhotoPreviews();
     const firstCat = categories.find((c) => c !== 'Todas') || '';
-    setEditDraft(emptyDraft(firstCat, instrumentsByCategory, vendors[0] || 'BARZOL'));
+    setEditDraft(emptyDraft(firstCat, vendors[0] || 'BARZOL'));
     setEditIndex(-1);
     setShowValidation(false);
   }
@@ -1167,8 +1169,9 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                                   key={opt}
                                   type="button"
                                   onClick={() => {
-                                    const insts = instrumentsByCategory[opt] || [];
-                                    setEditDraft((d) => (d ? { ...d, category: opt, instrument: insts[0] || '' } : d));
+                                    // Cambiar de categoría limpia la subcategoría en vez de
+                                    // autoseleccionar la primera — es opcional, la elige el admin.
+                                    setEditDraft((d) => (d ? { ...d, category: opt, instrument: '' } : d));
                                     setOpenDropdown(null);
                                   }}
                                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 13px', border: 'none', background: isSelected ? 'var(--color-primary-light)' : 'white', color: isSelected ? 'var(--color-primary)' : 'var(--color-text)', fontSize: 13.5, fontWeight: isSelected ? 600 : 400, cursor: 'pointer', textAlign: 'left' }}
@@ -1194,7 +1197,9 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                           onClick={() => setOpenDropdown((d) => (d === 'sub' ? null : 'sub'))}
                           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 13px', border: `1.5px solid ${openDropdown === 'sub' ? 'var(--color-primary)' : 'var(--color-border)'}`, borderRadius: 8, fontSize: 13.5, color: 'var(--color-text)', background: 'white', cursor: 'pointer' }}
                         >
-                          {editDraft.instrument}
+                          <span style={{ color: editDraft.instrument ? 'var(--color-text)' : 'var(--color-text-faint)' }}>
+                            {editDraft.instrument || 'Sin subcategoría'}
+                          </span>
                           <span style={{ flexShrink: 0, transform: openDropdown === 'sub' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.12s' }}>
                             <Icon size={13}>
                               <path d="M6 9l6 6 6-6" stroke="var(--color-text-faint)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1205,6 +1210,16 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                           <>
                             <div onClick={() => setOpenDropdown(null)} style={{ position: 'fixed', inset: 0, zIndex: 9 }} />
                             <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', border: '1px solid var(--color-border)', borderRadius: 10, boxShadow: '0 12px 28px rgba(0,0,0,0.14)', zIndex: 10, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditDraft((d) => (d ? { ...d, instrument: '' } : d));
+                                  setOpenDropdown(null);
+                                }}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 13px', border: 'none', borderBottom: '1px solid var(--color-border-faint)', background: !editDraft.instrument ? 'var(--color-primary-light)' : 'white', color: !editDraft.instrument ? 'var(--color-primary)' : 'var(--color-text-faint)', fontSize: 13.5, fontWeight: !editDraft.instrument ? 600 : 400, fontStyle: 'italic', cursor: 'pointer', textAlign: 'left' }}
+                              >
+                                Sin subcategoría
+                              </button>
                               {subOptions.map((opt) => {
                                 const isSelected = opt === editDraft.instrument;
                                 return (

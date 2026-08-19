@@ -72,10 +72,10 @@ export async function getProductosPublicados(): Promise<Product[]> {
 // categoría" (ProductoView) — filtra por categoría, publicado+activo, en
 // vez de traer todo product y filtrar en JS.
 //
-// `product.category_id` (DB) SIEMPRE apunta a una categoría hoja
-// (subcategoría) — nunca al instrumento en sí (ver productoMapper.ts). Por
-// eso este filtro recibe la lista de ids hoja del instrumento: su propio id
-// (por si se usa directo, sin subcategorías) + el de cada subcategoría.
+// `product.category_id` (DB) puede apuntar a una subcategoría o directo al
+// instrumento (ver productoMapper.ts) — por eso este filtro recibe la lista
+// de ids del instrumento: su propio id (productos sin subcategoría) + el de
+// cada subcategoría (productos con subcategoría asignada).
 export async function getProductosByCategoria(
   leafCategoryIds: string[],
   opts: { excludeId?: string; limit?: number } = {}
@@ -153,6 +153,10 @@ export interface ProductoWriteInput {
   personalizable: boolean;
 }
 
+// La subcategoría es opcional: un producto puede asociarse directo al
+// instrumento aunque tenga subcategorías definidas (p. ej. cuando todavía no
+// existe la subcategoría adecuada). `category_id` acepta cualquier nivel del
+// árbol — no hay restricción de "solo hoja" a nivel de base de datos.
 async function resolveCategoryLeafId(categoriaNombre: string, subcategoriaNombre: string | null): Promise<number> {
   const categorias = await getCategorias();
   const categoria = categorias.find((c) => c.nombre === categoriaNombre);
@@ -162,9 +166,6 @@ async function resolveCategoryLeafId(categoriaNombre: string, subcategoriaNombre
     const sub = categoria.subcategorias.find((s) => s.nombre === subcategoriaNombre);
     if (!sub) throw new Error(`Subcategoría "${subcategoriaNombre}" no encontrada en "${categoriaNombre}".`);
     return Number(sub.id);
-  }
-  if (categoria.subcategorias.length > 0) {
-    throw new Error(`"${categoriaNombre}" tiene subcategorías — hay que elegir una.`);
   }
   return Number(categoria.id);
 }

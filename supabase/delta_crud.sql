@@ -50,3 +50,9 @@ create policy "admin write" on gallery_item for all to authenticated
 create policy "admin write" on site_configuration for all to authenticated
   using (exists (select 1 from admin_profile where id = auth.uid()))
   with check (exists (select 1 from admin_profile where id = auth.uid()));
+
+-- 9) 2026-08-14 — un producto ya puede asociarse a cualquier nivel del
+-- árbol de category (instrumento o subcategoría), no solo a una hoja.
+-- Ejecutado en Supabase — ver schema.sql y productoService.ts.
+drop trigger if exists trg_product_category_leaf on product;
+drop function if exists check_product_category_is_leaf();

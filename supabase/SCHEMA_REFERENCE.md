@@ -44,7 +44,7 @@ erDiagram
         numeric price
         numeric original_price "nullable"
         integer vendor_id FK
-        integer category_id FK "debe ser categoria hoja, sin subcategorias"
+        integer category_id FK "instrumento o subcategoria, cualquier nivel"
         product_status status "enum: draft / published"
         boolean is_active
         boolean is_personalizable
@@ -164,7 +164,7 @@ erDiagram
 | price | numeric(10,2) | |
 | original_price | numeric(10,2) | nullable — precio tachado |
 | vendor_id | integer | FK → `vendor.id` |
-| category_id | integer | FK → `category.id`. **Regla de negocio:** debe apuntar a una categoría "hoja" (sin subcategorías propias) — no se puede asignar un producto a una categoría intermedia. Esto no se puede validar con un `CHECK` simple en SQL (requiere consultar si la categoría tiene hijos), así que se aplica con un trigger `BEFORE INSERT/UPDATE` o validación en el backend antes de guardar |
+| category_id | integer | FK → `category.id`. Puede apuntar a cualquier nivel del árbol — instrumento o subcategoría. Hasta el 2026-08-14 un trigger exigía que fuera siempre una hoja; se sacó para permitir productos sin subcategoría asignada (categoría sin subcategorías definidas todavía, por ejemplo) |
 | status | `product_status` (enum) | `draft` \| `published`. Ver definición del tipo abajo |
 | is_active | boolean | visible/oculto, independiente de `status` |
 | is_personalizable | boolean | |
@@ -276,13 +276,11 @@ El formulario de producto en el admin debe cambiar el campo de texto libre `vend
 
 ## Nota sobre `product.category_id` (revertido a 1 sola categoría por producto)
 
-Se elimina `product_categories` (muchos a muchos). Cada producto vuelve a tener **una sola** `category_id`, con una regla adicional: debe ser una categoría de último nivel (sin subcategorías propias) — nunca una categoría intermedia como "Accesorios".
+Se elimina `product_categories` (muchos a muchos). Cada producto vuelve a tener **una sola** `category_id`.
 
 **Trade-off aceptado conscientemente:** con esto, un producto ya no puede pertenecer simultáneamente a, por ejemplo, `Sordinas` y `Trompeta`. El filtro cruzado "ver todo lo de Trompeta" (sordinas + soportes + lo que sea, todo compatible con ese instrumento) **ya no es posible con este modelo**, salvo que en el futuro se agregue el instrumento como un atributo/etiqueta aparte del árbol de categorías — la alternativa que se descartó antes en la conversación. Queda documentado aquí para que la decisión no se pierda de vista más adelante si el negocio la vuelve a necesitar.
 
-**Cómo validar la regla "solo categorías hoja":** un `CHECK` de columna no puede consultar si `category_id` tiene hijos en la misma tabla `category`. Dos formas de aplicarlo:
-- **Trigger de base de datos** (`BEFORE INSERT OR UPDATE ON product`) que verifique `NOT EXISTS (SELECT 1 FROM category WHERE parent_category_id = NEW.category_id)`.
-- **Validación en el backend**, antes de guardar — más simple de mantener, pero depende de que todo el código pase siempre por esa capa (un trigger es más seguro porque protege incluso ante escrituras directas a la base de datos).
+**Actualización 2026-08-14 — se sacó la regla "solo categorías hoja":** originalmente `category_id` estaba restringido a categorías de último nivel (sin subcategorías propias), forzado con un trigger `BEFORE INSERT/UPDATE ON product`. Se revirtió a pedido explícito: hay instrumentos sin subcategorías definidas todavía, y un producto tiene que poder asociarse directo al instrumento en ese caso — no solo cuando el instrumento no tiene ninguna subcategoría, sino también cuando sí tiene pero ninguna aplica todavía. `category_id` ahora acepta cualquier nivel del árbol, sin restricción a nivel de base de datos; ver `resolveCategoryLeafId` en `productoService.ts` para la resolución (subcategoría si se eligió, si no el instrumento tal cual).
 
 ## Nota sobre `product.status` (enum nativo en vez de varchar)
 
