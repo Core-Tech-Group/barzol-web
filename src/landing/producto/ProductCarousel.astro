@@ -8,6 +8,7 @@ interface Product {
   precioOriginal?: number;
   marca?: string;
   isNew?: boolean;
+  foto?: string;
 }
 
 interface Props {
@@ -21,7 +22,7 @@ const { title, viewAllHref, products } = Astro.props;
 
 <div class="product-carousel" style="margin-top:44px;">
 	<div style="display:flex; align-items:center; gap:14px; margin-bottom:18px;">
-		<h2 style="font-size:16px; font-weight:600; color:var(--color-text);">{title}</h2>
+		<h2 style="font-size:19px; font-weight:600; color:var(--color-text);">{title}</h2>
 		{viewAllHref && (
 			<a href={viewAllHref} style="font-size:12px; font-weight:500; color:var(--color-primary); text-decoration:none; margin-left:auto;">Ver todo</a>
 		)}
@@ -40,6 +41,7 @@ const { title, viewAllHref, products } = Astro.props;
 						precioOriginal={product.precioOriginal}
 						marca={product.marca}
 						isNew={product.isNew}
+						foto={product.foto}
 					/>
 				</div>
 			))}

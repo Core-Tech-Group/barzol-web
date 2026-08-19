@@ -6,9 +6,10 @@ interface Props {
   precioOriginal?: number;
   marca?: string;
   isNew?: boolean;
+  foto?: string;
 }
 
-const { href, nombre, precio, precioOriginal, marca = 'BARZOL', isNew = false } = Astro.props;
+const { href, nombre, precio, precioOriginal, marca = 'BARZOL', isNew = false, foto } = Astro.props;
 ---
 
 <a
@@ -16,12 +17,18 @@ const { href, nombre, precio, precioOriginal, marca = 'BARZOL', isNew = false } 
 	class="product-card"
 	style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); cursor:pointer; overflow:hidden; text-decoration:none; display:block; transition:box-shadow 0.18s ease,transform 0.18s ease;"
 >
-	<div style="width:100%; aspect-ratio:1; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
-		<svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-			<rect x="3" y="3" width="18" height="18" rx="3" stroke="var(--color-border-muted)" stroke-width="1.5"></rect>
-			<circle cx="8.5" cy="8.5" r="1.5" stroke="var(--color-border-muted)" stroke-width="1.5"></circle>
-			<path d="M21 15l-5-5L5 21" stroke="var(--color-border-muted)" stroke-width="1.5" stroke-linejoin="round"></path>
-		</svg>
+	<div class="product-card-media" data-state={foto ? 'loading' : 'empty'} style="width:100%; aspect-ratio:1; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+		<div class="media-skeleton"></div>
+		{foto && (
+			<img
+				src={foto}
+				alt={nombre}
+				loading="lazy"
+				class="media-photo"
+				onload="this.closest('.product-card-media').dataset.state='loaded'"
+				onerror="this.closest('.product-card-media').dataset.state='error'"
+			/>
+		)}
 		{isNew && (
 			<div style="position:absolute; top:8px; left:8px; padding:3px 8px; background:var(--color-primary); color:white; font-size:9px; font-weight:700; border-radius:99px; letter-spacing:0.05em; z-index:2;">NUEVO</div>
 		)}
@@ -42,5 +49,55 @@ const { href, nombre, precio, precioOriginal, marca = 'BARZOL', isNew = false } 
 	.product-card:hover {
 		box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
 		transform: translateY(-3px);
+	}
+
+	/* Un solo diseño para "sin foto", "cargando" y "foto rota": un fondo
+	   sutil con un brillo lento — sin íconos. Solo desaparece cuando la
+	   foto carga bien de verdad. */
+	.media-skeleton {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			100deg,
+			var(--color-surface-muted) 42%,
+			var(--color-border-faint) 50%,
+			var(--color-surface-muted) 58%
+		);
+		background-size: 250% 100%;
+		animation: media-shimmer 6s linear infinite;
+		opacity: 1;
+		transition: opacity 0.2s ease;
+	}
+
+	.media-photo {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		opacity: 0;
+		transition: opacity 0.25s ease;
+		position: relative;
+		z-index: 1;
+	}
+
+	.product-card-media[data-state='loaded'] .media-skeleton {
+		opacity: 0;
+	}
+	.product-card-media[data-state='loaded'] .media-photo {
+		opacity: 1;
+	}
+
+	@keyframes media-shimmer {
+		0% {
+			background-position: 250% 0;
+		}
+		100% {
+			background-position: -250% 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.media-skeleton {
+			animation: none;
+		}
 	}
 </style>

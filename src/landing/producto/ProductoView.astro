@@ -26,6 +26,7 @@ const precio = producto.precio;
 const precioOriginal = producto.precioOriginal;
 const descuentoPct = precioOriginal ? Math.round((1 - precio / precioOriginal) * 100) : 0;
 const caracteristicas = producto.caracteristicas;
+const fotos = producto.fotos;
 
 // El breadcrumb y "más productos" navegan por categoría (instrumento) — la
 // misma que se administra en /admin/categorias, no una taxonomía alternativa.
@@ -37,7 +38,7 @@ const breadcrumbMiddle = categoria ? { label: categoria.nombre, href: `/catalogo
 // no toda la tabla product.
 const leafIds = categoria ? [categoria.id, ...categoria.subcategorias.map((s) => s.id)] : [];
 const suggestedDb = leafIds.length ? await getProductosByCategoria(leafIds, { excludeId: producto.id, limit: 4 }) : [];
-const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
+const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
 ---
 
 <PublicLayout title={`${nombre} — Barzol`}>
@@ -51,17 +52,42 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 
 	<!-- PRODUCT DETAIL -->
 	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:24px 32px 32px;">
-		<div class="bz-product-grid" style="display:grid; grid-template-columns:560px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
+		<div class="bz-product-grid" style="display:grid; grid-template-columns:612px 1fr; gap:52px; align-items:start; background:white; border-radius:16px; border:1px solid var(--color-border-soft); box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:28px;">
 
-			<!-- GALERÍA -->
+			<!-- GALERÍA: el layout (miniatura chica + foto grande) es siempre el
+			     mismo — la cantidad de miniaturas sigue a producto.fotos, no un
+			     número fijo, pero se muestra la columna aunque haya una sola foto.
+			     Click en una miniatura cambia la foto principal. -->
 			<div class="bz-gallery" style="display:flex; gap:12px; align-items:flex-start;">
-				<div class="bz-thumbs" style="display:flex; flex-direction:column; gap:10px;">
-					{[1, 2, 3, 4].map(() => (
-						<div class="bz-thumb" style="width:80px; height:80px; background:var(--color-surface-muted); border-radius:8px; flex-shrink:0;"></div>
-					))}
-				</div>
-				<div class="bz-main-img-wrap" style="flex:1; min-width:0; height:540px; border-radius:12px; overflow:hidden; background:var(--color-surface-muted); display:flex; align-items:center; justify-content:center; color:var(--color-text-faint); font-size:13px; text-align:center; padding:20px;">
-					Foto principal del producto
+				{fotos.length > 0 && (
+					<div class="bz-thumbs" style="display:flex; flex-direction:column; gap:10px;">
+						{fotos.map((foto, i) => (
+							<button
+								type="button"
+								class="bz-thumb"
+								class:list={{ 'bz-thumb-active': i === 0 }}
+								data-photo-thumb
+								data-src={foto}
+								aria-label={`Ver foto ${i + 1} de ${fotos.length}`}
+								style="width:80px; height:80px; padding:0; border-radius:0; flex-shrink:0; overflow:hidden; background:var(--color-surface-muted); cursor:pointer; border:1px solid transparent;"
+							>
+								<img src={foto} alt="" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;" />
+							</button>
+						))}
+					</div>
+				)}
+				<div class="bz-main-img-wrap" data-gallery-main data-state={fotos.length ? 'loading' : 'empty'} style="width:520px; height:540px; border-radius:0; overflow:hidden; background:var(--color-surface-muted); position:relative; cursor:crosshair; flex-shrink:0;">
+					<div class="media-skeleton"></div>
+					{fotos.length > 0 && (
+						<img
+							data-main-photo
+							src={fotos[0]}
+							alt={nombre}
+							class="media-photo"
+							onload="this.closest('[data-gallery-main]').dataset.state='loaded'"
+							onerror="this.closest('[data-gallery-main]').dataset.state='error'"
+						/>
+					)}
 				</div>
 			</div>
 
@@ -89,13 +115,13 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 					))}
 				</ul>
 
-				<div style="display:flex; flex-direction:row; gap:10px; margin-bottom:24px; flex-wrap:wrap;">
-					<a href={`https://wa.me/51950759032?text=${encodeURIComponent(`Hola, me interesa: ${nombre}`)}`} target="_blank" rel="noopener" class="product-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:11px 20px; background:var(--color-whatsapp); color:white; font-size:13px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 3px 12px rgba(var(--color-whatsapp-rgb),0.3);">
+				<div style="display:flex; flex-direction:row; gap:8px; margin-bottom:24px; flex-wrap:wrap;">
+					<a href={`https://wa.me/51950759032?text=${encodeURIComponent(`Hola, me interesa: ${nombre}`)}`} target="_blank" rel="noopener" class="product-cta-primary" style="display:inline-flex; align-items:center; gap:7px; padding:11px 15px; background:var(--color-whatsapp); color:white; font-size:12.5px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 3px 12px rgba(var(--color-whatsapp-rgb),0.3); white-space:nowrap;">
 						<WhatsAppIcon size={16} fill="white" />
 						Consultar por WhatsApp
 					</a>
 					{breadcrumbMiddle && (
-						<a href={breadcrumbMiddle.href} class="product-cta-secondary" style="display:inline-flex; align-items:center; padding:11px 18px; background:white; border:1.5px solid var(--color-border); border-radius:9px; font-size:13px; font-weight:500; color:var(--color-text-soft); text-decoration:none;">Ver más de {breadcrumbMiddle.label}</a>
+						<a href={breadcrumbMiddle.href} class="product-cta-secondary" style="display:inline-flex; align-items:center; padding:11px 13px; background:white; border:1px solid var(--color-border); border-radius:9px; font-size:12.5px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap;">Ver más de {breadcrumbMiddle.label}</a>
 					)}
 				</div>
 				<div style="background:var(--color-surface-soft); border:1px solid var(--color-border-soft); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:10px;">
@@ -116,10 +142,12 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 		</div>
 	</div>
 
-	<!-- PRODUCTOS SUGERIDOS: solo si hay al menos 2, para no mostrar un carrusel con un único producto -->
+	<!-- PRODUCTOS SUGERIDOS: solo si hay al menos 2, para no mostrar un carrusel con un único producto.
+	     Sin padding propio arriba/abajo — ProductCarousel ya trae su margin-top, y Footer su
+	     margin-top: sumarles otro relleno acá duplicaba el espacio antes del título y antes del footer. -->
 	{suggested.length >= 2 && (
-		<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px 64px;">
-			<div style="border-top:1px solid var(--color-border-soft); padding-top:40px;">
+		<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px;">
+			<div style="border-top:1px solid var(--color-border-soft);">
 				<ProductCarousel title={`Más productos de ${breadcrumbMiddle?.label ?? ''}`} products={suggested} />
 			</div>
 		</div>
@@ -147,7 +175,7 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 		.bz-main-img-wrap {
 			width: 100% !important;
 			height: auto !important;
-			aspect-ratio: 448 / 540 !important;
+			aspect-ratio: 520 / 540 !important;
 		}
 		.bz-thumbs {
 			flex-direction: row !important;
@@ -159,4 +187,112 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 			flex-shrink: 0;
 		}
 	}
+
+	.bz-thumb:hover {
+		border-color: var(--color-border) !important;
+	}
+	.bz-thumb-active {
+		border-color: var(--color-primary) !important;
+	}
+	.bz-thumb img {
+		transition: transform 0.18s ease;
+	}
+	.bz-thumb:hover img {
+		transform: scale(1.06);
+	}
+
+	/* Mismo diseño sutil de ProductCard para "sin foto"/"cargando"/"foto
+	   rota" — sin íconos, solo un brillo lento y parejo. */
+	.media-skeleton {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			100deg,
+			var(--color-surface-muted) 42%,
+			var(--color-border-faint) 50%,
+			var(--color-surface-muted) 58%
+		);
+		background-size: 250% 100%;
+		animation: media-shimmer 6s linear infinite;
+		opacity: 1;
+		transition: opacity 0.2s ease;
+	}
+	.media-photo {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		opacity: 0;
+		transition: opacity 0.25s ease;
+		position: relative;
+		z-index: 1;
+	}
+	[data-gallery-main][data-state='loaded'] .media-skeleton {
+		opacity: 0;
+	}
+	[data-gallery-main][data-state='loaded'] .media-photo {
+		opacity: 1;
+	}
+	@keyframes media-shimmer {
+		0% {
+			background-position: 250% 0;
+		}
+		100% {
+			background-position: -250% 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.media-skeleton {
+			animation: none;
+		}
+	}
 </style>
+
+<script>
+	function initGallery() {
+		document.querySelectorAll<HTMLElement>('.bz-gallery').forEach((gallery) => {
+			if (gallery.dataset.wired) return;
+			gallery.dataset.wired = 'true';
+
+			const mainWrap = gallery.querySelector<HTMLElement>('[data-gallery-main]');
+			const mainImg = gallery.querySelector<HTMLImageElement>('[data-main-photo]');
+			const thumbs = gallery.querySelectorAll<HTMLButtonElement>('[data-photo-thumb]');
+			if (!mainWrap || !mainImg) return;
+
+			thumbs.forEach((thumb) => {
+				thumb.addEventListener('click', () => {
+					const src = thumb.dataset.src;
+					if (!src || src === mainImg.src) return;
+
+					mainWrap.dataset.state = 'loading';
+					mainImg.src = src;
+
+					thumbs.forEach((t) => t.classList.toggle('bz-thumb-active', t === thumb));
+				});
+			});
+
+			// Lupa: acercarse a la foto principal la agranda 2x y sigue el mouse.
+			mainWrap.addEventListener('mouseenter', () => {
+				mainImg.style.transition = 'transform 0.2s ease, opacity 0.25s ease';
+				mainImg.style.transform = 'scale(2)';
+			});
+			mainWrap.addEventListener('mousemove', (e) => {
+				const rect = mainWrap.getBoundingClientRect();
+				const x = (((e.clientX - rect.left) / rect.width) * 100).toFixed(2);
+				const y = (((e.clientY - rect.top) / rect.height) * 100).toFixed(2);
+				mainImg.style.transformOrigin = `${x}% ${y}%`;
+			});
+			mainWrap.addEventListener('mouseleave', () => {
+				mainImg.style.transition = 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.25s ease';
+				mainImg.style.transform = 'scale(1)';
+				const onEnd = () => {
+					mainImg.style.transformOrigin = '50% 50%';
+					mainImg.removeEventListener('transitionend', onEnd);
+				};
+				mainImg.addEventListener('transitionend', onEnd);
+			});
+		});
+	}
+
+	document.addEventListener('astro:page-load', initGallery);
+	initGallery();
+</script>

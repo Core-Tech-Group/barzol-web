@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx astro check *)",
+      "Bash(npm run build *)",
+      "Bash(npx astro dev stop*)",
+      "Bash(claude mcp list)",
+      "Bash(npx wrangler whoami)",
+      "mcp__Claude_Browser__navigate",
+      "mcp__Claude_Browser__get_page_text",
+      "mcp__Claude_Browser__preview_start",
+      "mcp__Claude_Browser__read_console_messages",
+      "mcp__Claude_Browser__resize_window",
+      "mcp__Claude_Browser__read_page",
+      "mcp__Claude_Browser__preview_stop",
+      "mcp__claude-design__read_file",
+      "mcp__Claude_Browser__preview_logs",
+      "mcp__claude-design__list_files",
+      "mcp__Claude_Browser__find",
+      "mcp__Claude_Browser__read_network_requests",
+      "mcp__claude-design__get_project",
+      "mcp__Claude_Browser__preview_list",
+      "mcp__claude-design__list_projects"
+    ]
+  }
+}

@@ -36,7 +36,7 @@ const sections = visibleSections
     return {
       title: it.titulo ?? '',
       viewAllHref: singleCategoria ? `/catalogo/${singleCategoria.slug}` : undefined,
-      products: productos.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined })),
+      products: productos.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] })),
     };
   })
   .filter((s) => s.products.length > 0);

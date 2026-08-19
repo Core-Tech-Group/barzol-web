@@ -32,7 +32,7 @@ const requestedPage = Number(Astro.url.searchParams.get('page')) || 1;
 const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
 const pageItems = matched.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined }));
+const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
 ---
 
 <PublicLayout title={`${categoryName} — Barzol`}>
@@ -93,7 +93,7 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 			</div>
 			<div class="bz-cat-product-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
 				{products.map((p) => (
-					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} />
+					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} foto={p.foto} />
 				))}
 			</div>
 
