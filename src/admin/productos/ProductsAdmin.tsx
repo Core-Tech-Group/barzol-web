@@ -618,7 +618,9 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
           {pageItems.map((p) => (
             <div
               key={p.id}
-              style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border-faint)' }}
+              className="admin-product-row"
+              onClick={() => openEdit(p._i)}
+              style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border-faint)', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--color-surface-muted)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -655,7 +657,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                 </span>
                 <button
                   type="button"
-                  onClick={() => toggleActive(p._i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleActive(p._i);
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -677,7 +682,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                 <button
                   type="button"
-                  onClick={() => openEdit(p._i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(p._i);
+                  }}
                   title="Editar"
                   style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-muted)' }}
                 >
@@ -688,7 +696,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDupConfirmIndex(p._i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDupConfirmIndex(p._i);
+                  }}
                   title="Duplicar producto"
                   style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-muted)' }}
                 >
@@ -699,7 +710,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDelConfirmIndex(p._i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDelConfirmIndex(p._i);
+                  }}
                   title="Eliminar"
                   style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-muted)' }}
                 >
@@ -1353,6 +1367,11 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
           </div>
         </div>
       )}
+      <style>{`
+        .admin-product-row:hover {
+          background: var(--color-surface-soft);
+        }
+      `}</style>
     </>
   );
 }
