@@ -142,3 +142,94 @@ setup manual.
 Cuando `BZ-50` se cierre, el resultado hay que anotarlo en el kanban de despliegue
 con la fecha. Si RLS resulta estar **mal** configurado, deja de ser una tarea de
 testing y pasa a ser un incidente de seguridad con el sitio ya publicado.
+
+---
+
+## Enmienda 1 — 2026-08-22 · sondas de solo lectura y hallazgo confirmado
+
+### Por qué se enmienda
+
+La SPEC original definía **solo** pgTAP, que exige un stack local levantado. Este
+proyecto ni siquiera está inicializado como proyecto de Supabase CLI (no existe
+`supabase/config.toml`), así que `BZ-70` no se podía cerrar en el corto plazo —
+mientras `BZ-50` llevaba desde el 2026-08-08 abierta como P0 **sobre un sitio que
+ya sirve datos al público**.
+
+Se añade un subconjunto verificable **sin escribir nada y sin stack local**, para
+que la distancia entre "no lo hemos verificado" y "sabemos qué ve un visitante"
+deje de depender de levantar Docker.
+
+### [REQ-931] — Ubicuo
+El sistema DEBE poder auditar las políticas de lectura contra una instancia viva
+usando únicamente el rol `anon` y peticiones `GET` a PostgREST.
+
+### [REQ-932] — No deseado
+SI la auditoría se ejecuta contra producción, ENTONCES NO DEBE realizar ninguna
+operación de escritura. Las comprobaciones de escritura (REQ-924, REQ-925) siguen
+siendo exclusivas de pgTAP contra el stack local.
+
+### [REQ-933] — Dirigido por evento
+CUANDO una consulta que debería estar vacía devuelva cero filas, el sistema DEBE
+informarlo como **AVISO**, no como éxito: desde fuera no se puede distinguir
+"RLS lo impide" de "la tabla está vacía", y tratarlo como éxito sería afirmar algo
+que no se ha comprobado.
+
+**Implementación:** `scripts/auditar-rls.mjs` + `scripts/rls/sondas.mjs`
+(`npm run audit:rls`).
+
+---
+
+## Estado verificado contra producción — 2026-08-22
+
+Primera ejecución de la auditoría sobre `rnfcccnesxunjtpwahce.supabase.co`:
+
+| Requisito | Resultado |
+| :--- | :--- |
+| REQ-922 · anon lee publicados | ✅ PASA |
+| **REQ-923 · anon NO ve borradores** | ❌ **FALLA — 4 borradores expuestos** |
+| REQ-927 · anon NO lee `admin_profile` | ⚠️ AVISO — responde 200 con lista vacía |
+| REQ-921 · RLS en todo el esquema | ⚠️ no verificable desde PostgREST |
+
+### El fallo, y su causa
+
+```sql
+-- supabase/schema.sql:300
+create policy "public read" on product for select using (true);
+```
+
+`using (true)` deja leer **todas** las filas, publicadas o no. El filtro por
+`status` vive únicamente en la aplicación (`getProductosPublicados()`), y la anon
+key viaja al navegador en cada visita — así que cualquiera puede consultar
+PostgREST directamente y enumerar los borradores. Se comprobó: devuelve 4, entre
+ellos *"Soporte de Celular Trompeta (copia)"*.
+
+Lo mismo aplica a `product_photo` y `product_feature` (líneas 301-302), que es
+exactamente lo que TEST-R15 anticipaba: el producto no aparece, pero sus fotos se
+pueden enumerar, y el nombre del archivo suele decir de qué producto son.
+
+`admin_profile` **no tiene `enable row level security`** en `schema.sql`. La
+auditoría no puede distinguir si está protegida o simplemente vacía (REQ-933),
+y eso lo resuelve pgTAP.
+
+### Por qué NO se ha corregido todavía
+
+**Corregir la política a secas rompe el panel de administración.**
+
+`productoService.getProductos()` —el listado del admin, el que debe ver los
+borradores— usa `getSupabase()`, que es el cliente **anon** cacheado a nivel de
+módulo. No usa la sesión autenticada. Es decir: *la capacidad del admin de ver
+borradores depende hoy de que RLS deje a `anon` leerlos*.
+
+Restringir la política sin más dejaría el panel sin borradores. El arreglo real
+son tres cosas, en este orden:
+
+1. Que las lecturas del admin usen el cliente **autenticado** (`locals.supabase`)
+   en vez del singleton anon. Requiere inyectar el cliente en el servicio, y eso
+   necesita su propia SPEC.
+2. Añadir una policy `admin read` para `authenticated` presente en `admin_profile`.
+3. Recién entonces, restringir `public read` a `status = 'published'`.
+
+La migración propuesta está escrita en
+[`supabase/pendiente-fix-rls-borradores.sql`](../../supabase/pendiente-fix-rls-borradores.sql),
+**sin aplicar**, con el orden y las advertencias. Aplicarla es decisión humana
+(Constitución 8.5) y no debe hacerse antes del paso 1.

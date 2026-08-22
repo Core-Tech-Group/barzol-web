@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { alias } from './vitest.alias';
 
 /**
  * CAPA 1 — lógica pura (`src/shared/lib/**`), en Node.
@@ -11,6 +12,7 @@ import { defineConfig } from 'vitest/config';
  * Ver la nota de abajo y `BZ-60`.
  */
 export default defineConfig({
+  resolve: { alias },
   test: {
     projects: [
       {

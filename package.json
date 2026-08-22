@@ -23,7 +23,8 @@
     "sdd:trace": "node scripts/sdd-trace.mjs",
     "smoke": "node scripts/smoke.mjs",
     "sdd:gate": "npm run typecheck && npm run test:cov && npm run sdd:trace",
-    "test:node": "vitest run"
+    "test:node": "vitest run",
+    "audit:rls": "node scripts/auditar-rls.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.4",

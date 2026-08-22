@@ -1,4 +1,5 @@
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
+import { alias } from './vitest.alias';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -17,6 +18,7 @@ import { defineConfig } from 'vitest/config';
  * falta el worker de la aplicación: hacen falta sus bindings.
  */
 export default defineConfig({
+  resolve: { alias },
   plugins: [
     cloudflareTest({
       miniflare: {

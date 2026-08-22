@@ -52,7 +52,7 @@ error de especificación cuesta un párrafo en vez de un despliegue.
 
 ## Estado de adopción
 
-Esta capa **ya es ejecutable**. `npm test` corre 45 tests en dos runtimes:
+Esta capa **ya es ejecutable**. `npm test` corre 54 tests en dos runtimes:
 lógica pura en Node y endpoints en workerd real con bindings de Miniflare.
 `npm run sdd:trace` verifica la trazabilidad y `npm run smoke` sondea producción.
 
@@ -64,6 +64,7 @@ lógica pura en Node y endpoints en workerd real con bindings de Miniflare.
 | `npm run test:cov:workers` | Capa 3 con cobertura istanbul |
 | `npm run sdd:trace` | gate 4 — REQ ↔ TEST ↔ archivo, determinismo, cobertura por capa |
 | `npm run smoke` | 7 sondas de solo lectura contra la URL de producción |
+| `npm run audit:rls` | auditoría RLS de solo lectura contra Supabase (SPEC-902 Enmienda 1) |
 | `npm run sdd:gate` | typecheck + cobertura + trazabilidad |
 
 **Lo que todavía no está:** los componentes `.astro` (Capa 2) siguen sin runner —

@@ -7,8 +7,9 @@
 // Sin dependencias externas (SPEC-900 INV-1). La lógica vive en `scripts/sdd/`.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fuentesNoDeterministas } from './sdd/determinismo.mjs';
 import { verificarCobertura } from './sdd/cobertura.mjs';
+import { fuentesNoDeterministas } from './sdd/determinismo.mjs';
+import { archivosDemasiadoLargos, inventarioDemasiadoLargos } from './sdd/tamano.mjs';
 import {
   archivosSinSpec,
   requisitosSinTest,
@@ -21,15 +22,22 @@ const DIRS_TEST = ['tests', 'supabase/tests'];
 const DIR_LOGICA = 'src/shared/lib';
 const BASELINE = '.sdd/baseline.json';
 const RESUMEN_COBERTURA = 'coverage/coverage-summary.json';
+// Constitución 9.1 — se revisa el código; la documentación solo se avisa.
+const DIRS_CODIGO = ['src', 'scripts', 'tests', 'supabase'];
+const DIRS_DOC_LARGA = ['.sdd', 'docs/2_backlog'];
 
 const ci = Boolean(process.env.CI);
 const bullet = (t) => `  ${t}`;
 
 function leerBaseline() {
   try {
-    return JSON.parse(readFileSync(BASELINE, 'utf8')).sinSpec ?? [];
+    const datos = JSON.parse(readFileSync(BASELINE, 'utf8'));
+    return {
+      sinSpec: datos.sinSpec ?? [],
+      demasiadoLargos: datos.demasiadoLargos ?? [],
+    };
   } catch {
-    return [];
+    return { sinSpec: [], demasiadoLargos: [] };
   }
 }
 
@@ -45,22 +53,26 @@ function imprimirHallazgos(titulo, hallazgos) {
 function regenerarBaseline() {
   const { hallazgos } = archivosSinSpec(DIR_LOGICA, DIRS_DOC, []);
   const sinSpec = hallazgos.map((h) => h.archivo).sort();
+  const demasiadoLargos = inventarioDemasiadoLargos(DIRS_CODIGO);
 
   writeFileSync(
     BASELINE,
     `${JSON.stringify(
       {
         _comentario:
-          'Deuda heredada: archivos de lógica que existían sin SPEC cuando se montó el gate (BZ-66). La lista solo puede ENCOGER. Ver BZ-75.',
+          'Deuda heredada de cuando se montaron los gates. Ambas listas solo pueden ENCOGER: cualquier archivo NUEVO que incumpla bloquea. Ver BZ-75 (specs) y BZ-79 (tamaño).',
         _generado: new Date().toISOString().slice(0, 10),
         sinSpec,
+        demasiadoLargos,
       },
       null,
       2
     )}\n`
   );
 
-  console.log(`Baseline regenerada: ${sinSpec.length} archivos sin SPEC.`);
+  console.log(
+    `Baseline regenerada: ${sinSpec.length} sin SPEC, ${demasiadoLargos.length} por encima de 500 líneas.`
+  );
 }
 
 function main() {
@@ -74,8 +86,9 @@ function main() {
   const baseline = leerBaseline();
   const vacuidad = verificarNoVacuidad(DIR_SPECS, DIRS_TEST);
   const reqs = requisitosSinTest(DIR_SPECS, DIRS_TEST);
-  const archivos = archivosSinSpec(DIR_LOGICA, DIRS_DOC, baseline);
+  const archivos = archivosSinSpec(DIR_LOGICA, DIRS_DOC, baseline.sinSpec);
   const determinismo = fuentesNoDeterministas(DIR_LOGICA);
+  const tamano = archivosDemasiadoLargos(DIRS_CODIGO, DIRS_DOC_LARGA, baseline.demasiadoLargos);
   const cobertura = verificarCobertura(RESUMEN_COBERTURA);
 
   const bloqueantes = [
@@ -83,15 +96,18 @@ function main() {
     ...reqs.hallazgos,
     ...archivos.hallazgos,
     ...determinismo,
+    ...tamano.hallazgos,
     ...cobertura.hallazgos,
   ];
 
   imprimirHallazgos('FALLOS', bloqueantes);
   imprimirHallazgos('Informativo — specs en borrador, no bloquean:', reqs.informativos);
+  imprimirHallazgos('Informativo — tamaño (Constitución 9.1):', tamano.avisos);
 
-  if (archivos.especificados.length > 0) {
+  const saldados = [...archivos.especificados, ...tamano.saldados];
+  if (saldados.length > 0) {
     console.log('\nDeuda saldada — quitar de .sdd/baseline.json con `--baseline`:');
-    for (const a of archivos.especificados) console.log(bullet(a));
+    for (const a of saldados) console.log(bullet(a));
   }
 
   if (archivos.huerfanos.length > 0) {
@@ -115,7 +131,8 @@ function main() {
   }
 
   console.log(
-    `\nDeuda heredada en baseline: ${baseline.length} archivos sin SPEC (ver BZ-75).`
+    `\nDeuda en baseline: ${baseline.sinSpec.length} sin SPEC (BZ-75) · ` +
+      `${baseline.demasiadoLargos.length} por encima de 500 líneas (BZ-79).`
   );
 
   if (bloqueantes.length > 0) {

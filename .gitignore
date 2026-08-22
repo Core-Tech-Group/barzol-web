@@ -29,3 +29,6 @@ pnpm-debug.log*
 .env.example
 # cobertura de tests
 coverage/
+
+# artefactos del CLI de supabase
+supabase/.temp/
