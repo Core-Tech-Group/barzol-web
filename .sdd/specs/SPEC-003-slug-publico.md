@@ -1,8 +1,8 @@
 # SPEC-003 — Slug público unificado
 
-**Estado:** BORRADOR — pendiente de aprobación humana
+**Estado:** APROBADA · implementada y verde el 2026-08-22
 **Capa:** 1 (lógica pura) · **Fecha:** 2026-08-21
-**Unidad destino:** `src/shared/lib/text/slugify.ts` (**no existe todavía**)
+**Unidad destino:** `src/shared/lib/text/slugify.ts` — implementada en `BZ-61`
 **Reemplaza a:** `categoriaMapper.ts:17` y `productoMapper.ts:34`
 
 ---

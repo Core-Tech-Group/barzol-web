@@ -1,0 +1,29 @@
+{
+  "_comentario": "Deuda heredada: archivos de lógica que existían sin SPEC cuando se montó el gate (BZ-66). La lista solo puede ENCOGER. Ver BZ-75.",
+  "_generado": "2026-08-22",
+  "sinSpec": [
+    "src/shared/lib/auth/authClient.ts",
+    "src/shared/lib/build/buildInfo.ts",
+    "src/shared/lib/categorias/categoriaService.ts",
+    "src/shared/lib/configuracion/configuracionMapper.ts",
+    "src/shared/lib/configuracion/configuracionService.ts",
+    "src/shared/lib/db/client.ts",
+    "src/shared/lib/env/nombresParecidos.ts",
+    "src/shared/lib/env/serverEnv.ts",
+    "src/shared/lib/errors/logServerError.ts",
+    "src/shared/lib/galeria/galeriaMapper.ts",
+    "src/shared/lib/galeria/galeriaService.ts",
+    "src/shared/lib/home/homeMapper.ts",
+    "src/shared/lib/home/homeService.ts",
+    "src/shared/lib/media/uploadClient.ts",
+    "src/shared/lib/productos/productoService.ts",
+    "src/shared/lib/productos/productoUrl.ts",
+    "src/shared/lib/storage/r2Bucket.ts",
+    "src/shared/lib/validation/categoriaSchema.ts",
+    "src/shared/lib/validation/configuracionSchema.ts",
+    "src/shared/lib/validation/galeriaSchema.ts",
+    "src/shared/lib/validation/mediaSchema.ts",
+    "src/shared/lib/validation/productoSchema.ts",
+    "src/shared/lib/validation/zodError.ts"
+  ]
+}

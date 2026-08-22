@@ -4,7 +4,7 @@
 > **Alcance:** Spec-Driven Development aplicado a **pruebas del sistema y DevOps** sobre
 > Cloudflare Workers + R2 + Supabase.
 > **Documento base:** [`docs/1_inbox/SDD-TESTING-BARZOL-2026.md`](../docs/1_inbox/SDD-TESTING-BARZOL-2026.md)
-> **Tablero:** [`docs/2_backlog/20260821-2218-kanban-ssd-integracion-pruebas-unitarias-devops.md`](../docs/2_backlog/20260821-2218-kanban-ssd-integracion-pruebas-unitarias-devops.md)
+> **Tablero:** [`docs/2_backlog/20260821-2218-kanban-sdd-integracion-pruebas-unitarias-devops.md`](../docs/2_backlog/20260821-2218-kanban-sdd-integracion-pruebas-unitarias-devops.md)
 
 ## Qué es esto
 
@@ -52,11 +52,23 @@ error de especificación cuesta un párrafo en vez de un despliegue.
 
 ## Estado de adopción
 
-Esta capa está **escrita pero no ejecutable todavía**: el repo aún no tiene
-Vitest, ni `tests/`, ni `.github/workflows/`. Eso es deliberado — instalar el
-tooling toca `package.json` y es donde se cuelan las regresiones. Las tareas
-`BZ-57` a `BZ-60` del tablero lo hacen paso a paso, con verificación en cada uno.
+Esta capa **ya es ejecutable**. `npm test` corre 45 tests en dos runtimes:
+lógica pura en Node y endpoints en workerd real con bindings de Miniflare.
+`npm run sdd:trace` verifica la trazabilidad y `npm run smoke` sondea producción.
 
-Lo que **sí** funciona hoy: las SPECs describen código real y ya existente, así
-que sirven como contrato de revisión aunque todavía no haya un runner que las
-compruebe sola.
+| Comando | Qué hace |
+| :--- | :--- |
+| `npm run typecheck` | `astro check` + `tsc --noEmit` |
+| `npm test` | las dos capas, una tras otra |
+| `npm run test:cov` | Capa 1 con cobertura v8 |
+| `npm run test:cov:workers` | Capa 3 con cobertura istanbul |
+| `npm run sdd:trace` | gate 4 — REQ ↔ TEST ↔ archivo, determinismo, cobertura por capa |
+| `npm run smoke` | 7 sondas de solo lectura contra la URL de producción |
+| `npm run sdd:gate` | typecheck + cobertura + trazabilidad |
+
+**Lo que todavía no está:** los componentes `.astro` (Capa 2) siguen sin runner —
+`getViteConfig()` no funciona en este proyecto, ver `BZ-60`— y las políticas RLS
+siguen sin verificar (`BZ-70`, la P0 más antigua abierta).
+
+El estado detallado, con cobertura medida y deuda registrada, está en
+[`TRACEABILITY.md`](TRACEABILITY.md).

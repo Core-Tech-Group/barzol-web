@@ -1,0 +1,120 @@
+name: SDD Gate
+
+# Implementa SPEC-900. Opción B de BZ-68: **Cloudflare Workers Builds sigue
+# siendo quien despliega**, y esto solo verifica. Es decir: estos gates NO
+# bloquean la publicación todavía; avisan después, con un check rojo en el
+# commit (REQ-908). Se pasa a la opción A —Actions desplegando— cuando lleven
+# dos semanas sin falsos rojos.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# REQ-909: una ejecución por referencia; las anteriores se cancelan.
+concurrency:
+  group: sdd-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22.12.0' # REQ-911, coherente con `engines` de package.json
+
+jobs:
+  # ── GATE 1 · tipos y lógica pura ────────────────────────────────────────
+  tipos-y-logica:
+    name: Gate 1 · tipos + lógica
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # REQ-911: `npm ci`, nunca `npm install`. Si el lockfile está
+      # desincronizado esto falla, y debe fallar (TEST-G14).
+      - run: npm ci
+
+      - name: Typecheck estricto
+        run: npm run typecheck
+
+      - name: Tests de Capa 1 con cobertura
+        run: npm run test:cov
+
+      - uses: actions/upload-artifact@v4
+        if: always() # REQ-909: el informe se conserva aunque el gate falle
+        with:
+          name: cobertura-node
+          path: coverage/
+          retention-days: 14
+
+      # El gate 4 necesita el coverage-summary.json que acaba de generarse.
+      - name: Gate 4 · trazabilidad SDD
+        run: npm run sdd:trace
+
+  # ── GATE 2 · endpoints dentro de workerd ────────────────────────────────
+  workerd:
+    name: Gate 2 · workerd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # Los tipos de bindings tienen que regenerarse ANTES de los tests, o van
+      # desfasados respecto a `wrangler.jsonc`.
+      - name: Generar tipos de bindings
+        run: npx wrangler types
+
+      # Istanbul es obligatorio acá: `@vitest/coverage-v8` necesita
+      # `node:inspector` y workerd solo expone un stub no funcional
+      # (Constitución 7.4). El provider ya va fijado en la config.
+      - name: Tests de Capa 3 con cobertura istanbul
+        run: npm run test:cov:workers
+
+  # ── GATE 3 · RLS en Postgres ────────────────────────────────────────────
+  #
+  # PENDIENTE (BZ-70). Implementa SPEC-902 y cierra BZ-50, que lleva abierta
+  # como P0 desde el 2026-08-08.
+  #
+  # No se añade vacío a propósito: un job que ejecuta `supabase test db` sin
+  # ningún archivo en `supabase/tests/` termina en verde sin haber verificado
+  # nada, y a partir de ahí todo el mundo cree que RLS está comprobado. Es
+  # exactamente el fallo por vacuidad que SPEC-900 INV-3 prohíbe.
+
+  # ── Humo post-despliegue ────────────────────────────────────────────────
+  humo:
+    name: Humo en producción
+    # Solo tras un push a main: es cuando Workers Builds publica.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [tipos-y-logica, workerd]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Workers Builds despliega en paralelo a este workflow y tarda lo suyo.
+      # Sin la espera, TEST-S06 compararía contra el bundle ANTERIOR y fallaría
+      # siempre. Si el margen resulta corto, se sube acá — no se quita la sonda.
+      - name: Esperar a que Workers Builds publique
+        run: sleep 150
+
+      # REQ-956: la comprobación de mayor valor del conjunto. BZ-38 registra
+      # dos commits que tardaron un día en publicarse sin que nadie lo notara.
+      - name: Sondas de solo lectura contra producción
+        run: node scripts/smoke.mjs --commit "${{ github.sha }}"
+        env:
+          BARZOL_DIAGNOSTICO_TOKEN: ${{ secrets.BARZOL_DIAGNOSTICO_TOKEN }}

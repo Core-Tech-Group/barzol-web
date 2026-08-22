@@ -1,6 +1,6 @@
 # SPEC-002 — Claves de objeto en R2 (`buildMediaKey`)
 
-**Estado:** BORRADOR — pendiente de aprobación humana
+**Estado:** APROBADA · implementada y verde el 2026-08-22
 **Capa:** 1 (lógica pura) · **Fecha:** 2026-08-21
 **Unidad existente:** `src/shared/lib/storage/mediaKey.ts`
 **Tipo:** especificación **retroactiva** de código ya en producción
@@ -75,7 +75,7 @@ El sistema DEBE anteponer el UUID al nombre, no anexarlo.
 > El orden no es cosmético: en R2 un `PUT` sobre una clave existente sobrescribe
 > sin avisar. Con el UUID delante, dos archivos llamados `foto.webp` nunca colisionan.
 
-### [REQ-208] — Ubicuo · **objetivo de `BZ-62`, aún no implementado**
+### [REQ-208] — Ubicuo · implementado en `BZ-62`
 El sistema DEBE recibir el instante y el generador de identificadores como
 dependencias inyectadas, con valores por defecto que preserven la firma actual:
 
@@ -103,7 +103,7 @@ export const MEDIA_FOLDERS = ['productos', 'galeria', 'home'] as const;
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];
 
 export function sanitizeFileName(fileName: string): string;
-export function buildMediaKey(folder: MediaFolder, fileName: string): string;
+export function buildMediaKey(folder: MediaFolder, fileName: string, deps?: MediaKeyDeps): string;
 ```
 
 ## Invariantes verificables

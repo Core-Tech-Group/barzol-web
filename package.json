@@ -11,7 +11,19 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
-    "generate-types": "wrangler types"
+    "generate-types": "wrangler types",
+    "typecheck": "astro check && tsc --noEmit",
+    "test": "npm run test:node && npm run test:workers",
+    "test:unit": "vitest run --project unit",
+    "test:components": "vitest run --project components",
+    "test:workers": "vitest run --config vitest.workers.config.ts",
+    "test:watch": "vitest --project unit",
+    "test:cov": "vitest run --coverage",
+    "test:cov:workers": "vitest run --config vitest.workers.config.ts --coverage",
+    "sdd:trace": "node scripts/sdd-trace.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "sdd:gate": "npm run typecheck && npm run test:cov && npm run sdd:trace",
+    "test:node": "vitest run"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.4",
@@ -30,7 +42,11 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@cloudflare/vitest-plugin": "^1.0.0",
     "@types/node": "^26.1.1",
-    "typescript": "^6.0.3"
+    "@vitest/coverage-istanbul": "^4.1.11",
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   }
 }

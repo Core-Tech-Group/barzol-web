@@ -1,5 +1,6 @@
 import type { Product } from '../../types';
 import type { CategoryRow } from '../categorias/categoriaMapper';
+import { slugify } from '../text/slugify';
 
 // Fila cruda tal como la devuelve Supabase (columnas snake_case, ids ya
 // normalizados a string). `product_photo` y `product_feature` llegan unidas
@@ -29,16 +30,6 @@ export interface ProductoRow {
   created_at: string;
   product_photo: { url: string; sort_order: number }[];
   product_feature: { content: string; sort_order: number }[];
-}
-
-function slugify(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 export function mapProductoRowToProduct(row: ProductoRow, categoryRows: CategoryRow[]): Product {

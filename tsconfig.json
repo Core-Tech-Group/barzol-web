@@ -11,12 +11,15 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "baseUrl": ".",
+    // Sin `baseUrl` (BZ-15): quedó deprecado y TypeScript 7 dejará de
+    // soportarlo. Los `paths` de abajo se resuelven relativos a este archivo,
+    // que es donde ya apuntaban. Ningún import usaba rutas desnudas tipo
+    // `src/...`, así que quitarlo no cambia ninguna resolución.
     "paths": {
-      "@/*": ["src/*"],
-      "@landing/*": ["src/landing/*"],
-      "@admin/*": ["src/admin/*"],
-      "@shared/*": ["src/shared/*"]
+      "@/*": ["./src/*"],
+      "@landing/*": ["./src/landing/*"],
+      "@admin/*": ["./src/admin/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   }
 }

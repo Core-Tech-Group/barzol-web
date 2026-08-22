@@ -1,4 +1,5 @@
 import type { Category, Subcategory } from '../../types';
+import { slugify } from '../text/slugify';
 
 // Fila cruda de la tabla `category` (autorreferenciada — ver DATABASE_SCHEMA.md).
 // No existe una tabla `subcategory` separada: una subcategoría es una fila de
@@ -14,15 +15,8 @@ export interface CategoryRow {
 
 // `category.code` es un número de inventario, no un texto de ruta — el slug
 // público se calcula desde `name` (no se persiste, igual que en `product`).
-function slugify(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+// La función vive en `../text/slugify` desde BZ-61: estaba duplicada acá y en
+// `productoMapper.ts`, y el slug es la URL pública (ver SPEC-003).
 
 // Recibe TODAS las filas activas de `category` (una sola consulta) y arma el
 // árbol de 2 niveles que espera el resto del proyecto: categorías raíz

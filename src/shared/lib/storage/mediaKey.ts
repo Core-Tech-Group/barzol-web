@@ -42,16 +42,43 @@ export function sanitizeFileName(fileName: string): string {
 }
 
 /**
+ * Fuentes de no-determinismo, inyectables (SPEC-002 REQ-208).
+ *
+ * Existen porque la Constitución 6.1 prohíbe `new Date()` y `crypto.randomUUID()`
+ * dentro de lógica pura: sin esto, la única forma de probar `buildMediaKey` es
+ * congelar el reloj global, que es justo el test frágil que la Regla 5 prohíbe.
+ *
+ * Ambos campos son opcionales y traen su valor de siempre, así que las llamadas
+ * de dos argumentos que ya existen no cambian (TEST-123).
+ */
+export interface MediaKeyDeps {
+  /** Instante en que se construye la clave. Por defecto, ahora. */
+  ahora?: () => Date;
+  /** Generador del identificador único. Por defecto, `crypto.randomUUID()`. */
+  nuevoId?: () => string;
+}
+
+/**
  * Clave definitiva del objeto: `carpeta/AAAA/MM/<uuid>-<nombre-limpio>`.
  *
  * El UUID va por delante del nombre para que dos archivos con el mismo nombre
  * nunca se pisen — en R2 un PUT sobre una clave existente la sobrescribe sin
  * avisar. El tramo AAAA/MM mantiene el bucket navegable a mano.
+ *
+ * Las fechas se leen en UTC a propósito. Barzol opera en UTC-5, y con hora
+ * local una subida del 31 de diciembre por la noche se archivaría bajo el año
+ * siguiente (TEST-122).
  */
-export function buildMediaKey(folder: MediaFolder, fileName: string): string {
-  const ahora = new Date();
-  const anio = ahora.getUTCFullYear();
-  const mes = String(ahora.getUTCMonth() + 1).padStart(2, '0');
+export function buildMediaKey(
+  folder: MediaFolder,
+  fileName: string,
+  deps: MediaKeyDeps = {}
+): string {
+  const instante = deps.ahora?.() ?? new Date(); // sdd:determinismo-ok REQ-208 valor-por-defecto-inyectable
+  const id = deps.nuevoId?.() ?? crypto.randomUUID(); // sdd:determinismo-ok REQ-208 valor-por-defecto-inyectable
 
-  return `${folder}/${anio}/${mes}/${crypto.randomUUID()}-${sanitizeFileName(fileName)}`;
+  const anio = instante.getUTCFullYear();
+  const mes = String(instante.getUTCMonth() + 1).padStart(2, '0');
+
+  return `${folder}/${anio}/${mes}/${id}-${sanitizeFileName(fileName)}`;
 }

@@ -1,61 +1,82 @@
 # Matriz de trazabilidad — SPEC ↔ TEST ↔ código
 
-> **Estado:** manual. La automatiza `scripts/sdd-trace.mjs` (`BZ-66`).
-> **Última actualización:** 2026-08-21
-
-Mientras sea manual, esta tabla **es un documento, no un gate**: se desactualiza en
-cuanto alguien olvide tocarla. Por eso `BZ-66` no es opcional — un gate de
-trazabilidad que depende de la memoria humana ya falló antes de escribirse.
+> **Última actualización:** 2026-08-22
+> **Verificación automática:** `npm run sdd:trace` (`BZ-66`). Este documento es el
+> resumen legible; **la fuente de verdad es el gate**, que sí falla.
 
 ---
 
 ## Estado por SPEC
 
-| SPEC | Capa | Código | Tests | Estado |
+| SPEC | Estado | Código | Tests | Cobertura |
 | :--- | :--- | :--- | :--- | :--- |
-| SPEC-001 · Precio de catálogo | 1 | ⬜ `src/shared/lib/pricing/catalogPrice.ts` | ⬜ | Especificada, sin implementar |
-| SPEC-002 · Claves R2 | 1 | ✅ `src/shared/lib/storage/mediaKey.ts` | ⬜ | Código existe, sin tests. REQ-208 pendiente |
-| SPEC-003 · Slug público | 1 | 🔶 duplicado en 2 mappers | ⬜ | Código existe **mal ubicado** |
-| SPEC-900 · Gates CI/CD | Plataforma | ⬜ `.github/workflows/sdd-gate.yml` | ⬜ | Sin empezar |
-| SPEC-901 · Humo post-deploy | Plataforma | ⬜ `scripts/smoke.mjs` | ⬜ | Sin empezar |
-| SPEC-902 · RLS | 4 | 🔶 policies aplicadas, sin verificar | ⬜ `supabase/tests/` | **P0** — `BZ-50` |
+| [SPEC-001](specs/SPEC-001-precio-catalogo.md) · Precio de catálogo | BORRADOR | ⬜ sin implementar | ⬜ | — |
+| [SPEC-002](specs/SPEC-002-media-key-r2.md) · Claves de R2 | **APROBADA** | ✅ `storage/mediaKey.ts` | ✅ 22 tests | alta |
+| [SPEC-003](specs/SPEC-003-slug-publico.md) · Slug público | **APROBADA** | ✅ `text/slugify.ts` | ✅ 19 tests | alta |
+| [SPEC-900](specs/SPEC-900-gates-cicd.md) · Gates de CI/CD | BORRADOR | 🔶 workflow escrito, sin correr | ⬜ matriz de 14 provocaciones | — |
+| [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios | — |
+| [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | ⬜ | ⬜ `supabase/tests/` | — |
 
-Leyenda: ✅ existe y cumple · 🔶 existe con reservas · ⬜ no existe
+Las SPEC en **BORRADOR** no bloquean el gate: describen algo aún no implementado.
+Pasar una a APROBADA es un acto explícito, y a partir de ahí todos sus REQ deben
+estar citados en algún test o el gate falla.
 
-## Requisitos sin cobertura
+## Cobertura de requisitos
 
-Todos, hoy. `tests/` no existe. La tabla se completa a medida que avanzan `BZ-57`
-a `BZ-70`.
+| SPEC | REQ | Cubiertos | Pendiente de |
+| :--- | :--- | :--- | :--- |
+| SPEC-001 | 001–007 | 0 / 7 | implementar `catalogPrice.ts` |
+| SPEC-002 | 201–208 | **8 / 8** | — |
+| SPEC-003 | 301–305 | **5 / 5** | — |
+| SPEC-900 | 901–911 | 0 / 11 | `BZ-65` · ejecutar la matriz de `SPEC-900.plan.md` |
+| SPEC-901 | 951–961 | 0 / 11 | tests unitarios del evaluador de sondas |
+| SPEC-902 | 921–930 | 0 / 10 | `BZ-70` · pgTAP |
 
-| REQ | SPEC | Bloqueado por |
+> `SPEC-901` es un caso interesante: el script **funciona y se ejecutó contra
+> producción**, pero su lógica de decisión —códigos de salida, timeouts, "todas se
+> ejecutan aunque una falle"— no tiene ni un test. Es exactamente el hueco que el
+> gate reportaría el día que la spec pase a APROBADA, y por eso sigue en borrador.
+
+## Cobertura medida — 2026-08-22
+
+Primera medición real, con `npm run test:cov`:
+
+| Capa | Líneas | Ramas | Umbral | Archivos |
+| :--- | ---: | ---: | ---: | ---: |
+| 1 · lógica pura | **5,8 %** | **5,9 %** | 95 % / 90 % | 30 |
+| 3 · endpoints | sin datos | sin datos | 70 % / 60 % | 0 |
+
+El 5,8 % es lo esperable con tres archivos de treinta cubiertos. El umbral **no se
+baja** para que el número quede bonito (`BZ-73`): primero sube la cobertura.
+
+## Deuda registrada — `.sdd/baseline.json`
+
+**23 archivos** de `src/shared/lib/` existían sin SPEC cuando se montó el gate.
+La lista solo puede encoger; el gate falla con archivos **nuevos** sin spec, y
+avisa cuando uno del baseline gana su spec para poder podarla.
+
+Prioridad de especificación (`BZ-75`):
+
+| Archivo | Prioridad | Motivo |
 | :--- | :--- | :--- |
-| REQ-001..007 | SPEC-001 | `BZ-57` (infra de tests) |
-| REQ-201..207 | SPEC-002 | `BZ-57` |
-| REQ-208 | SPEC-002 | `BZ-62` |
-| REQ-301..305 | SPEC-003 | `BZ-57`, `BZ-61` |
-| REQ-901..911 | SPEC-900 | `BZ-65`, `BZ-66`, `BZ-68` |
-| REQ-951..961 | SPEC-901 | `BZ-67`, y `BZ-72` antes |
-| REQ-921..930 | SPEC-902 | `BZ-70` |
-
-## Código en `src/shared/lib/` sin SPEC
-
-Lo que el gate 4 (REQ-905b) reportaría hoy. **No es una lista de tareas**: es el
-inventario de lo que queda por especificar, y especificarlo entero de golpe es
-justo lo que hace fracasar la adopción de SDD en la segunda semana.
-
-| Archivo | Prioridad de especificación | Motivo |
-| :--- | :--- | :--- |
-| `productos/productoMapper.ts` | **Alta** | Deriva la categoría subiendo por `parent_category_id`. Es la lógica más sutil del repo |
+| `productos/productoMapper.ts` | **Alta** | Deriva la categoría subiendo por `parent_category_id`. La lógica más sutil del repo |
 | `categorias/categoriaMapper.ts` | **Alta** | Anida subcategorías; alimenta toda la navegación |
-| `validation/*.ts` | Media | Esquemas Zod — el contrato ya está en el propio esquema |
-| `storage/mediaUrl.ts` | Media | Construye URLs públicas de R2 |
 | `env/serverEnv.ts` | Media | 183 líneas, causa raíz de `BZ-04` y `BZ-33` |
-| `errors/logServerError.ts` | Media | Relacionado con `BZ-14` (fuga de mensajes internos) |
-| `*/`*`Service.ts` | Baja | Orquestación; se prueban en Capa 3 con fakes |
-| `media/imageOptimizer.ts` | Baja | — |
-| `build/buildInfo.ts` | Baja | — |
-| `env/nombresParecidos.ts` | Baja | Heurística de ayuda al diagnóstico, no de negocio |
+| `errors/logServerError.ts` | Media | Relacionado con `BZ-14`, fuga de mensajes internos |
+| `storage/mediaUrl.ts` | Media | Construye las URLs públicas de R2 — relacionado con `BZ-76` |
+| `validation/*.ts` | Baja | El contrato ya está en el propio esquema Zod |
+| `*/*Service.ts` | Baja | Orquestación; se prueban en Capa 3 con dobles |
 
-**Orden sugerido:** los dos mappers primero. Son puros, son la lógica que más
-decisiones sutiles concentra, y no tienen ninguna dependencia de infraestructura —
-se pueden especificar y probar el mismo día en que exista `npm test`.
+## Excepciones declaradas
+
+**Determinismo (Constitución 6.1).** El gate lo verifica estáticamente. Quedan
+fuera, por diseño:
+
+- Los adaptadores que la Regla 1.1 declara como tales (`db/client.ts`,
+  `auth/authClient.ts`, `env/serverEnv.ts`, `storage/r2Bucket.ts`,
+  `storage/mediaStorage.ts`).
+- Los `*Service.ts`, que son orquestadores (Regla 1.3). `categoriaService.ts` usa
+  `Date.now()` para el TTL de su caché, y eso es lo esperable de un orquestador.
+  Su determinismo se resuelve cuando tenga SPEC, inyectando el reloj.
+- Líneas con marcador explícito `// sdd:determinismo-ok <motivo>`. Hoy solo las dos
+  de `mediaKey.ts`, que son los valores por defecto inyectables de `REQ-208`.
