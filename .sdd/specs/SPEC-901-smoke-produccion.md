@@ -148,3 +148,46 @@ Salida en texto plano, una línea por sonda, más un resumen. Sin colores ANSI c
 - **INV-3:** El token nunca aparece en la salida, ni siquiera truncado.
 - **INV-4:** El script no lee `.env` del repositorio. Toma todo de argumentos o de
   variables de entorno del proceso.
+
+---
+
+## Enmienda 1 — 2026-08-22 · el diagnóstico deja de ser público
+
+`SPEC-903` protege `GET /api/diagnostico` y añade `GET /api/salud`. Esta SPEC
+asumía la **opción 1** (cabecera con token, 404 sin ella) y decía que si se
+elegía la 2 —separar en dos endpoints— cambiaría REQ-955. Se eligieron **las
+dos**, así que cambian tres cosas.
+
+### [REQ-955] — revisado
+El sistema DEBE leer el estado y el commit desplegado de `GET /api/salud`, que es
+público. DEBE consultar `GET /api/diagnostico` **solo** para verificar las
+variables recibidas, y DEBE informar **AVISO** —no fallo— cuando esa consulta no
+sea posible por falta de token.
+
+> Un AVISO dice "no se pudo comprobar". Un PASA diría "se comprobó y está bien",
+> que sería falso. Es la misma regla que `SPEC-902` REQ-933.
+
+### [REQ-956] — sin cambios de fondo, sí de origen
+La comparación del commit se hace contra `/api/salud`. **Deliberadamente:** es la
+sonda de mayor valor del conjunto —la que `BZ-38` habría necesitado— y era la que
+menos debía depender de que alguien recuerde configurar un secreto.
+
+### [REQ-962] — nuevo · Ubicuo
+El informe DEBE distinguir tres estados por sonda: `PASA`, `AVISO` y `FALLA`.
+Solo `FALLA` cambia el código de salida.
+
+## Reparto tras la enmienda
+
+| Sonda | Origen | Necesita token |
+| :--- | :--- | :--- |
+| TEST-S01 · portada | `/` | no |
+| TEST-S02 · catálogo | `/catalogo/<slug>` | no |
+| TEST-S03 · 404 propio | ruta aleatoria | no |
+| TEST-S04 · worker sano | `/api/salud` | no |
+| TEST-S05 · variables recibidas | `/api/diagnostico` | **sí** (si no, AVISO) |
+| TEST-S06 · commit desplegado | `/api/salud` | no |
+| TEST-S07 · imagen desde R2 | portada + dominio R2 | no |
+
+Seis de siete siguen funcionando sin ningún secreto. Esa es la propiedad que
+había que conservar: un humo que necesita configuración previa es un humo que no
+se ejecuta.

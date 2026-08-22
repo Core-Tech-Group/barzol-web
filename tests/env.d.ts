@@ -19,6 +19,13 @@ declare namespace Cloudflare {
   interface Env {
     /** KV de sesiones inyectado por @astrojs/cloudflare, ausente en wrangler.jsonc. */
     SESSION: KVNamespace;
+    /**
+     * Token del diagnóstico (SPEC-903). Opcional a propósito: los tests de
+     * `BZ-72` lo asignan y lo borran para ejercitar los tres niveles de acceso
+     * en la misma corrida, y declararlo acá evita el `as unknown as` que
+     * prohíbe la Regla 4.1.
+     */
+    BARZOL_DIAGNOSTICO_TOKEN?: string;
   }
 }
 

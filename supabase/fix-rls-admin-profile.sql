@@ -1,0 +1,74 @@
+-- ============================================================================
+--  RLS en `admin_profile` — SPEC-902 REQ-921 y REQ-927 · tarea BZ-80, parte C
+-- ============================================================================
+--
+--  APLICABLE POR SÍ SOLO. No depende de ningún cambio de código y no puede
+--  romper el panel de administración. Es la parte independiente del hallazgo,
+--  separada a propósito para poder subir la seguridad por fases.
+--
+--  Lo que arregla
+--  --------------
+--  `supabase/schema.sql` crea la tabla en la línea 37 y **nunca le habilita
+--  RLS**. Las otras diez tablas del esquema sí lo tienen. Con RLS deshabilitado
+--  y los GRANT que Supabase da por defecto al rol `anon`, cualquiera con la
+--  clave pública —que viaja al navegador en cada visita— puede leer la tabla
+--  entera.
+--
+--  Hoy `npm run audit:rls` responde AVISO, no FALLA, porque desde fuera no se
+--  distingue "protegida" de "vacía" (REQ-933). Es decir: puede que ahora mismo
+--  no haya filas que filtrar. Eso no es una defensa, es una casualidad — en
+--  cuanto se cree el primer perfil de administrador, se filtra.
+--
+--  Por qué NO rompe nada
+--  ---------------------
+--  Ningún código de la aplicación lee `admin_profile` con el cliente anónimo.
+--  Se usa en dos sitios y los dos siguen funcionando:
+--
+--    1. Dentro de las policies `"admin write"` de `delta_crud.sql`, en un
+--       `exists (select 1 from admin_profile where id = auth.uid())`. Las
+--       subconsultas de una policy se evalúan con los permisos del propietario
+--       de la policy, no del rol que consulta: RLS sobre `admin_profile` no las
+--       afecta.
+--    2. La sesión del admin, que tras esta migración sigue viendo su propia
+--       fila gracias a la policy `"self read"`.
+--
+--  Cómo aplicarlo
+--  --------------
+--    1. `npm run audit:rls` y guardar la salida (estado previo).
+--    2. Ejecutar este archivo en el SQL Editor de Supabase.
+--    3. Comprobar que el panel de admin sigue permitiendo guardar cambios
+--       —crear o editar un producto—, que es lo que ejercita las policies
+--       `"admin write"`.
+--    4. `npm run audit:rls` de nuevo: TEST-P03 debe pasar de AVISO a PASA.
+--
+--  Si algo saliera mal, la vuelta atrás es una línea:
+--      alter table admin_profile disable row level security;
+--
+--  El resto del hallazgo —que `anon` puede leer los productos en borrador—
+--  necesita un cambio de código antes y está en
+--  `supabase/pendiente-fix-rls-borradores.sql`, sin aplicar.
+-- ============================================================================
+
+-- REQ-921 · RLS habilitado en todas las tablas del esquema public.
+alter table admin_profile enable row level security;
+
+-- REQ-927 · Sin policy de lectura para `anon`, la tabla queda cerrada por
+-- defecto. Cada administrador autenticado ve únicamente su propia fila: es lo
+-- que el panel necesita y nada más.
+drop policy if exists "self read" on admin_profile;
+create policy "self read" on admin_profile for select to authenticated
+  using (id = auth.uid());
+
+-- ----------------------------------------------------------------------------
+-- Verificación, para pegar en el SQL Editor después de aplicar:
+--
+--   select relname, relrowsecurity
+--   from pg_class
+--   where relnamespace = 'public'::regnamespace and relkind = 'r'
+--   order by relname;
+--   -- admin_profile debe aparecer con relrowsecurity = true
+--
+--   select tablename, policyname, cmd, roles
+--   from pg_policies
+--   where schemaname = 'public' and tablename = 'admin_profile';
+-- ----------------------------------------------------------------------------

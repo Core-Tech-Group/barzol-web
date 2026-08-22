@@ -98,21 +98,9 @@ create policy "public read" on product_feature for select
     )
   );
 
--- ---------------------------------------------------------------------------
--- SECCIÓN C · admin_profile (REQ-921, REQ-927)
--- Independiente de las anteriores: se puede aplicar sin tocar código.
---
--- `schema.sql` crea la tabla pero NUNCA le habilita RLS. Hoy la auditoría
--- responde 200 con lista vacía, y desde fuera no se distingue "protegida" de
--- "vacía" (REQ-933). Con RLS habilitado y sin policy de lectura, queda cerrada
--- por defecto para anon y para authenticated.
--- ---------------------------------------------------------------------------
-
-alter table admin_profile enable row level security;
-
--- Cada admin puede ver su propia fila; nadie más ve nada.
-create policy "self read" on admin_profile for select to authenticated
-  using (id = auth.uid());
+-- La sección C (RLS en admin_profile) se movió a su propio archivo,
+-- `supabase/fix-rls-admin-profile.sql`: no depende de ningún cambio de código
+-- y se aplica por separado, antes que todo esto.
 
 -- ============================================================================
 -- Verificar antes de confirmar:

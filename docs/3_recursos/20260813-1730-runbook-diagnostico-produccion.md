@@ -10,13 +10,32 @@ Qué hacer cuando el sitio devuelve "Algo salió mal". Está escrito para resolv
 
 Ese log responde "¿se subió el código?". La pregunta cuando el sitio falla es otra: "¿qué configuración recibe el worker al atender una petición?". Son cosas distintas y se miran en lugares distintos.
 
-## Paso 1 — `GET /api/diagnostico` (10 segundos, sin herramientas)
-
-Abrir en el navegador:
+## Paso 0 — ¿está vivo y qué código corre? (5 segundos)
 
 ```
-https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+https://barzol-web.willymichael-cardenas.workers.dev/api/salud
 ```
+
+Público y sin autenticación. Devuelve tres cosas: `ok`, el `commit` desplegado y
+el `momento`. Con eso ya se responde la primera pregunta de cualquier incidente
+—¿estoy mirando el código que creo?— sin exponer nada de la configuración.
+
+## Paso 1 — `GET /api/diagnostico` (10 segundos, requiere token)
+
+**Desde `BZ-72` este endpoint ya no es público** (ver `SPEC-903`). Necesita la
+cabecera `x-diagnostico-token` con el valor de `BARZOL_DIAGNOSTICO_TOKEN`:
+
+```bash
+curl -H "x-diagnostico-token: $BARZOL_DIAGNOSTICO_TOKEN" \
+  https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+```
+
+Sin la cabecera responde **404**, no 403 — un 403 confirmaría que la ruta
+existe. Si el token todavía no está configurado en Cloudflare, el endpoint
+responde 200 en modo reducido y dice exactamente qué falta para recuperar el
+detalle.
+
+El token se carga con `npx wrangler secret put BARZOL_DIAGNOSTICO_TOKEN`.
 
 Responde JSON con el estado real del worker desplegado:
 

@@ -14,7 +14,7 @@
 
 import {
   catalogoConDatos,
-  diagnostico,
+  estadoYCommit,
   imagenDesdeR2,
   paginaNoEncontrada,
   portadaViva,
@@ -58,19 +58,23 @@ async function main() {
     await portadaViva(base),
     await catalogoConDatos(base),
     await paginaNoEncontrada(base),
-    ...(await diagnostico(base, { token, commit })),
+    ...(await estadoYCommit(base, { token, commit })),
     await imagenDesdeR2(base),
   ];
 
   for (const r of resultados) {
-    const marca = r.estado === 'PASA' ? 'PASA' : 'FALLA';
+    const marca = r.estado;
     console.log(`[${marca}] ${r.id} · ${r.descripcion} (${r.ms} ms)`);
     if (r.detalle) console.log(`         ${r.detalle}`);
   }
 
   const fallidas = resultados.filter((r) => r.estado === 'FALLA');
+  const avisadas = resultados.filter((r) => r.estado === 'AVISO');
   console.log('');
-  console.log(`${resultados.length - fallidas.length}/${resultados.length} sondas en verde.`);
+  console.log(
+    `${resultados.length - fallidas.length - avisadas.length} en verde · ` +
+      `${avisadas.length} aviso(s) · ${fallidas.length} fallo(s).`
+  );
 
   if (fallidas.length > 0) {
     console.log(`HUMO · FALLA — ${fallidas.map((r) => r.id).join(', ')}`);

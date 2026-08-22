@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — SPEC ↔ TEST ↔ código
 
-> **Última actualización:** 2026-08-22 (3ª revisión)
+> **Última actualización:** 2026-08-22 (4ª revisión)
 > **Verificación automática:** `npm run sdd:trace`. Este documento es el resumen
 > legible; **la fuente de verdad es el gate**, que sí falla.
 
@@ -16,6 +16,7 @@
 | [SPEC-900](specs/SPEC-900-gates-cicd.md) · Gates de CI/CD | BORRADOR | 🔶 workflow escrito, sin correr | ⬜ matriz de 14 provocaciones |
 | [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios |
 | [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | 🔶 auditoría de lectura hecha | ⬜ pgTAP pendiente |
+| [SPEC-903](specs/SPEC-903-acceso-diagnostico.md) · Acceso al diagnóstico | BORRADOR | ✅ `acceso.ts`, `/api/salud`, `/api/diagnostico` | ✅ 15 unit + 11 workerd |
 
 Las SPEC en **BORRADOR** no bloquean el gate: describen algo aún no implementado.
 Pasar una a APROBADA es un acto explícito, y a partir de ahí todos sus REQ deben
@@ -31,6 +32,7 @@ estar citados en algún test o el gate falla.
 | SPEC-900 | 901–911 | 0 / 11 | ejecutar la matriz de `SPEC-900.plan.md` |
 | SPEC-901 | 951–961 | 0 / 11 | tests unitarios del evaluador de sondas |
 | SPEC-902 | 921–933 | 0 / 13 | `BZ-70` · pgTAP |
+| SPEC-903 | 941–947 | **7 / 7** | aprobarla tras revisión humana |
 
 > **SPEC-902 REQ-923 está VERIFICADO Y FALLANDO en producción.** `npm run audit:rls`
 > lo detecta hoy, pero no hay un test que lo fije permanentemente, así que cuenta
@@ -41,7 +43,7 @@ estar citados en algún test o el gate falla.
 | Capa | Líneas | Ramas | Umbral | Archivos |
 | :--- | ---: | ---: | ---: | ---: |
 | 1 · lógica pura | **5,8 %** | **5,9 %** | 95 % / 90 % | 30 |
-| 3 · endpoints | medida aparte con istanbul | — | 70 % / 60 % | 1 de 11 |
+| 3 · endpoints | medida aparte con istanbul | — | 70 % / 60 % | 3 de 12 |
 
 El umbral **no se baja** para que el número quede bonito (`BZ-73`): primero sube
 la cobertura.

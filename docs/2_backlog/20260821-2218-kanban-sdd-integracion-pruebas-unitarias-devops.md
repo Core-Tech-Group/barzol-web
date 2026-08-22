@@ -1,6 +1,6 @@
 # Scrumban — SDD, pruebas del sistema y DevOps
 
-> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-22 (3ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-22 (4ª revisión) · **Rama:** `main`
 > **Alcance:** integrar Spec-Driven Development, construir la infraestructura de
 > pruebas sobre los runtimes reales, y cerrar el ciclo de despliegue con gates
 > verificables.
@@ -9,6 +9,28 @@
 
 Las tareas no repiten el contenido de las specs: cada una enlaza la suya. Aquí va
 la decisión, el riesgo y el orden; el detalle técnico vive en `.sdd/`.
+
+---
+
+## Estado — 2026-08-22, 4ª revisión
+
+**La seguridad empezó a subir, por fases y sin romper nada.** El criterio fue
+tocar primero lo que no arrastra a nada más:
+
+| Fase | Qué | Estado |
+| :--- | :--- | :--- |
+| 1 · independiente, sin código | RLS en `admin_profile` | SQL listo para aplicar solo |
+| 2 · independiente, solo código | `/api/diagnostico` protegido + `/api/salud` público | ✅ desplegable ya |
+| 3 · arrastra refactor | `anon` lee borradores | especificado, **sin aplicar** |
+
+La fase 2 se hizo entera siguiendo el ciclo SDD: `SPEC-903` → RED → GREEN →
+gate. 26 tests nuevos, ninguno mockeando nada.
+
+| Control | 3ª revisión | Ahora |
+| :--- | :--- | :--- |
+| Tests | 54 | **82** — 56 en Node, 26 en workerd |
+| Specs aprobadas / totales | 2 / 6 | 2 / **7** |
+| `/api/diagnostico` | público | **protegido, con transición sin corte** |
 
 ---
 
@@ -74,7 +96,7 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | BZ-69 | Ensayar el rollback antes de necesitarlo | ⬜ Pendiente | 🟠 |
 | BZ-70 | Verificar RLS — implementa SPEC-902 | 🔶 Auditoría hecha, pgTAP pendiente | 🔴 |
 | BZ-71 | Secretos de CI y de Supabase local | ⬜ Pendiente | 🟠 |
-| BZ-72 | Proteger `/api/diagnostico` para usarlo como sonda | ⬜ Pendiente | 🔴 |
+| BZ-72 | Proteger `/api/diagnostico` para usarlo como sonda | ✅ Hecho | 🔴 |
 | BZ-73 | Fijar los umbrales de cobertura con datos reales | ⬜ Pendiente, **ya hay datos** | 🟡 |
 | BZ-74 | Evaluación: E2E con Playwright | ⬜ Pendiente | ⚪ |
 | BZ-75 | Especificar los mappers y bajar la deuda del baseline | ⬜ Pendiente | 🟠 |
@@ -82,9 +104,9 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | BZ-77 | Imágenes en base64 incrustadas en el HTML | ⬜ Pendiente | 🟡 |
 | BZ-78 | Gate de tamaño de archivo (Regla 9.1) | ✅ Hecho | 🟠 |
 | BZ-79 | Tres componentes de admin superan las 500 líneas | ⬜ Pendiente | 🟠 |
-| BZ-80 | **`anon` puede leer productos en borrador** | ⬜ Pendiente | 🔴 |
+| BZ-80 | **`anon` puede leer productos en borrador** | 🔶 Parte C lista, resto especificado | 🔴 |
 
-**Progreso:** 15 de 28 hechas, 3 parciales.
+**Progreso:** 16 de 28 hechas, 4 parciales.
 
 | Prioridad | Significado |
 |---|---|
@@ -122,9 +144,30 @@ Lo mismo aplica a `product_photo` y `product_feature` (líneas 301-302): es
 exactamente lo que TEST-R15 anticipaba — el producto no aparece, pero sus fotos
 se pueden enumerar, y el nombre del archivo suele decir de qué producto son.
 
-Aparte, `admin_profile` **no tiene `enable row level security`** en el esquema.
-La auditoría responde 200 con lista vacía y desde fuera no se distingue
-"protegida" de "vacía" (REQ-933). Eso lo resuelve pgTAP.
+### Parte C — lista para aplicar sola ✅
+
+`admin_profile` **no tiene `enable row level security`** en el esquema. Las otras
+diez tablas sí. Con RLS deshabilitado y los GRANT que Supabase da por defecto a
+`anon`, cualquiera con la clave pública puede leer la tabla entera.
+
+Hoy la auditoría responde AVISO y no FALLA porque desde fuera no se distingue
+"protegida" de "vacía" (REQ-933). **Eso no es una defensa, es una casualidad:**
+en cuanto exista el primer perfil de administrador, se filtra.
+
+Está separada en [`supabase/fix-rls-admin-profile.sql`](../../supabase/fix-rls-admin-profile.sql)
+porque **no depende de ningún cambio de código y no puede romper el panel**:
+
+- Las policies `"admin write"` consultan `admin_profile` dentro de un `exists`, y
+  las subconsultas de una policy se evalúan con los permisos de su propietario,
+  no del rol que pregunta. RLS sobre la tabla no las afecta.
+- La sesión del admin sigue viendo su propia fila por la policy `"self read"`.
+
+Vuelta atrás en una línea: `alter table admin_profile disable row level security;`
+
+**Queda pendiente de que alguien lo ejecute** en el SQL Editor de Supabase — no
+tengo forma de aplicar DDL desde acá, y de todos modos es decisión humana
+(Constitución 8.5). Después, `npm run audit:rls` debe pasar TEST-P03 de AVISO a
+PASA.
 
 ### Por qué NO lo he corregido — la regresión
 
@@ -158,7 +201,62 @@ aplicar sin tocar código. Es la parte barata de este hallazgo.
 
 ---
 
-## ✅ Cerradas en esta sesión (2026-08-22, 3ª revisión)
+## ✅ Cerradas en esta sesión (2026-08-22, 4ª revisión)
+
+### BZ-72 · `/api/diagnostico` protegido ✅ 🔴 — hereda y cierra `BZ-37`
+
+Especificado en [SPEC-903](../../.sdd/specs/SPEC-903-acceso-diagnostico.md), con
+su plan y el ciclo RED → GREEN completo. **26 tests**, ninguno mockeando nada.
+
+El endpoint ya estaba bien construido —nunca devolvía el *valor* de una variable—
+pero sí publicaba un mapa: los nombres de todas las variables que recibe el
+worker (incluidos los secretos), qué bindings existen y el SHA desplegado.
+
+**El problema no era cerrarlo, era cerrarlo sin quedarse ciego.** Protegerlo del
+todo hoy dejaba al proyecto sin el paso 1 de su runbook hasta que alguien
+configurara un secreto en Cloudflare — y si el sitio se cae en esa ventana, se
+pierde justo la herramienta que existe para esos momentos.
+
+De ahí **tres niveles** en vez de dos:
+
+| `BARZOL_DIAGNOSTICO_TOKEN` | Cabecera | Respuesta |
+| :--- | :--- | :--- |
+| sin configurar | cualquiera | 200 reducido + pista de cómo configurarlo |
+| configurado | correcta | 200 con el detalle entero |
+| configurado | ausente o incorrecta | **404 vacío** |
+
+El 404 y no 403 es deliberado: un 403 confirma que la ruta existe.
+
+Y un endpoint nuevo, `GET /api/salud`, público y mínimo: `ok`, `commit`,
+`momento`. Es lo que permite cerrar el diagnóstico sin perder liveness, y ahí
+vive ahora la sonda de mayor valor del humo — la comparación del commit
+desplegado, que era la que menos debía depender de que alguien recuerde
+configurar un secreto.
+
+Detalles que valían el esfuerzo:
+
+- **Comparación en tiempo constante** (REQ-945). Un `===` sobre cadenas corta en
+  la primera diferencia; con suficientes intentos el tiempo filtra el token
+  carácter a carácter. Se recorre siempre entera con XOR.
+- **Un token vacío cuenta como no configurado** (REQ-946, TEST-408/409). Es el
+  caso real de un secreto mal cargado. Tratarlo como configurado dejaría el
+  endpoint en `oculto` para siempre, y el motivo sería invisible precisamente
+  porque el diagnóstico está apagado.
+- Se extrajeron `probarSupabase.ts` y `estadoBasico.ts` para que los dos
+  endpoints compartan una sola respuesta a "¿la base contesta?" y un solo cuerpo
+  reducido. `Diagnostico extends EstadoBasico`, así que INV-4 la sostiene el
+  compilador y no la memoria de quien edite esto en seis meses.
+
+**El gate hizo su trabajo otra vez:** al añadir `probarSupabase.ts` falló con
+`[SIN-SPEC]` hasta que el archivo quedó nombrado en el contrato de SPEC-903.
+
+Se enmendaron `SPEC-901` (el humo ahora distingue `PASA`/`AVISO`/`FALLA`, y seis
+de sus siete sondas siguen funcionando sin ningún secreto) y el runbook de
+diagnóstico, que tiene un paso 0 nuevo.
+
+---
+
+## ✅ Cerradas en la 3ª revisión (2026-08-22)
 
 ### BZ-68 · Quién despliega ✅ 🔴 — cerrado con evidencia
 
@@ -316,11 +414,6 @@ panel que hoy funciona. El orden sano es `BZ-60` → tests → partir.
 entrypoint que solo existe tras el build. Hay que obtener la config de Astro sin
 el adaptador. Ahora tiene más valor que antes: desbloquea `BZ-79`.
 
-### BZ-72 · Proteger `/api/diagnostico` 🔴
-
-Sin cambios. Sigue exponiendo qué variables recibe el worker y qué bindings
-tiene. Ya no bloquea al humo, pero sigue siendo una fuga de configuración.
-
 ### BZ-73 · Fijar los umbrales 🟡 — ya hay datos
 
 Capa 1 al **5,8 %** de líneas frente al 95 % de la Constitución. La Capa 3 ya
@@ -353,14 +446,17 @@ BZ-75 (specs mappers) ──── BZ-73 (umbrales)
 ```
 
 **Orden sugerido para la próxima sesión:**
-`BZ-80` sección C → `BZ-76` → `BZ-70` (pgTAP) → `BZ-72` → `BZ-80` pasos 1-3 →
-`BZ-60` → `BZ-79` → `BZ-75` → `BZ-69` → `BZ-73` → `BZ-71` → `BZ-77` → `BZ-74`.
+aplicar `BZ-80` parte C + cargar el token del diagnóstico → `BZ-76` →
+`BZ-70` (pgTAP) → `BZ-80` pasos 1-3 → `BZ-60` → `BZ-79` → `BZ-75` → `BZ-69` →
+`BZ-73` → `BZ-71` → `BZ-77` → `BZ-74`.
 
-**Por qué.** La **sección C de `BZ-80`** primero porque es independiente, no toca
-código y cierra el agujero de `admin_profile` en un solo `alter table`. Después
-`BZ-76`, que es lo único visible para un visitante. Luego pgTAP, que es lo que
-convierte el hallazgo de hoy en un test permanente. El resto de `BZ-80` va
-después porque arrastra un refactor de servicios que necesita su propia SPEC.
+**Por qué.** Lo primero no es código: **aplicar la parte C** en el SQL Editor y
+cargar `BARZOL_DIAGNOSTICO_TOKEN` con `wrangler secret put`. Los dos son de un
+minuto y los dos suben la seguridad de golpe — el segundo, además, lleva el
+diagnóstico del nivel `reducido` al `oculto` que ya está implementado y probado.
+Después `BZ-76`, lo único visible para un visitante. Luego pgTAP, que convierte
+el hallazgo de `BZ-80` en un test permanente. El resto de `BZ-80` va al final
+porque arrastra un refactor de servicios que necesita su propia SPEC.
 
 ---
 
