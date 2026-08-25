@@ -155,19 +155,36 @@ Hoy la auditoría responde AVISO y no FALLA porque desde fuera no se distingue
 en cuanto exista el primer perfil de administrador, se filtra.
 
 Está separada en [`supabase/fix-rls-admin-profile.sql`](../../supabase/fix-rls-admin-profile.sql)
-porque **no depende de ningún cambio de código y no puede romper el panel**:
-
-- Las policies `"admin write"` consultan `admin_profile` dentro de un `exists`, y
-  las subconsultas de una policy se evalúan con los permisos de su propietario,
-  no del rol que pregunta. RLS sobre la tabla no las afecta.
-- La sesión del admin sigue viendo su propia fila por la policy `"self read"`.
+porque **no depende de ningún cambio de código**. El paso a paso para aplicarla
+desde el panel está en
+[`docs/3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md`](../3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md).
 
 Vuelta atrás en una línea: `alter table admin_profile disable row level security;`
 
 **Queda pendiente de que alguien lo ejecute** en el SQL Editor de Supabase — no
 tengo forma de aplicar DDL desde acá, y de todos modos es decisión humana
-(Constitución 8.5). Después, `npm run audit:rls` debe pasar TEST-P03 de AVISO a
-PASA.
+(Constitución 8.5).
+
+#### Corrección del 2026-08-24 — dos afirmaciones de la 4ª revisión eran falsas
+
+Escribir el runbook obligó a verificar contra la documentación, y dos cosas que
+esta sección daba por ciertas no lo eran.
+
+**1. El mecanismo.** Decía que las subconsultas de una policy corren "con los
+permisos de su propietario". PostgreSQL dice lo contrario —*"run as part of the
+query and with the privileges of the user running the query"*— y el RLS de la
+tabla referenciada **sí** se aplica. La conclusión (no rompe el panel) se
+sostiene por otro motivo: `"self read"` devuelve la única fila que la subconsulta
+necesita, y las `"admin write"` son todas `to authenticated`, así que `anon`
+jamás las evalúa. Pero aparece una condición operativa nueva: **ejecutar el
+`enable` sin el `create policy` rompe el panel**, por default-deny. De ahí el
+`begin; … commit;` que ahora envuelve el archivo.
+
+**2. La verificación.** TEST-P03 **no** pasa a PASA: RLS filtra filas, no rechaza
+peticiones, y PostgREST sigue devolviendo `200` con `[]` — indistinguible de hoy,
+que es lo que REQ-933 obliga a reportar como AVISO. Llega a PASA solo con el
+`revoke select on admin_profile from anon` opcional del runbook. La verificación
+real es `pg_class.relrowsecurity` en el SQL Editor, no la sonda.
 
 ### Por qué NO lo he corregido — la regresión
 
@@ -450,10 +467,11 @@ aplicar `BZ-80` parte C + cargar el token del diagnóstico → `BZ-76` →
 `BZ-70` (pgTAP) → `BZ-80` pasos 1-3 → `BZ-60` → `BZ-79` → `BZ-75` → `BZ-69` →
 `BZ-73` → `BZ-71` → `BZ-77` → `BZ-74`.
 
-**Por qué.** Lo primero no es código: **aplicar la parte C** en el SQL Editor y
-cargar `BARZOL_DIAGNOSTICO_TOKEN` con `wrangler secret put`. Los dos son de un
-minuto y los dos suben la seguridad de golpe — el segundo, además, lleva el
-diagnóstico del nivel `reducido` al `oculto` que ya está implementado y probado.
+**Por qué.** Lo primero no es código: **aplicar la parte C** con el
+[runbook del 2026-08-24](../3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md)
+—trae ensayo en seco antes de confirmar— y cargar `BARZOL_DIAGNOSTICO_TOKEN` con
+`wrangler secret put`. Los dos suben la seguridad de golpe; el segundo, además,
+lleva el diagnóstico del nivel `reducido` al `oculto` ya implementado y probado.
 Después `BZ-76`, lo único visible para un visitante. Luego pgTAP, que convierte
 el hallazgo de `BZ-80` en un test permanente. El resto de `BZ-80` va al final
 porque arrastra un refactor de servicios que necesita su propia SPEC.
