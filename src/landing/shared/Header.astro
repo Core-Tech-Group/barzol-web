@@ -12,7 +12,7 @@ const instrumentLinks = categoriasDb
 	.sort((a, b) => a.orden - b.orden)
 	.map((cat) => ({ name: cat.nombre, href: `/catalogo/${cat.slug}` }));
 
-const navCats = [...instrumentLinks, { name: 'Accesorios Personalizados', href: '/servicios#servicios' }, { name: 'Trabajos de Ingeniería', href: '/servicios#servicios' }];
+const navCats = [...instrumentLinks, { name: 'Accesorios Personalizados', href: '/servicios#servicios' }, { name: 'Trabajos de Ingeniería', href: '/servicios/trabajos-de-ingenieria#servicios' }];
 
 const announcement = { text: 'Envío a nivel nacional e internacional', icons: true };
 ---

@@ -4,47 +4,44 @@ import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
-const galeriaDb = await getGaleria('accesorios');
+const galeriaDb = await getGaleria('trabajos');
 const galeria = galeriaDb
   .slice()
   .sort((a, b) => a.orden - b.orden)
   .map((g) => ({ name: g.titulo }));
 
 const proceso = [
-  { n: '1', title: 'Nos contactas', desc: 'Cuéntanos tu proyecto por WhatsApp o email' },
-  { n: '2', title: 'Cotizamos', desc: 'Te enviamos precio y tiempo estimado' },
-  { n: '3', title: 'Fabricamos', desc: 'Producción con impresión 3D, a tu medida' },
+  { n: '1', title: 'Nos contactas', desc: 'Cuéntanos qué pieza necesitás por WhatsApp o email' },
+  { n: '2', title: 'Diseño CAD/CAE', desc: 'Modelamos la pieza con software profesional, ajustada a tu instrumento' },
+  { n: '3', title: 'Fabricamos', desc: 'Producción con impresión 3D y control de calidad antes del envío' },
   { n: '4', title: 'Te lo enviamos', desc: 'Despacho a nivel nacional e internacional' },
 ];
 ---
 
-<PublicLayout title="Servicios — Barzol">
+<PublicLayout title="Trabajos de ingeniería — Barzol">
 	<!-- HERO -->
 	<div style="position:relative; padding:80px 32px; overflow:hidden; background:var(--gradient-hero-dark);">
 		<div style="max-width:1200px; margin:0 auto; position:relative; z-index:1;">
 			<div style="display:inline-flex; align-items:center; gap:8px; padding:5px 14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:99px; font-size:11px; font-weight:600; letter-spacing:0.08em; color:white; text-transform:uppercase; margin-bottom:14px; white-space:nowrap;">
-				<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="white" stroke-width="2"></path></svg>
-				Hecho a tu medida
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="white" stroke-width="2" stroke-linecap="round"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+				Diseño e ingeniería inversa
 			</div>
-			<h1 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:10px;">Accesorios personalizados</h1>
-			<p style="font-size:15px; color:rgba(255,255,255,0.9); line-height:1.6; max-width:560px;">Grabamos el nombre, logo o detalle especial que quieras en tu soporte, sordina o accesorio, con impresión 3D.</p>
+			<h1 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:10px;">Trabajos de ingeniería</h1>
+			<p style="font-size:15px; color:rgba(255,255,255,0.9); line-height:1.6; max-width:560px;">Diseño CAD/CAE, ingeniería inversa y escaneo 3D para digitalizar formas reales y fabricar repuestos o piezas a medida con ajuste exacto.</p>
 		</div>
 	</div>
 
 	<!-- GALERÍA -->
-	<div id="servicios" style="background:white; padding:64px 32px 16px;">
+	<div id="servicios" style="background:white; padding:64px 32px;">
 		<div style="max-width:1200px; margin:0 auto;">
 			<div style="text-align:center; margin-bottom:48px;">
 				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Galería</div>
-				<h2 style="font-size:34px; font-weight:700; color:var(--color-text); line-height:1.2;">Nuestros trabajos personalizados</h2>
+				<h2 style="font-size:34px; font-weight:700; color:var(--color-text); line-height:1.2;">Nuestros trabajos de ingeniería</h2>
 			</div>
 
-			<div style="margin-bottom:40px;">
-				<GalleryLightbox items={galeria} client:load />
-			</div>
+			<GalleryLightbox items={galeria} client:load />
 		</div>
 	</div>
-
 </PublicLayout>
 
 <style>
