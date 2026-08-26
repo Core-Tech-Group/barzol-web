@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
+import { subirImagen } from '@shared/lib/media/uploadClient';
+import { guardarInicio } from './guardarInicio';
 
 export interface AllProduct {
+  /** SPEC-904 REQ-974 — la identidad es el id; `name` solo se pinta. */
+  id: string;
   name: string;
   category: string;
 }
@@ -13,6 +17,7 @@ export interface HomeSectionItem {
   title: string;
   visible: boolean;
   open: boolean;
+  /** Ids de producto, NO nombres (REQ-974). El nombre se resuelve al pintar. */
   products: string[];
   isNew?: boolean;
 }
@@ -57,14 +62,10 @@ function DragHandleIcon() {
   );
 }
 
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// Antes había aquí un `readFileAsDataURL`. Lo que devolvía —una `data:` URI—
+// se guardaba tal cual en la fila, y el sitio habría servido ese base64 en cada
+// visita a la portada. Ahora la imagen viaja a R2 y lo que se persiste es su
+// URL pública (SPEC-904 REQ-975, `subirImagen`).
 
 // ---------- Componente principal ----------
 
@@ -76,8 +77,10 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
   const [dirty, setDirty] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorMensaje, setErrorMensaje] = useState('');
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   const [delConfirmIndex, setDelConfirmIndex] = useState(-1);
 
@@ -133,6 +136,21 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
     setDirty(true);
   }
 
+  /**
+   * Un solo camino para todo lo que sale mal, con el mensaje real.
+   *
+   * El toast de error tenía el texto incrustado ("Completa los títulos
+   * vacíos..."), así que era literalmente incapaz de informar de cualquier otro
+   * fallo. Un error de RLS o una imagen que no subió habrían salido con ese
+   * mismo texto, o con ninguno.
+   */
+  function mostrarError(mensaje: string) {
+    clearTimeout(errorToastTimer.current);
+    setErrorMensaje(mensaje);
+    setShowErrorToast(true);
+    errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 5000);
+  }
+
   function confirmNavigate() {
     window.__adminHasUnsavedChanges = false;
     if (pendingHref) window.location.href = pendingHref;
@@ -143,9 +161,13 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
   async function handleHeroImageSelected(index: number, files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
-    const url = await readFileAsDataURL(file);
-    setHeroImages((prev) => prev.map((h, i) => (i === index ? url : h)));
-    markDirty();
+    try {
+      const url = await subirImagen(file, 'home');
+      setHeroImages((prev) => prev.map((h, i) => (i === index ? url : h)));
+      markDirty();
+    } catch (error) {
+      mostrarError((error as Error).message);
+    }
   }
 
   function removeHeroImage(index: number) {
@@ -202,9 +224,13 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
   async function handleBannerImageSelected(id: string, files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
-    const url = await readFileAsDataURL(file);
-    setItems((prev) => prev.map((it) => (it.id === id && it.type === 'banner' ? { ...it, image: url } : it)));
-    markDirty();
+    try {
+      const url = await subirImagen(file, 'home');
+      setItems((prev) => prev.map((it) => (it.id === id && it.type === 'banner' ? { ...it, image: url } : it)));
+      markDirty();
+    } catch (error) {
+      mostrarError((error as Error).message);
+    }
   }
 
   function removeBannerImage(id: string) {
@@ -227,9 +253,13 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
     setPickerQuery('');
   }
 
-  function addProductToSection(itemId: string, name: string) {
+  function addProductToSection(itemId: string, productId: string) {
     setItems((prev) =>
-      prev.map((it) => (it.id === itemId && it.type === 'section' && !it.products.includes(name) ? { ...it, products: [...it.products, name] } : it))
+      prev.map((it) =>
+        it.id === itemId && it.type === 'section' && !it.products.includes(productId)
+          ? { ...it, products: [...it.products, productId] }
+          : it
+      )
     );
     markDirty();
   }
@@ -278,11 +308,9 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
 
   function requestSaveConfirm() {
     const hasEmpty = items.some((it) => it.type === 'section' && !it.title.trim());
-    clearTimeout(errorToastTimer.current);
     if (hasEmpty) {
       setShowValidation(true);
-      setShowErrorToast(true);
-      errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 2800);
+      mostrarError('Completa los títulos vacíos antes de guardar');
       return;
     }
     setShowValidation(false);
@@ -290,14 +318,36 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
     setSaveConfirmOpen(true);
   }
 
-  function confirmSaveChanges() {
-    // TODO: reemplazar por @shared/lib/home/homeService cuando se conecte Supabase.
-    clearTimeout(savedToastTimer.current);
+  /**
+   * SPEC-904 REQ-970, REQ-971, REQ-973.
+   *
+   * Hasta `BZ-81` esta función no enviaba nada: mostraba el toast de éxito y
+   * limpiaba el estado sucio. El panel afirmaba haber guardado y además apagaba
+   * el guardia de navegación, así que nadie se enteraba hasta recargar.
+   *
+   * Ahora el orden es al revés y no es negociable: **primero la confirmación
+   * del servidor, después el toast**. Si algo falla, el estado sigue sucio y lo
+   * que el administrador escribió sigue en memoria, listo para reintentar.
+   */
+  async function confirmSaveChanges() {
     setSaveConfirmOpen(false);
-    setShowSavedToast(true);
-    setDirty(false);
-    savedToastTimer.current = setTimeout(() => setShowSavedToast(false), 2200);
+    setGuardando(true);
+    try {
+      await guardarInicio(items, heroImages);
+
+      clearTimeout(savedToastTimer.current);
+      setShowSavedToast(true);
+      setDirty(false);
+      savedToastTimer.current = setTimeout(() => setShowSavedToast(false), 2200);
+    } catch (error) {
+      mostrarError((error as Error).message);
+    } finally {
+      setGuardando(false);
+    }
   }
+
+  // REQ-974 — la sección guarda ids; el nombre se resuelve solo para pintar.
+  const nombrePorId = new Map(allProducts.map((p) => [p.id, p.name]));
 
   const sectionsOnly = items.filter((it) => it.type === 'section');
   const deletingItem = delConfirmIndex >= 0 ? items[delConfirmIndex] : null;
@@ -360,7 +410,8 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
             <button
               type="button"
               onClick={requestSaveConfirm}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--color-primary)', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer' }}
+              disabled={guardando}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--color-primary)', color: 'white', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, cursor: guardando ? 'wait' : 'pointer', opacity: guardando ? 0.6 : 1 }}
             >
               <Icon size={15}>
                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
@@ -374,7 +425,7 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
 
       {showErrorToast && (
         <Toast
-          message="Completa los títulos vacíos antes de guardar"
+          message={errorMensaje}
           background="var(--color-danger)"
           icon={
             <Icon size={16}>
@@ -642,11 +693,15 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-faint)', textTransform: 'uppercase', marginBottom: 10 }}>Productos</div>
                     {sec.products.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--color-text-faint)', marginLeft: 26, marginBottom: 10 }}>Sin productos todavía.</div>}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, marginLeft: 26 }}>
-                      {sec.products.map((name, k) => {
+                      {sec.products.map((productId, k) => {
                         const rowOver = overProduct && overProduct.itemId === sec.id && overProduct.index === k;
+                        // Un producto borrado del catálogo deja su id colgado
+                        // en la sección. Mostrarlo así es mejor que pintar un
+                        // hueco: dice qué pasó y se puede quitar.
+                        const name = nombrePorId.get(productId) ?? `(producto ${productId} ya no existe)`;
                         return (
                           <div
-                            key={name + k}
+                            key={productId + k}
                             draggable
                             onDragStart={(e) => {
                               e.stopPropagation();
@@ -724,12 +779,12 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 14px 14px' }}>
               {pickerResults.map((p) => {
-                const added = pickerItem.products.includes(p.name);
+                const added = pickerItem.products.includes(p.id);
                 return (
                   <button
-                    key={p.name}
+                    key={p.id}
                     type="button"
-                    onClick={() => addProductToSection(pickerItem.id, p.name)}
+                    onClick={() => addProductToSection(pickerItem.id, p.id)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', border: 'none', background: 'white', borderRadius: 8, cursor: 'pointer', textAlign: 'left' }}
                   >
                     <div style={{ minWidth: 0 }}>

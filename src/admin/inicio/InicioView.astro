@@ -18,9 +18,9 @@ const [heroImagesDb, homeItemsDb, productosDb, categoriasDb] = await Promise.all
 ]);
 
 const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
-const productById = new Map(productosDb.map((p) => [p.id, p]));
 
 const allProducts: AllProduct[] = productosDb.map((p) => ({
+	id: p.id,
 	name: p.nombre,
 	category: p.categoriaId ? categoryById.get(p.categoriaId)?.nombre ?? '—' : '—',
 }));
@@ -37,7 +37,11 @@ const items: HomeItem[] = homeItemsDb
 					title: it.titulo ?? '',
 					visible: it.visible,
 					open: false,
-					products: it.productoIds.map((pid) => productById.get(pid)?.nombre).filter((n): n is string => !!n),
+					// SPEC-904 REQ-974 — la isla trabaja con ids. Antes se traducían
+					// aquí a nombres y los que no resolvían se caían del array en
+					// silencio; ahora el id viaja intacto y el nombre se resuelve
+					// solo al pintar.
+					products: it.productoIds,
 				}
 	);
 

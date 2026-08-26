@@ -13,8 +13,6 @@
     "src/shared/lib/errors/logServerError.ts",
     "src/shared/lib/galeria/galeriaMapper.ts",
     "src/shared/lib/galeria/galeriaService.ts",
-    "src/shared/lib/home/homeMapper.ts",
-    "src/shared/lib/media/uploadClient.ts",
     "src/shared/lib/productos/productoService.ts",
     "src/shared/lib/productos/productoUrl.ts",
     "src/shared/lib/storage/r2Bucket.ts",
