@@ -16,6 +16,12 @@ export default defineConfig({
   test: {
     projects: [
       {
+        // El `resolve.alias` de abajo NO se hereda dentro de `projects`: cada
+        // proyecto resuelve por su cuenta. Estuvo latente hasta `SPEC-905`,
+        // porque hasta entonces ningún test de capa 1 importaba un módulo que
+        // usara alias **en runtime** — los de `guardarInicio.ts` eran
+        // `import type`, y TypeScript los borra antes de que el runner los vea.
+        resolve: { alias },
         test: {
           name: 'unit',
           environment: 'node',

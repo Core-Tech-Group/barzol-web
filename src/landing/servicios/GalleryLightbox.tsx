@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
+import { estadoImagen } from '@shared/lib/galeria/imagenGaleria';
 
 interface GalleryItem {
   name: string;
+  /**
+   * SPEC-905 REQ-982. Este campo no existía: el componente pintaba el marcador
+   * de posición siempre, y las dos vistas que lo alimentan descartaban la URL
+   * antes de dársela. Los cuadros grises de `BZ-82` no eran imágenes rotas —
+   * era el diseño funcionando como se escribió.
+   */
+  imagenUrl?: string | null;
 }
 
 interface Props {
@@ -34,6 +42,13 @@ const lightboxNavBtnStyle: React.CSSProperties = {
 export default function GalleryLightbox({ items }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  // REQ-983 — una URL puede ser válida y aun así devolver 404, que es lo que
+  // `BZ-76` documenta para dos imágenes de producto. Un `<img>` roto en una
+  // rejilla se ve peor que el marcador: se anota el fallo y se degrada.
+  const [rotas, setRotas] = useState<Record<number, boolean>>({});
+
+  const muestraFoto = (i: number) => estadoImagen(items[i].imagenUrl) === 'ok' && !rotas[i];
+  const marcarRota = (i: number) => setRotas((prev) => ({ ...prev, [i]: true }));
 
   const close = () => setOpenIndex(null);
   const prev = () => setOpenIndex((i) => (i === null ? null : (i - 1 + items.length) % items.length));
@@ -57,7 +72,9 @@ export default function GalleryLightbox({ items }: Props) {
           const hovered = hoverIndex === i;
           return (
             <div
-              key={item.name}
+              // Por índice y no por `name`: dos trabajos pueden llamarse igual,
+              // y con la clave repetida React reutiliza el nodo equivocado.
+              key={`${i}-${item.name}`}
               onClick={() => setOpenIndex(i)}
               onMouseEnter={() => setHoverIndex(i)}
               onMouseLeave={() => setHoverIndex(null)}
@@ -81,7 +98,17 @@ export default function GalleryLightbox({ items }: Props) {
                   color: 'var(--color-text-faint)',
                 }}
               >
-                <PhotoIcon />
+                {muestraFoto(i) ? (
+                  <img
+                    src={item.imagenUrl!}
+                    alt={item.name}
+                    loading="lazy"
+                    onError={() => marcarRota(i)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                ) : (
+                  <PhotoIcon />
+                )}
               </div>
               <div
                 style={{
@@ -164,9 +191,19 @@ export default function GalleryLightbox({ items }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'var(--color-text-faint)',
+                overflow: 'hidden',
               }}
             >
-              <PhotoIcon size={56} />
+              {muestraFoto(openIndex) ? (
+                <img
+                  src={items[openIndex].imagenUrl!}
+                  alt={items[openIndex].name}
+                  onError={() => marcarRota(openIndex)}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
+              ) : (
+                <PhotoIcon size={56} />
+              )}
             </div>
             <span style={{ color: 'white', fontSize: 15, fontWeight: 600 }}>{items[openIndex].name}</span>
             <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12.5 }}>

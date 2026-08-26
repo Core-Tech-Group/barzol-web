@@ -1,6 +1,6 @@
 # Scrumban — SDD, pruebas del sistema y DevOps
 
-> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-25 (6ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-26 (7ª revisión) · **Rama:** `main`
 > **Alcance:** integrar Spec-Driven Development, construir la infraestructura de
 > pruebas sobre los runtimes reales, y cerrar el ciclo de despliegue con gates
 > verificables.
@@ -12,28 +12,33 @@ la decisión, el riesgo y el orden; el detalle técnico vive en `.sdd/`.
 
 ---
 
-## Estado — 2026-08-25, 6ª revisión
+## Estado — 2026-08-26, 7ª revisión
 
-**`BZ-81` implementada entera.** SPEC-904 aprobada → RED → GREEN → gate, en el
-mismo ciclo que `BZ-72`. El botón de la página de inicio ya no miente: envía,
-espera respuesta y solo entonces dice que guardó.
+**Dos pantallas del panel prometían guardar imágenes y ninguna lo hacía**, por
+motivos distintos. `BZ-81` (inicio) no enviaba nada; `BZ-82` (galerías) enviaba,
+pero enviaba el **nombre del archivo**. Las dos quedan implementadas con el
+ciclo SDD completo.
 
-| Control | 5ª revisión | Ahora |
-| :--- | :--- | :--- |
-| Tests | 82 | **140** — 109 Node, 31 workerd |
-| Specs aprobadas / totales | 2 / 8 | **3** / 8 |
-| Trinquete de specs | 23 | **20** |
-| `fetch` en `InicioAdmin.tsx` | 0 | vía `guardarInicio.ts` |
+| Control | 5ª rev. | 6ª rev. | Ahora |
+| :--- | :--- | :--- | :--- |
+| Tests | 82 | 140 | **198** — 167 Node, 31 workerd |
+| Specs aprobadas | 2 | 3 | **4** de 9 |
+| Trinquete de specs | 23 | 20 | **18** |
 
-**Falta un paso que no es código.** Las tres tablas del inicio siguen sin policy
-de escritura, así que hoy guardar devuelve un error de RLS. Es el
-comportamiento correcto y deliberado: **falla ruidosamente en vez de mentir**.
-Se cierra aplicando
-[`supabase/pendiente-policies-home.sql`](../../supabase/pendiente-policies-home.sql).
+**Dos cosas quedan fuera del código:**
+
+1. Las policies del inicio (`BZ-81`) — sin ellas, guardar el inicio da error de
+   RLS. La galería **sí** tiene su policy, así que `BZ-82` funciona al desplegar.
+2. Las **seis fotos de la galería hay que volver a subirlas** desde el panel. No
+   hay migración posible: los archivos nunca llegaron a R2.
 
 ---
 
 ## Estado — revisiones anteriores (22-08-2026)
+
+**6ª revisión — `BZ-81`.** SPEC-904 aprobada → RED → GREEN → gate. El botón de
+la página de inicio dejó de mentir: envía, espera respuesta y solo entonces
+confirma. Detalle en la sección de `BZ-81`.
 
 **3ª revisión — los gates empezaron a encontrar cosas que nadie miraba.** Tres
 hallazgos reales en una sesión, ninguno visible desde la web: `anon` leyendo 4
@@ -106,8 +111,9 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | BZ-79 | Tres componentes de admin superan las 500 líneas | ⬜ Pendiente | 🟠 |
 | BZ-80 | **`anon` puede leer productos en borrador** | 🔶 Parte C lista, resto especificado | 🔴 |
 | BZ-81 | **El inicio dice guardar y no guarda** | 🔶 Código hecho, falta aplicar el SQL | 🔴 |
+| BZ-82 | **Las galerías guardan el nombre del archivo** | 🔶 Código hecho, faltan resubir 6 fotos | 🔴 |
 
-**Progreso:** 16 de 29 hechas, 5 parciales.
+**Progreso:** 16 de 30 hechas, 6 parciales.
 
 | Prioridad | Significado |
 |---|---|
@@ -115,6 +121,106 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | 🟠 P1 | Necesario para que los gates sirvan de verdad |
 | 🟡 P2 | Deuda con impacto real, sin urgencia |
 | ⚪ P3 | Evaluación o mejora |
+
+---
+
+## 🔴 BZ-82 · Las galerías guardan el nombre del archivo
+
+**Reportado el 2026-08-26.** Las dos galerías del panel —Accesorios
+personalizados y Trabajos de ingeniería— dejan añadir fotos, pero las imágenes
+no se ven ni en el admin ni en `/servicios`.
+
+### No es el mismo bug que `BZ-81`
+
+**Acá la persistencia sí funciona.** `GalleryAdmin` hace `POST`, `PUT` y
+`DELETE` contra `/api/galeria`. El problema es *qué* guarda:
+
+```tsx
+// src/admin/shared/GalleryAdmin.tsx:134
+setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image: file.name } : p)));
+```
+
+El **nombre del archivo**. El comentario de encima lo decía sin rodeos: *"lo que
+se guarda es solo el NOMBRE… Se resuelve del todo cuando se conecte R2"*. La
+vista previa que veía el administrador era un `blob:` local que moría al
+recargar.
+
+Consultado contra producción el 2026-08-26 — las seis filas:
+
+```
+#1..#3 [accessories] "firefox_ix0xISR5X0.png"
+#4..#6 [projects]    "firefox_BmzQRtw9Ue.png"
+```
+
+Ninguna es una URL, y el nombre se repite dentro de cada galería: es lo que pasa
+cuando la identidad de una imagen es el nombre que le puso el sistema operativo
+a una captura de pantalla.
+
+### El segundo hueco, independiente del primero
+
+Aunque el panel hubiera guardado una URL correcta, **la landing seguiría sin
+mostrarla**. `GalleryLightbox` no tenía campo de imagen —`interface GalleryItem
+{ name: string }`— y las dos vistas tiraban el dato antes de dárselo:
+
+```astro
+.map((g) => ({ name: g.titulo }));   // ServiciosView:10 · IngenieriaView:11
+```
+
+Los cuadros grises de las capturas **no son imágenes rotas**: son el diseño
+funcionando como se escribió. Nadie conectó nunca la imagen. Y esa línea compila,
+pasa el typecheck y produce una página que se ve ordenada — por eso llevaba ahí
+desde el principio.
+
+### Lo que se implementó — [SPEC-905](../../.sdd/specs/SPEC-905-imagenes-galeria.md), aprobada
+
+**36 tests nuevos.** `subirImagen()` de `SPEC-904` estrena su segundo uso, que
+es exactamente para lo que se había extraído.
+
+| Capa | Antes | Ahora |
+| :--- | :--- | :--- |
+| Subida | `file.name` | a R2 al elegir el archivo, se guarda la URL |
+| Endpoint | `min(1)` | rechaza todo lo que no sea URL absoluta `http(s)` |
+| Panel | mostraba el nombre como texto | muestra la foto; marca en rojo la inválida |
+| Landing | marcador siempre | `<img>` con degradación si falla |
+| Decisión | dispersa | `imagenGaleria.ts`, pura y compartida por las tres |
+
+### Tres decisiones
+
+**1 · Tres estados, no dos.** `estadoImagen()` devuelve `ok`, `ausente` o
+`invalida`. La diferencia entre las dos últimas no es cosmética: una tarjeta
+nueva pide *"subí una foto"* y una fila heredada pide *"ésta no sirve, volvé a
+subirla"*. Sin esa distinción, alguien se pondría a buscar un archivo que no
+existe en ningún sitio.
+
+**2 · El bloqueo va antes de la petición (REQ-984).** Las seis filas malas harían
+que tocar un título devolviera un `400` del servidor sin decir qué tarjeta lo
+provocó. El panel las señala y no deja guardar hasta reemplazarlas.
+
+**3 · Escrituras antes que borrados (REQ-985).** Idéntico a `SPEC-904` REQ-972 y
+por lo mismo: sin transacción, el orden es lo único que separa "falló a media
+escritura" de "la galería se quedó vacía".
+
+### El fallo del runner que esto destapó
+
+`vitest.config.ts` tenía `resolve.alias` a nivel raíz, y **eso no se hereda
+dentro de `projects`**. Estuvo latente desde `BZ-57` porque ningún test de capa
+1 había importado un módulo que usara alias *en runtime* — los de
+`guardarInicio.ts` eran `import type`, y TypeScript los borra antes de que el
+runner los vea. El primer `import` de valor lo reventó.
+
+### Lo que falta, y no lo arregla ningún SQL
+
+Las seis fotos **hay que volver a subirlas desde el panel**. Los archivos nunca
+llegaron a R2: solo existieron como `blob:` en el navegador de quien los eligió.
+No hay migración que recupere lo que no se guardó.
+
+**No se borran las filas**: los títulos son contenido real y escrito a mano
+(*"Sordina con logo de banda"*, *"Pieza reconstruida por ingeniería inversa"*).
+El panel las marca, conserva el título y pide la imagen. `image_url` es
+`NOT NULL`, así que tampoco se pueden dejar en `null` a la espera.
+
+A diferencia de `BZ-81`, **esto funciona en cuanto se despliega**: `gallery_item`
+sí tiene su policy `"admin write"` desde el principio.
 
 ---
 
@@ -316,64 +422,16 @@ aplicar sin tocar código. Es la parte barata de este hallazgo.
 
 ## ✅ Cerradas — historial
 
-El detalle técnico de cada una vive en su SPEC y en el mensaje de commit. Aquí
-queda la decisión y el motivo, que es lo que hace falta dentro de seis meses.
+El detalle técnico vive en su SPEC y en el mensaje de commit; el tablero guarda
+la decisión y el motivo, que es lo que hace falta dentro de seis meses.
 
-### BZ-72 · `/api/diagnostico` protegido ✅ 🔴 — hereda y cierra `BZ-37`
-
-[SPEC-903](../../.sdd/specs/SPEC-903-acceso-diagnostico.md), ciclo RED → GREEN,
-26 tests sin mocks. El endpoint nunca devolvía el *valor* de una variable, pero
-sí el mapa: los nombres de todas —secretos incluidos—, los bindings y el SHA.
-
-**El problema no era cerrarlo, era cerrarlo sin quedarse ciego**, así que hay
-tres niveles y no dos: sin token configurado responde 200 reducido con la pista
-de cómo configurarlo; con token y cabecera correcta, el detalle entero; con
-token y sin cabecera, **404 vacío** —un 403 confirmaría que la ruta existe—.
-Más `GET /api/salud`, público y mínimo, donde vive ahora la comparación del
-commit para que no dependa de un secreto.
-
-Dos detalles que valían el esfuerzo: comparación en **tiempo constante** con XOR
-(REQ-945), porque un `===` corta en la primera diferencia y el tiempo filtra el
-token carácter a carácter; y **token vacío = no configurado** (REQ-946), el caso
-real de un secreto mal cargado, que si contara como configurado dejaría el
-endpoint apagado para siempre con el motivo invisible.
-
-### BZ-68 · Quién despliega ✅ 🔴 — cerrado con evidencia
-
-**Workers Builds publica; GitHub Actions verifica.** Medido, no elegido: push de
-`a7eb50d` a las `12:17:32Z`, despliegue a las `12:18:16Z` — **44 segundos**. El
-humo lo confirmó desde el otro lado con TEST-S06.
-
-No se toca el desplegador: cambiar una integración que publica en 44 s por un
-workflow que nunca ha corrido sería empeorar a propósito. **Riesgo anotado:** el
-despliegue no está condicionado a que los gates pasen; un commit rojo llega
-igual a producción y el check se pone rojo después.
-
-### BZ-63 · Precios en céntimos ✅ 🟡 — decidido: no migrar
-
-La Constitución 3.2 ya cubre el caso intermedio —céntimos en la lógica pura,
-conversión validada en el mapper— y eso elimina el riesgo real sin tocar la base
-ni el panel. Se reevalúa **solo** si aparecen descuentos, IGV desglosado o
-precios por volumen.
-
-### BZ-59 · Capa 3 completa ✅ 🔴
-
-De 4 tests a 13: `POST /api/media` de punta a punta dentro de workerd contra el
-bucket real de Miniflare. Cubre bytes persistidos, `content-type` como metadato,
-normalización del nombre, `../../../secreto.png`, rechazo de SVG y HTML (un
-bucket público sirviendo SVG es XSS almacenado bajo el propio dominio),
-colisiones y no filtrar el nombre del bucket. **No cierra `BZ-25`**: prueba el
-código, no la cuenta.
-
-### BZ-78 · Gate de tamaño de archivo ✅ 🟠
-
-La Regla 9.1 estaba escrita desde el primer día y **nadie la comprobaba**.
-Encontró `ProductsAdmin.tsx` (1378), `InicioAdmin.tsx` (835) y
-`CategoriesAdmin.tsx` (730), más `GalleryAdmin.tsx` acercándose con 471. Los
-tres quedan en el baseline y no bloquean; cualquier archivo nuevo sí. Partir
-1378 líneas para que el gate se ponga verde sería la regresión que este tablero
-intenta evitar — es `BZ-79`. La documentación queda fuera del bloqueo: un kanban
-crece por acumular historia, no complejidad.
+| Tarea | Decisión, y por qué |
+| :--- | :--- |
+| **BZ-72** · `/api/diagnostico` protegido<br>[SPEC-903](../../.sdd/specs/SPEC-903-acceso-diagnostico.md) | Nunca devolvía el *valor* de una variable, pero sí el mapa: nombres de todas —secretos incluidos—, bindings y SHA. **Cerrarlo sin quedarse ciego** obligó a tres niveles: sin token → 200 reducido con la pista; con token y cabecera → detalle entero; con token y sin cabecera → **404 vacío**, porque un 403 confirmaría la ruta. Más `/api/salud`, donde vive la comparación del commit para que no dependa de un secreto. Comparación en tiempo constante (XOR) y **token vacío = no configurado**, el caso real de un secreto mal cargado. |
+| **BZ-68** · Quién despliega | **Workers Builds publica; Actions verifica.** Medido, no elegido: push `12:17:32Z` → deploy `12:18:16Z`, **44 s**. No se toca el desplegador. *Riesgo anotado:* el deploy no está condicionado a que los gates pasen. |
+| **BZ-63** · ¿Precios en céntimos? | **No migrar.** La Constitución 3.2 ya cubre el caso intermedio y elimina el riesgo real sin tocar la base ni el panel. Se reevalúa solo con descuentos, IGV desglosado o precios por volumen. |
+| **BZ-59** · Capa 3 completa | `POST /api/media` de punta a punta en workerd contra el bucket real de Miniflare: bytes, `content-type`, normalización, `../../../secreto.png`, rechazo de SVG/HTML (XSS almacenado bajo el propio dominio), colisiones. **No cierra `BZ-25`**: prueba el código, no la cuenta. |
+| **BZ-78** · Gate de tamaño | La Regla 9.1 llevaba desde el primer día sin que nadie la comprobara. Encontró tres incumplimientos. Trinquete en vez de partirlos a la fuerza — eso sería la regresión que el tablero evita. |
 
 ---
 
@@ -463,13 +521,14 @@ BZ-67 (humo) ✅ ────────── BZ-76 (imágenes) 🔶 ── BZ
 BZ-70 (auditoría RLS) 🔶 ─ BZ-80 (borradores expuestos) 🔴 ── necesita paso de código
 BZ-68 ✅ ───────────────── BZ-69 (rollback) · BZ-71 (secretos CI)
 BZ-75 (specs mappers) ──── BZ-73 (umbrales)
-BZ-81 (el inicio no guarda) 🔴 ─┬─ SPEC-904 fase 1 (independiente)
-                                ├─ pendiente-policies-home.sql (independiente)
+BZ-81 (el inicio no guarda) 🔴 ─┬─ pendiente-policies-home.sql (falta aplicar)
                                 └─ BZ-74 (E2E) · BZ-77 (base64) · BZ-79
+BZ-82 (galerías sin imagen) 🔴 ─┬─ subirImagen() de SPEC-904 (reutilizado)
+                                └─ resubir 6 fotos · BZ-76 (degradación) · BZ-74
 ```
 
 **Orden sugerido para la próxima sesión:**
-aplicar los dos SQL pendientes + cargar el token del diagnóstico → `BZ-76` →
+aplicar los dos SQL + resubir las 6 fotos + cargar el token → `BZ-76` →
 `BZ-74` (E2E) → `BZ-70` (pgTAP) → `BZ-80` pasos 1-3 → `BZ-60` → `BZ-79` →
 `BZ-75` → `BZ-69` → `BZ-73` → `BZ-71` → `BZ-77`.
 
@@ -480,7 +539,9 @@ acciones humanas de pocos minutos** que desbloquean lo demás.
 2. `supabase/fix-rls-admin-profile.sql`, con su
    [runbook](../3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md).
    Va **antes** que el anterior: las policies del inicio leen `admin_profile`.
-3. `npx wrangler secret put BARZOL_DIAGNOSTICO_TOKEN` — lleva el diagnóstico del
+3. **Volver a subir las seis fotos de la galería** desde el panel. Es la única
+   parte de `BZ-82` que no se puede resolver con código.
+4. `npx wrangler secret put BARZOL_DIAGNOSTICO_TOKEN` — lleva el diagnóstico del
    nivel `reducido` al `oculto` ya implementado y probado.
 
 Después `BZ-76`, lo único roto que ve un visitante, y `BZ-74`, que deja de ser
@@ -497,15 +558,15 @@ SPECs escritas *después* del código para pasar el gate; gates desactivados "so
 esta vez"; cobertura que sube mientras los tests no verifican nada.
 
 **El riesgo que introduje yo, y conviene vigilar:** los gates ya tienen **tres**
-mecanismos de tolerancia — trinquete de specs (**20**, era 23), trinquete de tamaño
+mecanismos de tolerancia — trinquete de specs (**18**, era 23), trinquete de tamaño
 (3 archivos) y specs en borrador que no bloquean. Los tres están justificados y
 los tres son la puerta por la que entra la decoración. La salvaguarda es que las
 dos listas **solo puedan encoger** y que aprobar una spec sea un acto explícito.
 
 Si dentro de un mes el baseline sigue igual y no hay specs nuevas aprobadas, el
 proceso será un adorno por más verde que salga el gate. **Señal buena:** el
-trinquete bajó de 23 a 20 y hay una tercera spec APROBADA, sin que nadie forzara
-la lista: encogió porque se escribió una spec.
+trinquete bajó de 23 a 18 en dos sesiones y hay cuatro specs APROBADAS, sin que
+nadie forzara la lista: encogió porque se escribieron specs.
 
 **Y una trampa que casi se cuela.** El gate da por cubierto cualquier archivo que
 una SPEC **nombre**, y SPEC-904 mencionaba `homeMapper.ts` sólo de pasada. Eso lo
@@ -521,8 +582,12 @@ hueco en un plan escrito el día anterior, tres archivos que incumplían una reg
 propia, ocho errores de tipos y un `baseUrl` deprecado. Ninguna la encontró una
 persona mirando la web.
 
-**Y el punto ciego que `BZ-81` acaba de enseñar:** ninguno de los cinco gates ni
-de las tres sondas ejercita el panel autenticado. Un botón que muestra "guardado"
-sin haber emitido una sola petición pasa los cinco en verde. La cobertura mide
-qué líneas se ejecutan, no si el sistema hace lo que dice hacer — y esa distancia
-es exactamente donde vivió este bug desde el primer día.
+**Y el punto ciego que `BZ-81` y `BZ-82` enseñaron, dos veces:** ninguno de los
+cinco gates ni de las tres sondas ejercita el panel autenticado. Un botón que
+muestra "guardado" sin emitir una petición pasa los cinco en verde. Una vista que
+descarta la URL de la imagen y pinta tres cuadros grises alineados, también.
+
+Las dos las encontró una persona usando la web, y las dos llevaban ahí desde que
+se escribió la pantalla. La cobertura mide qué líneas se ejecutan, no si el
+sistema hace lo que dice hacer — y esa distancia es donde vivieron los dos bugs.
+`BZ-74` deja de ser una evaluación: es la única herramienta que los habría visto.
