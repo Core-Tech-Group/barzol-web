@@ -3,7 +3,7 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
 import SortSelect from '@landing/shared/SortSelect.astro';
 import Pagination from './Pagination.astro';
-import { ordenarProductos, parseOrden } from '@landing/shared/ordenProductos';
+import { ordenarProductos, parseOrden, ORDEN_POR_DEFECTO } from '@landing/shared/ordenProductos';
 import { getProductosPublicados } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
@@ -42,6 +42,12 @@ const pageItems = ordenados.slice((currentPage - 1) * PAGE_SIZE, currentPage * P
 const paginacionParams: Record<string, string> = { orden };
 if (query.trim()) paginacionParams.q = query.trim();
 
+// "Limpiar" descarta el texto buscado y devuelve al catálogo completo — no a
+// una búsqueda vacía, que se anunciaría como un resultado más. Conserva el
+// orden: es una preferencia de visualización, no un filtro, y se omite de la
+// URL cuando ya es el de por defecto.
+const limpiarHref = orden === ORDEN_POR_DEFECTO ? '/catalogo' : `/catalogo?orden=${orden}`;
+
 const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
 ---
 
@@ -67,15 +73,15 @@ const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, 
 		<div class="bz-search-sidebar" style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
 			<div style="font-size:14px; font-weight:700; color:var(--color-text); margin-bottom:18px; display:flex; align-items:center; justify-content:space-between;">
 				Filtros
-				<button type="button" style="font-size:11px; font-weight:500; color:var(--color-primary); background:none; border:none; cursor:pointer; ">Limpiar</button>
+				<a href={limpiarHref} class="bz-filter-clear" style="font-size:11px; font-weight:500; color:var(--color-primary); text-decoration:none;">Limpiar</a>
 			</div>
 
 			{categoryFilters.length > 0 && (
 				<div style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--color-surface-muted);">
 					<div style="font-size:11px; font-weight:700; color:var(--color-text-soft); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px;">Categoría</div>
-					<div style="display:flex; flex-direction:column; gap:9px;">
+					<div style="display:flex; flex-direction:column; gap:3px;">
 						{categoryFilters.map((c) => (
-							<a href={`/catalogo/${c.slug}`} style="display:block; text-decoration:none; font-size:13px; color:var(--color-text-soft);">
+							<a href={`/catalogo/${c.slug}`} class="bz-filter-cat" style="display:block; padding:6px 8px; border-radius:7px; text-decoration:none; font-size:13px; color:var(--color-text-soft);">
 								{c.nombre}
 							</a>
 						))}
@@ -122,6 +128,25 @@ const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, 
 </PublicLayout>
 
 <style>
+	/* Categorías del sidebar: el realce al pasar el cursor se limita a
+	   punteros reales — en táctil el :hover queda "pegado" tras el tap.
+	   `!important` porque los estilos base van inline y ganan por
+	   especificidad (misma solución que `.cat-sidebar-item` del Header). */
+	.bz-filter-cat {
+		transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+	}
+	.bz-filter-clear:hover {
+		text-decoration: underline;
+	}
+	@media (hover: hover) {
+		.bz-filter-cat:hover {
+			background: var(--color-primary-light) !important;
+			color: var(--color-primary) !important;
+			font-weight: 500;
+			transform: translateX(1px);
+		}
+	}
+
 	@media (max-width: 860px) {
 		.bz-search-main {
 			grid-template-columns: 1fr !important;
