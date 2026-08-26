@@ -2,7 +2,9 @@
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import Breadcrumb from '@landing/shared/Breadcrumb.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
+import SortSelect from '@landing/shared/SortSelect.astro';
 import Pagination from '@landing/busqueda/Pagination.astro';
+import { ordenarProductos, parseOrden } from '@landing/shared/ordenProductos';
 import { getProductosByCategoria } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
@@ -26,11 +28,16 @@ const categoryName = categoriaActual?.nombre ?? 'Categoría';
 const leafIds = categoriaActual ? [categoriaActual.id, ...categoriaActual.subcategorias.map((s) => s.id)] : [];
 const matched = await getProductosByCategoria(leafIds);
 
+// El orden se aplica ANTES de paginar: si no, cada página se ordenaría por
+// separado y el listado completo quedaría desordenado.
+const orden = parseOrden(Astro.url.searchParams.get('orden'));
+const ordenados = ordenarProductos(matched, orden);
+
 const PAGE_SIZE = 12;
-const totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+const totalPages = Math.max(1, Math.ceil(ordenados.length / PAGE_SIZE));
 const requestedPage = Number(Astro.url.searchParams.get('page')) || 1;
 const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
-const pageItems = matched.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+const pageItems = ordenados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
 const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
 ---
@@ -80,15 +87,7 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 				<span style="font-size:13px; color:var(--color-text-muted);"><span style="font-weight:600; color:var(--color-text);">{matched.length}</span> productos</span>
 				<div style="display:flex; align-items:center; gap:9px;">
 					<span style="font-size:13px; color:var(--color-text-muted);">Ordenar por</span>
-					<div class="bz-sort-wrap">
-						<select class="bz-sort-select">
-							<option>Relevancia</option>
-							<option>Precio: menor a mayor</option>
-							<option>Precio: mayor a menor</option>
-							<option>Más nuevos</option>
-						</select>
-						<svg class="bz-sort-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--color-primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-					</div>
+					<SortSelect orden={orden} />
 				</div>
 			</div>
 			<div class="bz-cat-product-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
@@ -97,53 +96,13 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 				))}
 			</div>
 
-			<Pagination currentPage={currentPage} totalPages={totalPages} basePath={`/catalogo/${categoria}`} />
+			<Pagination currentPage={currentPage} totalPages={totalPages} basePath={`/catalogo/${categoria}`} extraParams={{ orden }} />
 		</div>
 
 	</div>
 </PublicLayout>
 
 <style>
-	.bz-sort-wrap {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-	}
-	.bz-sort-select {
-		appearance: none;
-		-webkit-appearance: none;
-		-moz-appearance: none;
-		padding: 9px 34px 9px 15px;
-		border: 1.5px solid var(--color-border);
-		border-radius: 10px;
-		font-size: 13px;
-		font-weight: 500;
-		color: var(--color-text);
-		background: white;
-		cursor: pointer;
-		outline: none;
-		transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-	}
-	.bz-sort-select:hover {
-		border-color: var(--color-primary-border);
-		background: var(--color-primary-light);
-	}
-	.bz-sort-select:focus-visible {
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 3px var(--color-primary-light);
-	}
-	.bz-sort-arrow {
-		position: absolute;
-		right: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		pointer-events: none;
-		transition: transform 0.15s ease;
-	}
-	.bz-sort-select:focus ~ .bz-sort-arrow {
-		transform: translateY(-50%) rotate(180deg);
-	}
-
 	@media (max-width: 860px) {
 		.bz-cat-hero {
 			height: auto !important;

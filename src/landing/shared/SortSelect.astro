@@ -1,0 +1,212 @@
+---
+import { ORDEN_OPCIONES, type OrdenValor } from './ordenProductos';
+
+interface Props {
+  orden: OrdenValor;
+}
+
+const { orden } = Astro.props;
+
+// Cada opción es un enlace real a la misma URL con otro `?orden=`: el orden
+// se aplica en el servidor, así que funciona igual sin JS (el script de abajo
+// solo abre y cierra el panel). Se conservan los demás parámetros —`q` en
+// /busqueda, por ejemplo— y se descarta `page`: al reordenar, la página 3 del
+// orden anterior ya no significa nada.
+function hrefPara(valor: string): string {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  params.set('orden', valor);
+  params.delete('page');
+  const qs = params.toString();
+  return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
+}
+
+const seleccionada = ORDEN_OPCIONES.find((o) => o.valor === orden) ?? ORDEN_OPCIONES[0];
+---
+
+<div class="bz-sort" data-sort>
+	<button type="button" class="bz-sort-btn" data-sort-trigger aria-haspopup="listbox" aria-expanded="false">
+		<span class="bz-sort-btn-label">{seleccionada.label}</span>
+		<svg class="bz-sort-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+			<path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+		</svg>
+	</button>
+
+	<div class="bz-sort-menu" data-sort-menu hidden role="listbox" aria-label="Ordenar por">
+		{ORDEN_OPCIONES.map((opcion) => (
+			<a
+				href={hrefPara(opcion.valor)}
+				class:list={['bz-sort-option', { 'is-active': opcion.valor === orden }]}
+				role="option"
+				aria-selected={opcion.valor === orden}
+			>
+				<span>{opcion.label}</span>
+				{opcion.valor === orden && (
+					<svg class="bz-sort-check" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+						<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+					</svg>
+				)}
+			</a>
+		))}
+	</div>
+</div>
+
+<style>
+	.bz-sort {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.bz-sort-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		padding: 9px 13px 9px 15px;
+		min-width: 190px;
+		border: 1px solid var(--color-border);
+		border-radius: 11px;
+		background: white;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--color-text);
+		cursor: pointer;
+		outline: none;
+		box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+		transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+	}
+	.bz-sort-btn-label {
+		flex: 1;
+		text-align: left;
+		white-space: nowrap;
+	}
+	.bz-sort-btn:hover {
+		border-color: var(--color-border-muted);
+		background: var(--color-surface-soft);
+	}
+	.bz-sort-btn:focus-visible {
+		border-color: var(--color-primary);
+		box-shadow: 0 0 0 3px var(--color-primary-light);
+	}
+	.bz-sort-btn[aria-expanded='true'] {
+		border-color: var(--color-primary);
+		box-shadow: 0 0 0 3px var(--color-primary-light);
+		background: white;
+	}
+
+	.bz-sort-caret {
+		flex-shrink: 0;
+		color: var(--color-text-faint);
+		transition: transform 0.18s ease, color 0.16s ease;
+	}
+	.bz-sort-btn[aria-expanded='true'] .bz-sort-caret {
+		transform: rotate(180deg);
+		color: var(--color-primary);
+	}
+
+	.bz-sort-menu {
+		position: absolute;
+		top: calc(100% + 6px);
+		right: 0;
+		min-width: 100%;
+		z-index: 60;
+		padding: 6px;
+		background: white;
+		border: 1px solid var(--color-border-soft);
+		border-radius: 14px;
+		box-shadow: 0 16px 40px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.05);
+		animation: bz-sort-in 0.14s ease-out;
+	}
+
+	.bz-sort-option {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		padding: 9px 12px;
+		border-radius: 9px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--color-text-soft);
+		text-decoration: none;
+		white-space: nowrap;
+		transition: background-color 0.13s ease, color 0.13s ease;
+	}
+	.bz-sort-option + .bz-sort-option {
+		margin-top: 2px;
+	}
+	.bz-sort-option:hover {
+		background: var(--color-surface-soft);
+		color: var(--color-text);
+	}
+	.bz-sort-option.is-active {
+		background: var(--color-primary-light);
+		color: var(--color-primary);
+		font-weight: 600;
+	}
+	.bz-sort-check {
+		flex-shrink: 0;
+	}
+
+	@keyframes bz-sort-in {
+		from {
+			opacity: 0;
+			transform: translateY(-4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bz-sort-menu {
+			animation: none;
+		}
+	}
+</style>
+
+<script>
+	function initSortSelects() {
+		document.querySelectorAll<HTMLElement>('[data-sort]').forEach((raiz) => {
+			if (raiz.dataset.wired) return;
+			raiz.dataset.wired = 'true';
+
+			const trigger = raiz.querySelector<HTMLButtonElement>('[data-sort-trigger]');
+			const menu = raiz.querySelector<HTMLElement>('[data-sort-menu]');
+			if (!trigger || !menu) return;
+
+			trigger.addEventListener('click', () => {
+				const abierto = trigger.getAttribute('aria-expanded') === 'true';
+				trigger.setAttribute('aria-expanded', abierto ? 'false' : 'true');
+				if (abierto) menu.setAttribute('hidden', '');
+				else menu.removeAttribute('hidden');
+			});
+
+			trigger.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape') {
+					trigger.setAttribute('aria-expanded', 'false');
+					menu.setAttribute('hidden', '');
+				}
+			});
+		});
+	}
+
+	// Cerrar al clickear fuera: UN solo listener en `document`, no uno por
+	// dropdown — con ClientRouter el componente se vuelve a montar en cada
+	// navegación y se acumularían.
+	function wireCierreGlobal() {
+		const w = window as unknown as { __bzSortWired?: boolean };
+		if (w.__bzSortWired) return;
+		w.__bzSortWired = true;
+
+		document.addEventListener('click', (e) => {
+			document.querySelectorAll<HTMLElement>('[data-sort]').forEach((raiz) => {
+				if (raiz.contains(e.target as Node)) return;
+				raiz.querySelector('[data-sort-trigger]')?.setAttribute('aria-expanded', 'false');
+				raiz.querySelector('[data-sort-menu]')?.setAttribute('hidden', '');
+			});
+		});
+	}
+
+	document.addEventListener('astro:page-load', initSortSelects);
+	initSortSelects();
+	wireCierreGlobal();
+</script>

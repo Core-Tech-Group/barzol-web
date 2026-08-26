@@ -84,23 +84,32 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 			<button id="mobile-search-toggle" class="bz-search-toggle" type="button" style="display:none; align-items:center; justify-content:center; width:36px; height:36px; background:var(--color-bg); border:none; border-radius:8px; cursor:pointer; flex-shrink:0;">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="var(--color-text)" stroke-width="2.2"></circle><path d="M21 21l-4.35-4.35" stroke="var(--color-text)" stroke-width="2.2" stroke-linecap="round"></path></svg>
 			</button>
-			<form action="/busqueda" class="bz-search-wrap" style="position:relative; flex:1 1 300px; max-width:480px; min-width:190px; z-index:300;">
-				<input type="text" name="q" placeholder="Buscar productos..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:14px; color:var(--color-text); background:white; outline:none;" />
+			<form action="/busqueda" class="bz-search-wrap" data-search-form data-search-overlay style="position:relative; flex:1 1 300px; max-width:480px; min-width:190px; z-index:300;">
+				<input type="text" name="q" data-search-input autocomplete="off" placeholder="Buscar productos..." style="width:100%; padding:7px 46px 7px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:14px; color:var(--color-text); background:white; outline:none;" />
 				<button type="submit" style="position:absolute; right:3px; top:50%; transform:translateY(-50%); width:32px; height:32px; background:transparent; color:var(--color-primary); border:none; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
 						<circle cx="11" cy="11" r="8" stroke="var(--color-primary)" stroke-width="2.2"></circle>
 						<path d="M21 21l-4.35-4.35" stroke="var(--color-primary)" stroke-width="2.2" stroke-linecap="round"></path>
 					</svg>
 				</button>
+				<div class="bz-search-recent" data-search-recent hidden style="position:absolute; top:calc(100% + 8px); left:0; right:0; background:white; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,0.16); border:1px solid var(--color-border-soft); padding:12px 0; z-index:310;">
+					<div style="padding:0 16px 8px; font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--color-text-faint);">Búsqueda reciente</div>
+					<div data-search-recent-list></div>
+				</div>
 			</form>
+			<div id="search-drawer-overlay" class="bz-search-drawer-overlay" hidden style="position:fixed; inset:0; z-index:299; background:rgba(0,0,0,0.45);"></div>
 
 			<!-- Búsqueda a pantalla completa (mobile) -->
 			<div id="mobile-search-overlay" class="bz-search-fullscreen" hidden style="position:fixed; inset:0; z-index:400; background:white; display:flex; flex-direction:column;">
-				<form action="/busqueda" style="display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--color-surface-muted); flex-shrink:0;">
+				<form action="/busqueda" data-search-form style="position:relative; display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--color-surface-muted); flex-shrink:0;">
 					<button type="button" id="mobile-search-close" style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:transparent; border:none; cursor:pointer; flex-shrink:0;">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="var(--color-text)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 					</button>
-					<input type="text" name="q" placeholder="Buscar productos..." style="flex:1; width:100%; padding:10px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:15px; color:var(--color-text); outline:none;" />
+					<input type="text" name="q" data-search-input autocomplete="off" placeholder="Buscar productos..." style="flex:1; width:100%; padding:10px 14px; border:1.5px solid var(--color-border-muted); border-radius:9px; font-size:15px; color:var(--color-text); outline:none;" />
+					<div class="bz-search-recent" data-search-recent hidden style="position:absolute; top:100%; left:16px; right:16px; background:white; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,0.16); border:1px solid var(--color-border-soft); padding:12px 0; z-index:310; margin-top:8px;">
+						<div style="padding:0 16px 8px; font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--color-text-faint);">Búsqueda reciente</div>
+						<div data-search-recent-list></div>
+					</div>
 				</form>
 			</div>
 
@@ -166,6 +175,13 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 	.bz-wa-btn:hover {
 		background: var(--color-bg);
 		border-color: var(--color-border-muted);
+	}
+
+	.bz-search-recent-item:hover {
+		background: var(--color-surface-soft);
+	}
+	.bz-search-recent-remove:hover {
+		color: var(--color-text-soft);
 	}
 
 	/* ===== Responsive ===== */
@@ -289,6 +305,139 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		const mobileSearchClose = document.getElementById('mobile-search-close');
 		mobileSearchToggle?.addEventListener('click', () => mobileSearchOverlay?.removeAttribute('hidden'));
 		mobileSearchClose?.addEventListener('click', () => mobileSearchOverlay?.setAttribute('hidden', ''));
+
+		initSearchRecientes();
+	}
+
+	// ---------- Búsqueda reciente ----------
+	//
+	// Se guarda solo en el navegador (localStorage) — no hay backend para
+	// esto, es una comodidad de UI por visitante, no un dato del negocio.
+	const RECIENTES_KEY = 'barzol_busquedas_recientes';
+	const RECIENTES_MAX = 8;
+
+	function leerRecientes(): string[] {
+		try {
+			const raw = localStorage.getItem(RECIENTES_KEY);
+			const parsed = raw ? JSON.parse(raw) : [];
+			return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
+		} catch {
+			return [];
+		}
+	}
+
+	function guardarReciente(termino: string) {
+		const limpio = termino.trim();
+		if (!limpio) return;
+		const actuales = leerRecientes().filter((t) => t.toLowerCase() !== limpio.toLowerCase());
+		actuales.unshift(limpio);
+		try {
+			localStorage.setItem(RECIENTES_KEY, JSON.stringify(actuales.slice(0, RECIENTES_MAX)));
+		} catch {
+			// localStorage puede fallar (modo privado, cuota llena) — no es crítico, se sigue sin recordar.
+		}
+	}
+
+	function quitarReciente(termino: string) {
+		const actuales = leerRecientes().filter((t) => t !== termino);
+		try {
+			localStorage.setItem(RECIENTES_KEY, JSON.stringify(actuales));
+		} catch {
+			// Ídem — no crítico.
+		}
+	}
+
+	function initSearchRecientes() {
+		// Overlay oscuro de escritorio, mismo patrón que el de categorías
+		// (`#cat-drawer-overlay`): un solo elemento compartido, no uno por
+		// formulario — solo el buscador de escritorio lo usa (`data-search-overlay`);
+		// el de mobile ya es pantalla completa y no lo necesita.
+		const searchOverlay = document.getElementById('search-drawer-overlay');
+
+		function cerrarPanel(form: HTMLFormElement) {
+			form.querySelector('[data-search-recent]')?.setAttribute('hidden', '');
+			if (form.hasAttribute('data-search-overlay')) searchOverlay?.setAttribute('hidden', '');
+		}
+
+		document.querySelectorAll<HTMLFormElement>('[data-search-form]').forEach((form) => {
+			const input = form.querySelector<HTMLInputElement>('[data-search-input]');
+			const panel = form.querySelector<HTMLElement>('[data-search-recent]');
+			const list = form.querySelector<HTMLElement>('[data-search-recent-list]');
+			if (!input || !panel || !list) return;
+
+			function render() {
+				const recientes = leerRecientes();
+				if (!list || !panel) return;
+				list.innerHTML = '';
+				if (recientes.length === 0) {
+					cerrarPanel(form);
+					return;
+				}
+				recientes.forEach((termino) => {
+					const item = document.createElement('button');
+					item.type = 'button';
+					item.className = 'bz-search-recent-item';
+					item.style.cssText =
+						'display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:9px 16px; background:transparent; border:none; cursor:pointer; font-size:13.5px; color:var(--color-text); text-align:left;';
+
+					const label = document.createElement('span');
+					label.textContent = termino;
+					label.style.cssText = 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+					item.appendChild(label);
+
+					const remove = document.createElement('span');
+					remove.className = 'bz-search-recent-remove';
+					remove.textContent = '×';
+					remove.style.cssText = 'flex-shrink:0; color:var(--color-text-faint); font-size:17px; line-height:1; padding:2px 3px;';
+					item.appendChild(remove);
+
+					item.addEventListener('click', (e) => {
+						if (e.target === remove) {
+							e.preventDefault();
+							e.stopPropagation();
+							quitarReciente(termino);
+							render();
+							return;
+						}
+						input!.value = termino;
+						form.submit();
+					});
+
+					list!.appendChild(item);
+				});
+			}
+
+			input.addEventListener('focus', () => {
+				render();
+				if (list.children.length > 0) {
+					panel.removeAttribute('hidden');
+					if (form.hasAttribute('data-search-overlay')) searchOverlay?.removeAttribute('hidden');
+				}
+			});
+			form.addEventListener('submit', () => {
+				guardarReciente(input.value);
+			});
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape') cerrarPanel(form);
+			});
+		});
+
+		// Clickear el overlay cierra el buscador, igual que el de categorías.
+		searchOverlay?.addEventListener('click', () => {
+			document.querySelectorAll<HTMLFormElement>('[data-search-form]').forEach(cerrarPanel);
+		});
+
+		// Cerrar al clickear afuera: UN solo listener en `document`, no uno por
+		// formulario — el header se vuelve a montar en cada navegación (no usa
+		// `transition:persist`) y agregar acá también se acumularía en cada una.
+		if (!(window as unknown as { __bzSearchRecentWired?: boolean }).__bzSearchRecentWired) {
+			(window as unknown as { __bzSearchRecentWired?: boolean }).__bzSearchRecentWired = true;
+			document.addEventListener('click', (e) => {
+				document.querySelectorAll<HTMLFormElement>('[data-search-form]').forEach((form) => {
+					if (!form.contains(e.target as Node)) cerrarPanel(form);
+				});
+			});
+		}
 	}
 
 	document.addEventListener('astro:page-load', initHeader);
