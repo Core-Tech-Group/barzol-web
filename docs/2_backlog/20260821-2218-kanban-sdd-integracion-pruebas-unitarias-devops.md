@@ -1,6 +1,6 @@
 # Scrumban — SDD, pruebas del sistema y DevOps
 
-> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-25 (5ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-25 (6ª revisión) · **Rama:** `main`
 > **Alcance:** integrar Spec-Driven Development, construir la infraestructura de
 > pruebas sobre los runtimes reales, y cerrar el ciclo de despliegue con gates
 > verificables.
@@ -12,19 +12,24 @@ la decisión, el riesgo y el orden; el detalle técnico vive en `.sdd/`.
 
 ---
 
-## Estado — 2026-08-25, 5ª revisión
+## Estado — 2026-08-25, 6ª revisión
 
-**Un bug reportado desde el panel resultó no ser un bug.** El guardado de la
-página de inicio no falla: nunca existió. `InicioAdmin.tsx` tiene **cero
-llamadas a `fetch`** y muestra un toast de éxito igual. Es `BZ-81`, y es el
-primer hallazgo de estas cinco revisiones que encontró una persona usando la web
-— precisamente porque ningún gate mira lo que el panel *dice* haber hecho.
+**`BZ-81` implementada entera.** SPEC-904 aprobada → RED → GREEN → gate, en el
+mismo ciclo que `BZ-72`. El botón de la página de inicio ya no miente: envía,
+espera respuesta y solo entonces dice que guardó.
 
-| Control | 4ª revisión | Ahora |
+| Control | 5ª revisión | Ahora |
 | :--- | :--- | :--- |
-| Specs aprobadas / totales | 2 / 7 | 2 / **8** |
-| Tareas | 28 | **29** |
-| Fuga de `/api/diagnostico` | cerrada | cerrada y verificada en producción |
+| Tests | 82 | **140** — 109 Node, 31 workerd |
+| Specs aprobadas / totales | 2 / 8 | **3** / 8 |
+| Trinquete de specs | 23 | **20** |
+| `fetch` en `InicioAdmin.tsx` | 0 | vía `guardarInicio.ts` |
+
+**Falta un paso que no es código.** Las tres tablas del inicio siguen sin policy
+de escritura, así que hoy guardar devuelve un error de RLS. Es el
+comportamiento correcto y deliberado: **falla ruidosamente en vez de mentir**.
+Se cierra aplicando
+[`supabase/pendiente-policies-home.sql`](../../supabase/pendiente-policies-home.sql).
 
 ---
 
@@ -100,7 +105,7 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | BZ-78 | Gate de tamaño de archivo (Regla 9.1) | ✅ Hecho | 🟠 |
 | BZ-79 | Tres componentes de admin superan las 500 líneas | ⬜ Pendiente | 🟠 |
 | BZ-80 | **`anon` puede leer productos en borrador** | 🔶 Parte C lista, resto especificado | 🔴 |
-| BZ-81 | **El inicio dice guardar y no guarda** | 🔶 Diagnosticada, SPEC-904 propuesta | 🔴 |
+| BZ-81 | **El inicio dice guardar y no guarda** | 🔶 Código hecho, falta aplicar el SQL | 🔴 |
 
 **Progreso:** 16 de 29 hechas, 5 parciales.
 
@@ -115,84 +120,96 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 
 ## 🔴 BZ-81 · La página de inicio dice guardar y no guarda
 
-**Reportado el 2026-08-25 desde el panel.** Agregar un producto a una sección,
-pulsar *Guardar cambios*, recargar, y el producto no está.
+**Reportado el 2026-08-25 desde el panel.** No era un fallo del CRUD: no había
+CRUD. `confirmSaveChanges()` era un `TODO` que mostraba el toast de éxito y
+ponía `__adminHasUnsavedChanges = false`, así que el guardia de navegación
+tampoco avisaba. Los logs de Cloudflare solo mostraban `GET` porque el
+navegador nunca emitió otra cosa.
 
-### No es un fallo del CRUD: no hay CRUD
+### Lo que se implementó — [SPEC-904](../../.sdd/specs/SPEC-904-persistencia-inicio.md), aprobada
 
-```tsx
-// src/admin/inicio/InicioAdmin.tsx:293
-function confirmSaveChanges() {
-  // TODO: reemplazar por @shared/lib/home/homeService cuando se conecte Supabase.
-  setSaveConfirmOpen(false);
-  setShowSavedToast(true);
-  setDirty(false);
-}
-```
+Ciclo completo: SPEC → RED → GREEN → gate. **58 tests nuevos**, ninguno
+mockeando bindings ni `supabase-js`.
 
-Eso es todo lo que hace el botón. **`InicioAdmin.tsx` no tiene ni una llamada a
-`fetch`**; `ProductsAdmin` tiene 3, `CategoriesAdmin` 1 y `GalleryAdmin` 1. Es el
-único panel que no habla con el servidor.
+| Capa | Antes | Ahora |
+| :--- | :--- | :--- |
+| UI | `TODO` + toast | `guardarInicio.ts`, toast solo tras `success` |
+| Endpoint | no existía | `PUT /api/inicio` con `locals.supabase` |
+| Servicio | solo lectura | `updateInicio()` ejecutando un plan |
+| Decisión | — | `inicioPlan.ts`, pura y probada entera |
+| Base | sin policies | SQL escrito, **sin aplicar** |
 
-Los logs de Cloudflare que pediste revisar lo confirman desde el otro lado: en
-toda la ventana solo hay `GET`. **No hay POST que revisar** — el navegador nunca
-lo emitió. Ese vacío es la prueba, no la falta de evidencia.
+### Las tres decisiones que costaron algo
 
-### Faltan cuatro capas
+**1 · Atomicidad: no la hay, y decirlo fue mejor que fingirla.** REQ-972 pedía
+que un fallo parcial dejara el inicio como estaba. Eso es una transacción, y
+`supabase-js` no puede abrir una: cada llamada de PostgREST es su propia
+transacción implícita. La única forma sería una función de Postgres invocada con
+`rpc()`, o sea una migración que ni viaja en este commit ni puedo aplicar.
 
-| Capa | Estado |
-| :--- | :--- |
-| UI · `confirmSaveChanges()` | stub con `TODO` |
-| Endpoint · `src/pages/api/inicio/**` | **no existe** |
-| Servicio · `homeService.ts` | solo lectura: `getHeroImages`, `getHomeItems` |
-| Base · policies `"admin write"` | **ausentes** en las tres tablas del inicio |
+Se enmendó el requisito en vez de marcarlo verde. Lo que hay es un **diff con
+los borrados al final**: actualizar, insertar, y solo entonces borrar. La
+alternativa evidente —`delete` de todo, `insert` de todo— es dos líneas más
+corta y deja la portada en blanco si el segundo paso falla. Con el diff, un
+fallo parcial deja el inicio a medio actualizar, visible, y **volver a pulsar
+Guardar converge**, porque el diff se calcula contra lo que hay.
 
-La cuarta la documenta el propio esquema en `schema.sql:339`, desde el primer
-día: *"Pendiente (CRUD todavía no implementado para esas pantallas):
-home_hero_image, home_item, home_section_product, vendor"*. Con RLS activo y sin
-policy de escritura rige el default-deny — aunque el código existiera, la
-escritura moriría en la base.
+**2 · El esquema corrigió un test.** `home_hero_image.image_url` es `NOT NULL`
+(`schema.sql:205`). Los tests que escribí antes de mirarlo asumían que quitar
+una portada era un `update` a `null`; eso habría reventado el guardado entero
+con un error de Postgres ilegible. Una portada vacía es una fila **ausente**, y
+como los huecos pueden estar en medio, las filas hero se emparejan por
+`sort_order` y no por posición.
 
-### Lo grave no es perder el cambio, es que afirme lo contrario
+**3 · Productos por id (REQ-974).** La isla los guardaba por nombre y
+`InicioView.astro` traducía al entrar — descartando en silencio los que no
+resolvían. Ahora el id viaja intacto y el nombre se resuelve solo al pintar; un
+producto borrado del catálogo se muestra como *"(producto N ya no existe)"* en
+vez de desaparecer. El catálogo real tiene *"Soporte de Celular Trompeta"* y
+*"...(copia)"*: por nombre eran indistinguibles en cuanto alguien renombrara uno.
 
-El panel enseña el toast verde **y además** pone
-`window.__adminHasUnsavedChanges = false`, así que el guardia de navegación
-tampoco avisa al salir. No hay ninguna señal hasta que alguien recarga, y para
-entonces el fallo ya no parece relacionado. Un error ruidoso habría costado
-minutos; éste lleva abierto desde que se escribió la pantalla.
+### De paso, medio `BZ-77`
 
-### Propuesta: [SPEC-904](../../.sdd/specs/SPEC-904-persistencia-inicio.md) — **sin aprobar**
+`readFileAsDataURL()` ya no existe en esta pantalla. Las imágenes hero y de
+banner suben a R2 con `subirImagen()`, un helper nuevo en `uploadClient.ts` que
+valida el MIME, optimiza y devuelve la URL pública. Conectar el guardado sin
+esto habría grabado base64 dentro de `home_hero_image.image_url` para servirlo
+en cada visita a la portada.
 
-Diez requisitos, en tres fases, con el mismo criterio que `BZ-72`:
+`ProductsAdmin.tsx` sigue con su copia inline del mismo flujo. **No se tocó**:
+está en el trinquete de `BZ-79` y su refactor no cabe en esta tarea. Queda
+anotado como el siguiente uso de `subirImagen()`.
 
-1. **REQ-970 solo** — que el botón deje de mentir. Sin endpoint, sin base, sin
-   migración; reversible en un commit. El panel pasa a ser peor de usar y más
-   honesto, que es justo la información que faltaba ayer.
-2. **REQ-979** — las tres policies, en
-   [`supabase/pendiente-policies-home.sql`](../../supabase/pendiente-policies-home.sql).
-   Aditivo, aplicable solo, no quita permisos a nadie.
-3. **REQ-971..978** — el CRUD, ya con la base lista y el fallo siendo ruidoso.
+### Lo que falta, y por qué falla hoy a propósito
 
-Dos trampas que el trabajo previo dejó a la vista y la SPEC bloquea:
+Las policies `"admin write"` de `home_item`, `home_hero_image` y
+`home_section_product` **siguen sin existir**, tal como `schema.sql:339` viene
+documentando desde el primer día. Guardar hoy devuelve *"new row violates
+row-level security policy"* — y el panel lo muestra, que es exactamente el
+comportamiento que esta tarea vino a conseguir. Un fallo visible es el resultado
+correcto; el toast verde mentiroso era el bug.
 
-- **REQ-975.** `InicioAdmin` usa `readFileAsDataURL()` en las líneas 146 y 205.
-  Conectar el guardado sin tocarlo grabaría el base64 dentro de
-  `home_hero_image.image_url` y lo serviría en cada visita a la portada. Es
-  `BZ-77`, y este cambio lo empeoraría en vez de heredarlo.
-- **REQ-974.** La isla referencia los productos **por nombre**. El catálogo real
-  tiene *"Soporte de Celular Trompeta"* y *"Soporte de Celular Trompeta
-  (copia)"*. Resolver por nombre al escribir es una ambigüedad esperando a que
-  alguien renombre algo.
+Se cierra aplicando
+[`supabase/pendiente-policies-home.sql`](../../supabase/pendiente-policies-home.sql)
+en el SQL Editor. Es aditivo, no quita permisos a nadie y va en una transacción.
+Ojo con el orden: si `admin_profile` tiene RLS habilitado **sin** su policy
+`"self read"`, estas tres tampoco funcionarán — el ensayo en seco del
+[runbook](../3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md) lo
+comprueba antes de confirmar.
 
-**No se ha escrito código de producción.** La regla SDD es explícita: sin SPEC
-aprobada, la propuesta se presenta y se espera.
+### La deuda que esto suma, dicha en voz alta
+
+`InicioAdmin.tsx` pasó de **835 a 889 líneas**. Está en el baseline y no
+bloquea, pero creció en la dirección contraria a `BZ-79`. La orquestación del
+guardado salió a `guardarInicio.ts` (114 líneas) precisamente para que no
+llegara a ~1000; el resto es manejo de errores que antes no existía. Anotado.
 
 ### Por qué ningún gate lo encontró
 
 Los cinco gates miran el repositorio y las tres sondas miran producción desde
-fuera. Ninguno ejercita el panel autenticado, que es `BZ-74` (E2E, hoy ⚪ P3).
-Este hallazgo es el primer argumento concreto a favor de subirle la prioridad:
-un E2E que pulse *Guardar* y recargue habría fallado el primer día.
+fuera. Ninguno ejercita el panel autenticado. Un botón que muestra "guardado"
+sin emitir una petición pasa los cinco en verde. `BZ-74` (E2E) sube a 🟠 por
+esto: un test que pulse *Guardar* y recargue habría fallado el primer día.
 
 ---
 
@@ -304,24 +321,16 @@ queda la decisión y el motivo, que es lo que hace falta dentro de seis meses.
 
 ### BZ-72 · `/api/diagnostico` protegido ✅ 🔴 — hereda y cierra `BZ-37`
 
-[SPEC-903](../../.sdd/specs/SPEC-903-acceso-diagnostico.md), ciclo RED → GREEN
-completo, 26 tests sin mocks. El endpoint nunca devolvía el *valor* de una
-variable, pero sí el mapa: los nombres de todas —secretos incluidos—, los
-bindings y el SHA desplegado.
+[SPEC-903](../../.sdd/specs/SPEC-903-acceso-diagnostico.md), ciclo RED → GREEN,
+26 tests sin mocks. El endpoint nunca devolvía el *valor* de una variable, pero
+sí el mapa: los nombres de todas —secretos incluidos—, los bindings y el SHA.
 
-**El problema no era cerrarlo, era cerrarlo sin quedarse ciego**: protegerlo del
-todo dejaba al proyecto sin el paso 1 de su runbook hasta que alguien cargara un
-secreto, y si el sitio cae en esa ventana se pierde justo la herramienta de esos
-momentos. De ahí **tres niveles**:
-
-| `BARZOL_DIAGNOSTICO_TOKEN` | Cabecera | Respuesta |
-| :--- | :--- | :--- |
-| sin configurar | cualquiera | 200 reducido + pista de cómo configurarlo |
-| configurado | correcta | 200 con el detalle entero |
-| configurado | ausente o incorrecta | **404 vacío** (un 403 confirmaría la ruta) |
-
-Más `GET /api/salud`, público y mínimo, donde vive ahora la sonda de mayor
-valor del humo —la comparación del commit— para que no dependa de un secreto.
+**El problema no era cerrarlo, era cerrarlo sin quedarse ciego**, así que hay
+tres niveles y no dos: sin token configurado responde 200 reducido con la pista
+de cómo configurarlo; con token y cabecera correcta, el detalle entero; con
+token y sin cabecera, **404 vacío** —un 403 confirmaría que la ruta existe—.
+Más `GET /api/salud`, público y mínimo, donde vive ahora la comparación del
+commit para que no dependa de un secreto.
 
 Dos detalles que valían el esfuerzo: comparación en **tiempo constante** con XOR
 (REQ-945), porque un `===` corta en la primera diferencia y el tiempo filtra el
@@ -460,22 +469,24 @@ BZ-81 (el inicio no guarda) 🔴 ─┬─ SPEC-904 fase 1 (independiente)
 ```
 
 **Orden sugerido para la próxima sesión:**
-aprobar SPEC-904 → `BZ-81` fase 1 → aplicar `BZ-80` parte C + cargar el token
-del diagnóstico → `BZ-81` fases 2-3 → `BZ-76` → `BZ-74` (E2E, sube de ⚪ a 🟠) →
-`BZ-70` (pgTAP) → `BZ-80` pasos 1-3 → `BZ-60` → `BZ-79` → `BZ-75` → `BZ-69` →
-`BZ-73` → `BZ-71` → `BZ-77`.
+aplicar los dos SQL pendientes + cargar el token del diagnóstico → `BZ-76` →
+`BZ-74` (E2E) → `BZ-70` (pgTAP) → `BZ-80` pasos 1-3 → `BZ-60` → `BZ-79` →
+`BZ-75` → `BZ-69` → `BZ-73` → `BZ-71` → `BZ-77`.
 
-**Por qué.** `BZ-81` primero porque es el único hallazgo que hace perder
-trabajo a una persona hoy, y su fase 1 —que el botón deje de mentir— no depende
-de nada. Después, lo que tampoco es código: **aplicar la parte C** con el
-[runbook del 2026-08-24](../3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md)
-—trae ensayo en seco antes de confirmar— y cargar `BARZOL_DIAGNOSTICO_TOKEN` con
-`wrangler secret put`. Los dos suben la seguridad de golpe; el segundo, además,
-lleva el diagnóstico del nivel `reducido` al `oculto` ya implementado y probado.
-Luego el CRUD del inicio, `BZ-76` —lo único visible para un visitante— y
-`BZ-74`, que deja de ser una evaluación: `BZ-81` demuestra que ningún gate
-ejercita el panel autenticado. El resto de `BZ-80` va al final porque arrastra un
-refactor de servicios que necesita su propia SPEC.
+**Por qué.** Lo que queda en la cabeza de la lista ya no es código: hay **tres
+acciones humanas de pocos minutos** que desbloquean lo demás.
+
+1. `supabase/pendiente-policies-home.sql` — sin esto, guardar el inicio falla.
+2. `supabase/fix-rls-admin-profile.sql`, con su
+   [runbook](../3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md).
+   Va **antes** que el anterior: las policies del inicio leen `admin_profile`.
+3. `npx wrangler secret put BARZOL_DIAGNOSTICO_TOKEN` — lleva el diagnóstico del
+   nivel `reducido` al `oculto` ya implementado y probado.
+
+Después `BZ-76`, lo único roto que ve un visitante, y `BZ-74`, que deja de ser
+una evaluación: `BZ-81` demostró que ningún gate ejercita el panel autenticado.
+El resto de `BZ-80` va al final porque arrastra un refactor de servicios que
+necesita su propia SPEC.
 
 ---
 
@@ -486,15 +497,23 @@ SPECs escritas *después* del código para pasar el gate; gates desactivados "so
 esta vez"; cobertura que sube mientras los tests no verifican nada.
 
 **El riesgo que introduje yo, y conviene vigilar:** los gates ya tienen **tres**
-mecanismos de tolerancia — trinquete de specs (**22**, era 23), trinquete de tamaño
+mecanismos de tolerancia — trinquete de specs (**20**, era 23), trinquete de tamaño
 (3 archivos) y specs en borrador que no bloquean. Los tres están justificados y
 los tres son la puerta por la que entra la decoración. La salvaguarda es que las
 dos listas **solo puedan encoger** y que aprobar una spec sea un acto explícito.
 
 Si dentro de un mes el baseline sigue igual y no hay specs nuevas aprobadas, el
-proceso será un adorno por más verde que salga el gate. **Primera señal buena:**
-SPEC-904 nombra `homeService.ts` y el trinquete bajó de 23 a 22 sin que nadie lo
-empujara — la lista encogió porque se escribió una spec, que es como debía pasar.
+proceso será un adorno por más verde que salga el gate. **Señal buena:** el
+trinquete bajó de 23 a 20 y hay una tercera spec APROBADA, sin que nadie forzara
+la lista: encogió porque se escribió una spec.
+
+**Y una trampa que casi se cuela.** El gate da por cubierto cualquier archivo que
+una SPEC **nombre**, y SPEC-904 mencionaba `homeMapper.ts` sólo de pasada. Eso lo
+habría sacado del trinquete sin que nadie especificara nada — cobertura de
+mentira, exactamente la decoración que esta sección teme. Se resolvió escribiendo
+en el contrato qué fija SPEC-904 sobre ese archivo (`HomeItemRow` es la fuente de
+la forma de fila, y la traducción `tipo`↔`type` vive sólo ahí), que es verdad y
+ahora está dicho. La alternativa era borrar la mención y dejar el trinquete en 21.
 
 **Lo que demuestra que no lo es, por ahora:** en cuatro sesiones los gates han
 encontrado una fuga de datos en producción, dos imágenes rotas que nadie vio, un

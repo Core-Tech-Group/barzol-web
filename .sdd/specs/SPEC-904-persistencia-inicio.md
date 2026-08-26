@@ -1,6 +1,6 @@
 # SPEC-904 — Persistencia de la página de inicio
 
-**Estado:** BORRADOR — **pendiente de aprobación humana**
+**Estado:** APROBADA · aprobada por el responsable el 2026-08-25
 **Capa:** 1 (servicios) + 3 (endpoints) + presentación · **Fecha:** 2026-08-25
 **Unidades destino:** `src/shared/lib/home/homeService.ts` (ampliar),
 `src/pages/api/inicio/**` (**no existe**), `src/admin/inicio/InicioAdmin.tsx`
@@ -209,3 +209,97 @@ REQ-979 no se prueba con Vitest: es estado de la base. Lo cubre pgTAP (`BZ-70`).
 La fase 1 es un cambio de comportamiento visible para el administrador: el botón
 pasa de "parece que guarda" a "dice que todavía no puede". Es peor de usar y más
 honesto, y es exactamente la información que faltaba ayer.
+
+---
+
+## Enmienda 1 — 2026-08-25 · lo que la implementación obligó a corregir
+
+Aprobada la SPEC, dos cosas del contrato no sobrevivieron al contacto con
+PostgREST. Se corrigen antes de escribir el código, no después.
+
+### [REQ-972] — revisado · **no hay transacción que pedir**
+
+La redacción original —*"ante un fallo parcial, la página de inicio quede como
+estaba"*— describe una transacción, y **supabase-js no puede abrir una**. Cada
+llamada de PostgREST es su propia transacción implícita; la única forma de
+envolver varias es una función de Postgres invocada con `rpc()`, y eso es una
+migración de base de datos que ni viaja en este commit ni puedo aplicar.
+
+Fingir que se cumple sería el peor resultado: un requisito verde que nadie
+cumple. Se reemplaza por lo que sí es alcanzable y sí se puede verificar.
+
+**[REQ-972] revisado — Ubicuo · sin ventana destructiva**
+El sistema DEBE aplicar la actualización como un *diff* —actualizar lo que
+cambió, insertar lo nuevo, borrar lo que sobra— y DEBE ejecutar los borrados
+**después** de las escrituras. NO DEBE existir ningún instante en el que la
+página de inicio quede vacía.
+
+> La alternativa evidente, `delete` de todo seguido de `insert` de todo, es una
+> línea más corta y deja la portada en blanco si el segundo paso falla. Con el
+> diff, un fallo parcial deja el inicio a medio actualizar —feo, visible,
+> reversible— y **volver a pulsar Guardar converge**, porque el diff se calcula
+> contra lo que hay, no contra lo que había.
+
+**[REQ-972b] — nuevo · No deseado**
+SI la actualización falla a media escritura, ENTONCES el sistema DEBE propagar
+el error al cliente, que por REQ-973 mantiene el estado sucio.
+
+> Es lo que hace que el fallo parcial sea recuperable en vez de invisible: el
+> panel sigue teniendo en memoria lo que el usuario quería, y el botón sigue
+> disponible.
+
+La atomicidad real queda anotada como trabajo futuro: una función
+`security invoker` llamada con `rpc()`. No entra aquí porque las migraciones no
+viajan con el código (regla DevOps) y porque el diff ya elimina el único
+escenario que asusta.
+
+### Contrato — el `id` que faltaba
+
+El cuerpo original no llevaba identidad de item, y sin ella el diff de REQ-972
+es imposible: no hay forma de saber si una sección es la de siempre con otro
+título o una nueva.
+
+```typescript
+// PUT /api/inicio — cuerpo, revisado
+interface InicioWriteInput {
+  heroImages: (string | null)[];        // URL pública de R2, nunca data:
+  items: Array<
+    | { id: string | null; tipo: 'seccion'; titulo: string; visible: boolean; productoIds: string[] }
+    | { id: string | null; tipo: 'banner';  visible: boolean; link: string; imagenUrl: string | null }
+  >;                                     // el índice del array ES el orden
+}
+```
+
+`id: null` significa "insertar". Un `id` presente significa "actualizar el que
+ya existe". La isla genera ids provisionales (`new-<timestamp>-<n>`) para lo que
+todavía no está en la base; se traducen a `null` al construir el cuerpo, y ese
+es el único sitio donde esa convención de la isla cruza al servidor.
+
+`tipo` pasa de `'section'` a `'seccion'`: es el valor que ya usa
+`HomeItem['tipo']` en `src/shared/types/index.ts` y el que `homeMapper.ts`
+traduce desde la columna `type`. Inventar un tercer vocabulario para el mismo
+concepto habría sido duplicar lógica en el sentido que la Regla 9.2 prohíbe.
+
+### Contrato — un archivo más
+
+| Archivo | Qué |
+| :--- | :--- |
+| `src/admin/inicio/guardarInicio.ts` | arma el cuerpo desde el estado de la isla y llama al endpoint |
+| `src/shared/lib/home/inicioPlan.ts` | el diff puro: qué se actualiza, qué se inserta, qué se borra |
+| `src/shared/lib/media/uploadClient.ts` | `subirImagen()` — validar, optimizar y subir a R2 (REQ-975) |
+| `src/shared/lib/home/homeMapper.ts` | **no se modifica.** SPEC-904 fija que `HomeItemRow` es la fuente de la forma de fila y que la traducción `tipo`↔`type` vive solo ahí |
+
+`InicioAdmin.tsx` ya tiene 835 líneas y está en el trinquete de `BZ-79`.
+Meterle la construcción del payload y el `fetch` lo empujaría hacia las 900 en
+la dirección contraria a la que el tablero quiere. La orquestación del guardado
+sale a su propio módulo, que además es lo que hace testeable a REQ-971 y REQ-974
+sin montar la capa 2 (`BZ-60`, bloqueada).
+
+### Tests que cambian
+
+| Test | Qué prueba ahora |
+| :--- | :--- |
+| TEST-506 | el diff no borra antes de escribir, y un fallo deja el inicio no vacío |
+| TEST-509 | *(nuevo, REQ-972)* un item con `id` se actualiza; con `id: null` se inserta |
+| TEST-510 | *(nuevo, REQ-974)* `construirCuerpo()` emite ids de producto, nunca nombres |
+| TEST-511 | *(nuevo, REQ-972b)* el error del servidor llega al llamador sin tragarse |

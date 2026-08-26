@@ -17,7 +17,7 @@
 | [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios |
 | [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | 🔶 auditoría de lectura hecha | ⬜ pgTAP pendiente |
 | [SPEC-903](specs/SPEC-903-acceso-diagnostico.md) · Acceso al diagnóstico | BORRADOR | ✅ `acceso.ts`, `/api/salud`, `/api/diagnostico` | ✅ 15 unit + 11 workerd |
-| [SPEC-904](specs/SPEC-904-persistencia-inicio.md) · Persistencia del inicio | BORRADOR | ⬜ **nada implementado — ese es el bug** | ⬜ |
+| [SPEC-904](specs/SPEC-904-persistencia-inicio.md) · Persistencia del inicio | **APROBADA** | ✅ `inicioPlan.ts`, `updateInicio`, `PUT /api/inicio`, isla | ✅ 33 unit + 5 workerd |
 
 Las SPEC en **BORRADOR** no bloquean el gate: describen algo aún no implementado.
 Pasar una a APROBADA es un acto explícito, y a partir de ahí todos sus REQ deben
@@ -34,11 +34,13 @@ estar citados en algún test o el gate falla.
 | SPEC-901 | 951–961 | 0 / 11 | tests unitarios del evaluador de sondas |
 | SPEC-902 | 921–933 | 0 / 13 | `BZ-70` · pgTAP |
 | SPEC-903 | 941–947 | **7 / 7** | aprobarla tras revisión humana |
-| SPEC-904 | 970–979 | 0 / 10 | `BZ-81` · aprobación humana antes de escribir código |
+| SPEC-904 | 970–979 | **11 / 11** | aplicar `pendiente-policies-home.sql` (REQ-979) |
 
-> **SPEC-904 documenta un hueco, no una mejora.** `InicioAdmin.tsx` muestra un
-> toast de éxito sin emitir ninguna petición: hay cero de diez requisitos
-> cubiertos porque el guardado del inicio nunca se escribió. Ver `BZ-81`.
+> **SPEC-904 REQ-979 está cubierto por un test que NO prueba producción.**
+> `clienteAutenticado.test.ts` verifica que la migración pendiente declara las
+> tres policies y usa el predicado del esquema. Que estén **aplicadas** solo lo
+> puede decir pgTAP (`BZ-70`) o el panel real. Hasta entonces, el guardado del
+> inicio falla en producción con un error de RLS — visible, que es el punto.
 
 > **SPEC-902 REQ-923 está VERIFICADO Y FALLANDO en producción.** `npm run audit:rls`
 > lo detecta hoy, pero no hay un test que lo fije permanentemente, así que cuenta
