@@ -473,7 +473,7 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
               <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-soft)', marginBottom: 8 }}>Banner principal (hero) — hasta 3 imágenes</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <div className="bz-grid-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                     {heroImages.map((img, i) => (
                       <div key={i} style={{ position: 'relative', width: '100%', height: 90, borderRadius: 10, overflow: 'hidden', background: 'var(--color-surface-muted)' }}>
                         {img ? (

@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
 		<title>{title}</title>
 	</head>
 	<body>
-		<div style="height:100vh; display:flex; overflow:hidden;">
+		<div class="bz-admin-shell">
 
 			<!-- SIDEBAR -->
 			<div id="admin-sidebar" class="bz-admin-sidebar" style="width:240px; flex-shrink:0; height:100%; overflow-y:auto; background:linear-gradient(180deg,#0d2350 0%,var(--color-primary) 100%); display:flex; flex-direction:column; padding:24px 16px;">
@@ -94,46 +94,9 @@ const navItems: NavItem[] = [
 	</body>
 </html>
 
-<style is:global>
-	.bz-hamburger-btn {
-		display: none;
-	}
-	.bz-sidebar-overlay {
-		display: none;
-	}
-	.bz-sidebar-overlay.bz-open {
-		display: block;
-	}
-	@media (max-width: 768px) {
-		.bz-admin-sidebar {
-			position: fixed !important;
-			top: 0 !important;
-			left: 0 !important;
-			height: 100vh !important;
-			z-index: 600 !important;
-			transform: translateX(-100%) !important;
-			transition: transform 0.25s ease;
-			box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18);
-		}
-		.bz-admin-sidebar.bz-sidebar-open {
-			transform: translateX(0) !important;
-		}
-		.bz-hamburger-btn {
-			display: flex !important;
-		}
-		.bz-topbar {
-			padding-left: 16px !important;
-			padding-right: 16px !important;
-		}
-		.bz-content-pad {
-			padding: 20px !important;
-		}
-	}
-	[data-admin-nav-link]:hover {
-		background: rgba(255, 255, 255, 0.08) !important;
-		color: white !important;
-	}
-</style>
+<!-- Las reglas responsive del panel viven en @shared/styles/tokens.css
+     (SPEC-906 REQ-995): los <style> de Astro son scoped, así que dejarlas acá
+     obligaría a cada pantalla a redeclarar el mismo punto de ruptura. -->
 
 <script>
 	const sidebar = document.getElementById('admin-sidebar');

@@ -3,11 +3,14 @@ import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
 import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
-import type { ApiResponse } from '@shared/api/apiResponse';
+import { subirImagen } from '@shared/lib/media/uploadClient';
+import { estadoImagen } from '@shared/lib/galeria/imagenGaleria';
+import { fotosIncompletas, planificarGaleria, guardarGaleria } from '@admin/shared/guardarGaleria';
 
 export interface GalleryPhoto {
   id: string;
   caption: string;
+  /** URL pública de R2. Hasta `BZ-82` acá vivía el nombre del archivo. */
   image: string | null;
 }
 
@@ -53,9 +56,13 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [opsDone, setOpsDone] = useState(0);
-  // Vista previa local del archivo elegido (blob: URL, por id de foto) —
-  // lo que se guarda de verdad es el nombre del archivo, no el contenido.
-  const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>({});
+  // Ids de las fotos cuya imagen se está subiendo a R2 en este momento.
+  //
+  // Antes acá había un mapa de `blob:` URLs: la vista previa era local y lo que
+  // se guardaba era `file.name`. Ya no hace falta ninguna de las dos cosas —la
+  // imagen sube al elegirla y `p.image` ES la URL definitiva—, y de paso
+  // desaparece el `URL.revokeObjectURL` que había que recordar en tres sitios.
+  const [subiendo, setSubiendo] = useState<Record<string, boolean>>({});
 
   const [delConfirmIndex, setDelConfirmIndex] = useState(-1);
 
@@ -120,32 +127,40 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
     markDirty();
   }
 
-  // Se elige el archivo del escritorio (para que el admin vea una vista
-  // previa real), pero lo que se guarda es solo el NOMBRE del archivo —
-  // nunca el contenido en base64. Se resuelve del todo cuando se conecte R2
-  // (ahí este nombre se reemplaza por la URL real que devuelva la subida).
-  function handlePhotoFile(id: string, file: File | null) {
+  function mostrarError(mensaje: string, ms = 3600) {
+    clearTimeout(errorToastTimer.current);
+    setErrorToastMsg(mensaje);
+    setShowErrorToast(true);
+    errorToastTimer.current = setTimeout(() => setShowErrorToast(false), ms);
+  }
+
+  /**
+   * SPEC-905 REQ-980 — la imagen sube a R2 al elegirla.
+   *
+   * Hasta `BZ-82` esta función guardaba `file.name`. Eso llegaba tal cual a
+   * `gallery_item.image_url` y la landing lo resolvía como ruta relativa: 404
+   * silencioso, marcador de posición, y seis filas así en producción.
+   */
+  async function handlePhotoFile(id: string, file: File | null) {
     if (!file) return;
-    const previewUrl = URL.createObjectURL(file);
-    setPhotoPreviews((prev) => {
-      const old = prev[id];
-      if (old) URL.revokeObjectURL(old);
-      return { ...prev, [id]: previewUrl };
-    });
-    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image: file.name } : p)));
-    markDirty();
+    setSubiendo((prev) => ({ ...prev, [id]: true }));
+    try {
+      const url = await subirImagen(file, 'galeria');
+      setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image: url } : p)));
+      markDirty();
+    } catch (e) {
+      mostrarError((e as Error).message);
+    } finally {
+      setSubiendo((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   }
 
   function confirmDeletePhoto() {
     if (delConfirmIndex < 0) return;
-    const target = photos[delConfirmIndex];
-    setPhotoPreviews((prev) => {
-      const old = prev[target.id];
-      if (old) URL.revokeObjectURL(old);
-      const next = { ...prev };
-      delete next[target.id];
-      return next;
-    });
     setPhotos((prev) => prev.filter((_, i) => i !== delConfirmIndex));
     markDirty();
     setDelConfirmIndex(-1);
@@ -166,15 +181,20 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
     setOverIndex(null);
   }
 
+  // REQ-984 — se bloquea ANTES de la petición y diciendo cuál falla. Sin esto,
+  // las filas que `BZ-82` dejó en producción harían que tocar un título
+  // devolviera un 400 del servidor, sin pista de qué tarjeta lo provocó.
+  const { sinImagen, sinTitulo } = fotosIncompletas(photos);
+
   function requestSaveConfirm() {
-    const hasEmptyCaption = photos.some((p) => !p.caption.trim());
-    const hasMissingImage = photos.some((p) => !p.image);
-    clearTimeout(errorToastTimer.current);
-    if (hasEmptyCaption || hasMissingImage) {
+    if (sinTitulo.length > 0 || sinImagen.length > 0) {
       setShowValidation(true);
-      setErrorToastMsg(hasMissingImage ? 'Falta subir una foto en alguna tarjeta' : 'Completa los títulos vacíos antes de guardar');
-      setShowErrorToast(true);
-      errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 2800);
+      mostrarError(
+        sinImagen.length > 0
+          ? `Hay ${sinImagen.length} foto(s) sin imagen válida. Subilas antes de guardar.`
+          : 'Completa los títulos vacíos antes de guardar',
+        2800
+      );
       return;
     }
     setShowValidation(false);
@@ -182,49 +202,26 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
     setSaveConfirmOpen(true);
   }
 
-  async function apiCall(url: string, method: string, body?: unknown) {
-    const res = await fetch(url, {
-      method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const json = (await res.json()) as ApiResponse<unknown>;
-    if (!res.ok || !json.success) throw new Error(json.message || 'Error al guardar la galería.');
-    setOpsDone((n) => n + 1);
-    return json.data;
-  }
-
   async function confirmSaveChanges() {
     setSaveConfirmOpen(false);
     setSaving(true);
     setOpsDone(0);
     try {
-      for (let i = 0; i < photos.length; i++) {
-        const p = photos[i];
-        const payload = { tipo, titulo: p.caption.trim(), imagenUrl: p.image, orden: i };
-        if (p.id.startsWith('new-')) {
-          await apiCall('/api/galeria', 'POST', payload);
-        } else {
-          await apiCall(`/api/galeria/${p.id}`, 'PUT', payload);
-        }
-      }
-
-      const currentIds = new Set(photos.filter((p) => !p.id.startsWith('new-')).map((p) => p.id));
-      for (const before of initialPhotos) {
-        if (!currentIds.has(before.id)) {
-          await apiCall(`/api/galeria/${before.id}`, 'DELETE');
-        }
-      }
+      const plan = planificarGaleria(initialPhotos, photos);
+      await guardarGaleria(tipo, plan, async (url, init) => {
+        const res = await fetch(url, init);
+        setOpsDone((n) => n + 1);
+        return res;
+      });
 
       window.__adminHasUnsavedChanges = false;
       queueSuccessMessage('Galería guardada exitosamente');
       window.location.reload();
     } catch (e) {
+      // El estado sigue sucio a propósito (REQ-986): lo que el administrador
+      // escribió sigue en memoria y el botón sigue disponible.
       setSaving(false);
-      clearTimeout(errorToastTimer.current);
-      setErrorToastMsg((e as Error).message);
-      setShowErrorToast(true);
-      errorToastTimer.current = setTimeout(() => setShowErrorToast(false), 3600);
+      mostrarError((e as Error).message);
     }
   }
 
@@ -325,11 +322,12 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
 
           {photos.length === 0 && <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-faint)', fontSize: 13.5 }}>Sin fotos todavía. Usa "Agregar foto" para empezar.</div>}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div className="bz-grid-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {photos.map((p, i) => {
               const captionHasError = showValidation && !p.caption.trim();
               const isOver = overIndex === i;
-              const preview = photoPreviews[p.id];
+              const estado = estadoImagen(p.image);
+              const cargando = subiendo[p.id] === true;
               return (
                 <div
                   key={p.id}
@@ -352,15 +350,24 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
                   style={{ background: isOver ? 'var(--color-primary-light)' : 'white', border: '1px solid var(--color-border-soft)', borderRadius: 12, overflow: 'hidden', transition: 'background 0.12s' }}
                 >
                   <div style={{ position: 'relative' }}>
-                    {preview ? (
+                    {cargando ? (
+                      <div style={{ width: '100%', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-muted)', color: 'var(--color-text-faint)', fontSize: 12 }}>
+                        Subiendo…
+                      </div>
+                    ) : estado === 'ok' ? (
                       <label style={{ width: '100%', height: 170, display: 'block', cursor: 'pointer' }}>
                         <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(p.id, e.target.files?.[0] ?? null)} />
-                        <img src={preview} alt="" style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+                        <img src={p.image!} alt={p.caption} style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
                       </label>
-                    ) : p.image ? (
-                      <label style={{ width: '100%', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--color-surface-muted)', color: 'var(--color-text-muted)', fontSize: 12, fontWeight: 600, textAlign: 'center', padding: 10, overflowWrap: 'anywhere' }}>
+                    ) : estado === 'invalida' ? (
+                      // Las seis filas que dejó `BZ-82`. Se dice qué pasó y qué
+                      // hacer: el archivo original nunca llegó a R2, así que no
+                      // hay nada que recuperar, solo volver a subirlo.
+                      <label style={{ width: '100%', height: 170, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--color-surface-muted)', color: 'var(--color-danger)', fontSize: 12, fontWeight: 600, textAlign: 'center', padding: 12 }}>
                         <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(p.id, e.target.files?.[0] ?? null)} />
-                        {p.image}
+                        <span>Imagen no válida</span>
+                        <span style={{ color: 'var(--color-text-faint)', fontWeight: 500, overflowWrap: 'anywhere' }}>{p.image}</span>
+                        <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Hacé clic para subirla de nuevo</span>
                       </label>
                     ) : (
                       <label style={{ width: '100%', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--color-surface-muted)', color: 'var(--color-text-faint)', fontSize: 12 }}>

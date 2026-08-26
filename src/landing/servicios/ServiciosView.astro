@@ -8,7 +8,8 @@ const galeriaDb = await getGaleria('accesorios');
 const galeria = galeriaDb
   .slice()
   .sort((a, b) => a.orden - b.orden)
-  .map((g) => ({ name: g.titulo }));
+  // SPEC-905 REQ-982 — la URL viajaba hasta acá y se tiraba.
+  .map((g) => ({ name: g.titulo, imagenUrl: g.imagenUrl }));
 
 const proceso = [
   { n: '1', title: 'Nos contactas', desc: 'Cuéntanos tu proyecto por WhatsApp o email' },

@@ -18,6 +18,9 @@
 | [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | 🔶 auditoría de lectura hecha | ⬜ pgTAP pendiente |
 | [SPEC-903](specs/SPEC-903-acceso-diagnostico.md) · Acceso al diagnóstico | BORRADOR | ✅ `acceso.ts`, `/api/salud`, `/api/diagnostico` | ✅ 15 unit + 11 workerd |
 | [SPEC-904](specs/SPEC-904-persistencia-inicio.md) · Persistencia del inicio | **APROBADA** | ✅ `inicioPlan.ts`, `updateInicio`, `PUT /api/inicio`, isla | ✅ 33 unit + 5 workerd |
+| [SPEC-905](specs/SPEC-905-imagenes-galeria.md) · Imágenes de la galería | **APROBADA** | ✅ `imagenGaleria.ts`, `guardarGaleria.ts`, isla y landing | ✅ 36 unit |
+| [SPEC-906](specs/SPEC-906-responsive-admin.md) · Responsive del panel | **APROBADA** | ✅ utilidades en `tokens.css` + gate | ✅ 15 unit |
+| [SPEC-907](specs/SPEC-907-panel-tactil.md) · El panel en táctil | BORRADOR | ⬜ sin implementar | ⬜ necesita BZ-60 y BZ-74 |
 
 Las SPEC en **BORRADOR** no bloquean el gate: describen algo aún no implementado.
 Pasar una a APROBADA es un acto explícito, y a partir de ahí todos sus REQ deben
@@ -35,6 +38,15 @@ estar citados en algún test o el gate falla.
 | SPEC-902 | 921–933 | 0 / 13 | `BZ-70` · pgTAP |
 | SPEC-903 | 941–947 | **7 / 7** | aprobarla tras revisión humana |
 | SPEC-904 | 970–979 | **11 / 11** | aplicar `pendiente-policies-home.sql` (REQ-979) |
+| SPEC-905 | 980–986 | **7 / 7** | volver a subir las 6 fotos desde el panel |
+| SPEC-906 | 990–995, 997 | **7 / 7** | — |
+| SPEC-907 | 996, 998–999 | 0 / 3 | `BZ-84` · aprobación y BZ-74 |
+
+> **SPEC-905 REQ-982 y REQ-983 están cubiertos por tests sobre el código
+> fuente, no sobre su comportamiento.** Comprueban que el `<img>` existe, que su
+> `src` sale de `imagenUrl` y que las vistas no vuelven a descartar el campo —
+> que es la regresión concreta que hubo. Que la foto **se vea** solo lo puede
+> decir `BZ-74` (E2E); la capa de componentes sigue bloqueada por `BZ-60`.
 
 > **SPEC-904 REQ-979 está cubierto por un test que NO prueba producción.**
 > `clienteAutenticado.test.ts` verifica que la migración pendiente declara las
