@@ -62,6 +62,7 @@ Feature-sliced. **La lógica pura vive en `src/shared/lib/`, no en `src/lib/`.**
 | `.sdd/GLOSSARY.md` | Vocabulario de dominio (tudel, sordina, BERP, slug vs code) |
 | `.sdd/devops/RUNBOOK-GATES.md` | De commit a producción, y rollback |
 | `docs/3_recursos/20260813-1730-runbook-diagnostico-produccion.md` | Cuando producción ya está rota |
+| `docs/3_recursos/20260824-1200-runbook-aplicar-rls-admin-profile.md` | Aplicar el fix de RLS desde el panel de Supabase |
 | `docs/2_backlog/` | Tableros kanban vigentes |
 
 ## Lo que nunca ejecutas

@@ -1,6 +1,6 @@
 {
   "_comentario": "Deuda heredada de cuando se montaron los gates. Ambas listas solo pueden ENCOGER: cualquier archivo NUEVO que incumpla bloquea. Ver BZ-75 (specs) y BZ-79 (tamaño).",
-  "_generado": "2026-08-22",
+  "_generado": "2026-08-26",
   "sinSpec": [
     "src/shared/lib/auth/authClient.ts",
     "src/shared/lib/build/buildInfo.ts",
@@ -14,7 +14,6 @@
     "src/shared/lib/galeria/galeriaMapper.ts",
     "src/shared/lib/galeria/galeriaService.ts",
     "src/shared/lib/home/homeMapper.ts",
-    "src/shared/lib/home/homeService.ts",
     "src/shared/lib/media/uploadClient.ts",
     "src/shared/lib/productos/productoService.ts",
     "src/shared/lib/productos/productoUrl.ts",
