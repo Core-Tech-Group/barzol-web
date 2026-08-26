@@ -322,7 +322,7 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
 
           {photos.length === 0 && <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-faint)', fontSize: 13.5 }}>Sin fotos todavía. Usa "Agregar foto" para empezar.</div>}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div className="bz-grid-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {photos.map((p, i) => {
               const captionHasError = showValidation && !p.caption.trim();
               const isOver = overIndex === i;

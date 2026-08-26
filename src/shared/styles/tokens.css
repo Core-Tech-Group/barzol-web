@@ -134,3 +134,128 @@ textarea {
 		padding-right: 16px !important;
 	}
 }
+
+/* ===========================================================================
+   PANEL DE ADMINISTRACIÓN — utilidades responsive (SPEC-906)
+   ===========================================================================
+
+   Todo el responsive del panel vive acá, y no es una preferencia: los <style>
+   de Astro son scoped por componente, así que cada pantalla que quisiera su
+   propia media query tendría que reescribir el punto de ruptura. El panel ya
+   lo tenía duplicado en dos archivos, y por ahí llegó a tener 3 media queries
+   frente a las 18 de la landing.
+
+   Puntos de ruptura del panel — los únicos dos, y solo existen aquí:
+     ≤ 768px   teléfono   · sidebar off-canvas, una columna
+     ≤ 1024px  tablet     · dos columnas
+   =========================================================================== */
+
+/* REQ-990 · Alto real del viewport.
+   `100vh` es la altura MÁXIMA en un navegador móvil con barra dinámica, no la
+   visible. Como el panel scrollea en un hijo y el padre está en
+   `overflow:hidden`, lo que queda debajo es inalcanzable. La primera
+   declaración es el respaldo para quien no entienda la unidad. */
+.bz-admin-shell {
+	height: 100vh;
+	height: 100dvh;
+	display: flex;
+	overflow: hidden;
+}
+
+/* REQ-991 · El login deja de partirse en dos columnas de 187px. */
+.bz-split-auth {
+	min-height: 100vh;
+	min-height: 100dvh;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+}
+
+/* REQ-993 · Rejillas de tarjetas: 3 → 2 → 1. El valor de escritorio sigue
+   estando en línea; estas reglas solo lo bajan. */
+.bz-hamburger-btn,
+.bz-sidebar-overlay {
+	display: none;
+}
+
+.bz-sidebar-overlay.bz-open {
+	display: block;
+}
+
+[data-admin-nav-link]:hover {
+	background: rgba(255, 255, 255, 0.08) !important;
+	color: white !important;
+}
+
+@media (max-width: 1024px) {
+	.bz-grid-cards,
+	.bz-cms-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+	}
+}
+
+@media (max-width: 768px) {
+	.bz-admin-sidebar {
+		position: fixed !important;
+		top: 0 !important;
+		left: 0 !important;
+		height: 100vh !important;
+		height: 100dvh !important;
+		z-index: 600 !important;
+		transform: translateX(-100%) !important;
+		transition: transform 0.25s ease;
+		box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18);
+	}
+
+	.bz-admin-sidebar.bz-sidebar-open {
+		transform: translateX(0) !important;
+	}
+
+	.bz-hamburger-btn {
+		display: flex !important;
+	}
+
+	/* REQ-994 · La barra superior crece en vez de recortar sus acciones. El
+	   alto fijo de 68px cabía con un título y un botón; en Página de inicio
+	   conviven el título, el aviso de cambios sin guardar y tres botones. */
+	.bz-topbar {
+		height: auto !important;
+		min-height: 60px;
+		flex-wrap: wrap;
+		row-gap: 8px;
+		padding: 10px 16px !important;
+	}
+
+	.bz-content-pad {
+		padding: 20px !important;
+	}
+
+	.bz-grid-cards,
+	.bz-cms-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	.bz-user-label {
+		display: none !important;
+	}
+
+	/* REQ-991 · Una sola columna, y el panel de marca no reserva espacio. */
+	.bz-split-auth {
+		grid-template-columns: 1fr !important;
+	}
+
+	.bz-split-auth > .bz-auth-brand {
+		display: none !important;
+	}
+
+	/* REQ-992 · La tabla de Productos deja de comprimir cinco columnas en el
+	   ancho de un teléfono y se apila. La cabecera sobra: cada fila se lee
+	   sola. */
+	.bz-table-head {
+		display: none !important;
+	}
+
+	.bz-table-row {
+		grid-template-columns: 1fr !important;
+		row-gap: 6px;
+	}
+}

@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { verificarCobertura } from './sdd/cobertura.mjs';
 import { fuentesNoDeterministas } from './sdd/determinismo.mjs';
+import { revisarPanel } from './sdd/responsive.mjs';
 import { archivosDemasiadoLargos, inventarioDemasiadoLargos } from './sdd/tamano.mjs';
 import {
   archivosSinSpec,
@@ -88,6 +89,9 @@ function main() {
   const reqs = requisitosSinTest(DIR_SPECS, DIRS_TEST);
   const archivos = archivosSinSpec(DIR_LOGICA, DIRS_DOC, baseline.sinSpec);
   const determinismo = fuentesNoDeterministas(DIR_LOGICA);
+  // SPEC-906 REQ-997 — el panel llegó a tener 3 media queries frente a las 18
+  // de la landing porque nada avisaba cuando una pantalla nacía sin adaptar.
+  const responsive = revisarPanel();
   const tamano = archivosDemasiadoLargos(DIRS_CODIGO, DIRS_DOC_LARGA, baseline.demasiadoLargos);
   const cobertura = verificarCobertura(RESUMEN_COBERTURA);
 
@@ -96,6 +100,7 @@ function main() {
     ...reqs.hallazgos,
     ...archivos.hallazgos,
     ...determinismo,
+    ...responsive,
     ...tamano.hallazgos,
     ...cobertura.hallazgos,
   ];

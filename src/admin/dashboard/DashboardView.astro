@@ -91,19 +91,8 @@ const today = rawToday.charAt(0).toUpperCase() + rawToday.slice(1);
 		border-color: var(--color-primary) !important;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 	}
-	@media (max-width: 768px) {
-		.bz-cms-grid {
-			grid-template-columns: 1fr !important;
-		}
-		.bz-user-label {
-			display: none !important;
-		}
-	}
-	@media (max-width: 1024px) and (min-width: 769px) {
-		.bz-cms-grid {
-			grid-template-columns: repeat(2, 1fr) !important;
-		}
-	}
+	/* Las media queries de .bz-cms-grid y .bz-user-label se movieron a
+	   tokens.css con el resto del panel (SPEC-906 REQ-995). */
 </style>
 
 <script>

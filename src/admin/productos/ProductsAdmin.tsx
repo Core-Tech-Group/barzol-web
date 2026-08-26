@@ -607,7 +607,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
         {/* TABLE */}
         <div style={{ background: 'white', border: '1px solid var(--color-border-soft)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, padding: '13px 20px', background: 'var(--color-surface-soft)', borderBottom: '1px solid var(--color-border-soft)' }}>
+          <div className="bz-table-head" style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, padding: '13px 20px', background: 'var(--color-surface-soft)', borderBottom: '1px solid var(--color-border-soft)' }}>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Producto</span>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Categoría</span>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Precio</span>
@@ -618,7 +618,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
           {pageItems.map((p) => (
             <div
               key={p.id}
-              className="admin-product-row"
+              className="admin-product-row bz-table-row"
               onClick={() => openEdit(p._i)}
               style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border-faint)', cursor: 'pointer' }}
             >
