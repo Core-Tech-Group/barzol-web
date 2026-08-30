@@ -29,6 +29,18 @@ const commitSha = shaCompleto ? shaCompleto.slice(0, 7) : 'desconocido';
 export default defineConfig({
   output: 'server',
 
+  // `/servicios` existía como página propia y renderizaba ServiciosView. El
+  // renombrado a AccesoriosView la dejó importando un archivo inexistente y el
+  // build entero dejó de compilar.
+  //
+  // No se borra la ruta a secas: el CTA del hero sigue apuntando ahí
+  // (HomeView.astro:58) y hay enlaces ya publicados. Se redirige al destino que
+  // esa URL ya servía —accesorios personalizados—, así que lo que ve el
+  // visitante no cambia y queda una sola URL canónica.
+  redirects: {
+    '/servicios': '/servicios/accesorios-personalizados',
+  },
+
   integrations: [react()],
 
   vite: {

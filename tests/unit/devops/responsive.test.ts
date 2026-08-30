@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error — los gates son .mjs sin tipos; se prueban igual (SPEC-900 INV-1).
+// Los gates son .mjs sin tipos propios; TypeScript los resuelve igual, y se
+// prueban como cualquier otro módulo (SPEC-900 INV-1).
 import { revisarContrato, revisarFuente, revisarPanel } from '../../../scripts/sdd/responsive.mjs';
 
 /**
