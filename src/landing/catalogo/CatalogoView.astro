@@ -2,8 +2,10 @@
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import Breadcrumb from '@landing/shared/Breadcrumb.astro';
 import ProductCard from '@landing/producto/ProductCard.astro';
+import SortSelect from '@landing/shared/SortSelect.astro';
 import Pagination from '@landing/busqueda/Pagination.astro';
-import { getProductosByCategoria } from '@shared/lib/productos/productoService';
+import { ordenarProductos, parseOrden, ORDEN_POR_DEFECTO } from '@landing/shared/ordenProductos';
+import { getProductosByCategoria, getProductosPublicados } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
@@ -14,29 +16,47 @@ interface Props {
 const { categoria = '' } = Astro.props;
 
 // `categoria` es el slug del INSTRUMENTO — la misma categoría que se
-// administra en /admin/categorias, sin taxonomía alternativa.
+// administra en /admin/categorias, sin taxonomía alternativa. Viene vacío en
+// `/catalogo`, que es el catálogo entero sin filtrar (destino de "Limpiar").
 const categoriasDb = await getCategorias();
 const categoriaActual = categoriasDb.find((c) => c.slug === categoria);
-const categoryName = categoriaActual?.nombre ?? 'Categoría';
+const sinFiltro = !categoriaActual;
+const categoryName = categoriaActual?.nombre ?? 'Catálogo';
 
-// Solo se pide a la base de datos lo que esta página muestra: los productos
-// de ESTE instrumento (su propio id + el de cada subcategoría — product.category_id
-// siempre apunta a una hoja, nunca al instrumento), publicados y activos —
-// no la tabla product completa.
+// Solo se pide a la base de datos lo que esta página muestra: sin filtro, los
+// publicados y activos; con filtro, los de ESTE instrumento (su propio id +
+// el de cada subcategoría — product.category_id siempre apunta a una hoja,
+// nunca al instrumento). En ningún caso la tabla product completa.
 const leafIds = categoriaActual ? [categoriaActual.id, ...categoriaActual.subcategorias.map((s) => s.id)] : [];
-const matched = await getProductosByCategoria(leafIds);
+const matched = sinFiltro ? await getProductosPublicados() : await getProductosByCategoria(leafIds);
+
+// El orden se aplica ANTES de paginar: si no, cada página se ordenaría por
+// separado y el listado completo quedaría desordenado.
+const orden = parseOrden(Astro.url.searchParams.get('orden'));
+const ordenados = ordenarProductos(matched, orden);
 
 const PAGE_SIZE = 12;
-const totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+const totalPages = Math.max(1, Math.ceil(ordenados.length / PAGE_SIZE));
 const requestedPage = Number(Astro.url.searchParams.get('page')) || 1;
 const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
-const pageItems = matched.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+const pageItems = ordenados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
 const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
+
+// "Limpiar" quita el filtro de categoría y deja el catálogo completo — la
+// misma vista, sin filtrar. Conserva el orden: es una preferencia de
+// visualización, no un filtro.
+const limpiarHref = orden === ORDEN_POR_DEFECTO ? '/catalogo' : `/catalogo?orden=${orden}`;
+
+// Sin filtro no hay nivel que mostrar después de "Inicio": el breadcrumb
+// termina ahí en vez de repetir un rótulo genérico.
+const breadcrumbItems = sinFiltro
+  ? [{ label: 'Inicio', href: '/' }]
+  : [{ label: 'Inicio', href: '/' }, { label: categoryName }];
 ---
 
 <PublicLayout title={`${categoryName} — Barzol`}>
-	<Breadcrumb items={[{ label: 'Inicio', href: '/' }, { label: categoryName }]} />
+	<Breadcrumb items={breadcrumbItems} />
 
 	<!-- CATEGORY HERO -->
 	<!--div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:20px 32px 0;">
@@ -57,7 +77,7 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 		<div class="bz-cat-sidebar" style="background:white; border-radius:12px; border:1px solid var(--color-border-soft); padding:20px; position:sticky; top:94px;">
 			<div style="font-size:13px; font-weight:700; color:var(--color-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
 				Filtro
-				<button type="button" style="font-size:11px; font-weight:500; color:var(--color-primary); background:none; border:none; cursor:pointer; ">Limpiar</button>
+				<a href={limpiarHref} class="bz-filter-clear" style="font-size:11px; font-weight:500; color:var(--color-primary); text-decoration:none;">Limpiar</a>
 			</div>
 
 			<div style="margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--color-surface-muted);">
@@ -66,7 +86,8 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 					{categoriasDb.map((c) => (
 						<a
 							href={`/catalogo/${c.slug}`}
-							style={`display:block; padding:6px 8px; border-radius:6px; text-decoration:none; font-size:13px; ${c.id === categoriaActual?.id ? 'background:var(--color-primary-light); color:var(--color-primary); font-weight:700;' : 'color:var(--color-text-soft); font-weight:400;'}`}
+							class:list={['bz-filter-cat', { 'is-active': c.id === categoriaActual?.id }]}
+							style={`display:block; padding:6px 8px; border-radius:7px; text-decoration:none; font-size:13px; ${c.id === categoriaActual?.id ? 'background:var(--color-primary-light); color:var(--color-primary); font-weight:700;' : 'color:var(--color-text-soft); '}`}
 						>{c.nombre}</a>
 					))}
 				</div>
@@ -80,15 +101,7 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 				<span style="font-size:13px; color:var(--color-text-muted);"><span style="font-weight:600; color:var(--color-text);">{matched.length}</span> productos</span>
 				<div style="display:flex; align-items:center; gap:9px;">
 					<span style="font-size:13px; color:var(--color-text-muted);">Ordenar por</span>
-					<div class="bz-sort-wrap">
-						<select class="bz-sort-select">
-							<option>Relevancia</option>
-							<option>Precio: menor a mayor</option>
-							<option>Precio: mayor a menor</option>
-							<option>Más nuevos</option>
-						</select>
-						<svg class="bz-sort-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--color-primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-					</div>
+					<SortSelect orden={orden} />
 				</div>
 			</div>
 			<div class="bz-cat-product-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
@@ -97,51 +110,33 @@ const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre:
 				))}
 			</div>
 
-			<Pagination currentPage={currentPage} totalPages={totalPages} basePath={`/catalogo/${categoria}`} />
+			<Pagination currentPage={currentPage} totalPages={totalPages} basePath={sinFiltro ? '/catalogo' : `/catalogo/${categoria}`} extraParams={{ orden }} />
 		</div>
 
 	</div>
 </PublicLayout>
 
 <style>
-	.bz-sort-wrap {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
+	/* Categorías del sidebar: el realce al pasar el cursor se limita a
+	   punteros reales — en táctil el :hover queda "pegado" tras el tap.
+	   `!important` porque los estilos base van inline y ganan por
+	   especificidad (misma solución que `.cat-sidebar-item` del Header).
+	   La categoría activa ya está resaltada: no se desplaza al pasar por
+	   encima, o el sidebar "salta" sobre la que ya estás viendo. */
+	.bz-filter-cat {
+		transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 	}
-	.bz-sort-select {
-		appearance: none;
-		-webkit-appearance: none;
-		-moz-appearance: none;
-		padding: 9px 34px 9px 15px;
-		border: 1.5px solid var(--color-border);
-		border-radius: 10px;
-		font-size: 13px;
-		font-weight: 500;
-		color: var(--color-text);
-		background: white;
-		cursor: pointer;
-		outline: none;
-		transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+	.bz-filter-clear:hover {
+		text-decoration: underline;
 	}
-	.bz-sort-select:hover {
-		border-color: var(--color-primary-border);
-		background: var(--color-primary-light);
-	}
-	.bz-sort-select:focus-visible {
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 3px var(--color-primary-light);
-	}
-	.bz-sort-arrow {
-		position: absolute;
-		right: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		pointer-events: none;
-		transition: transform 0.15s ease;
-	}
-	.bz-sort-select:focus ~ .bz-sort-arrow {
-		transform: translateY(-50%) rotate(180deg);
+
+	@media (hover: hover) {
+		.bz-filter-cat:hover {
+			background: var(--color-primary-light) !important;
+			color: var(--color-primary) !important;
+			font-weight: 500;
+			transform: translateX(1px);
+		}
 	}
 
 	@media (max-width: 860px) {
