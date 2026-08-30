@@ -1,6 +1,6 @@
 # Scrumban — SDD, pruebas del sistema y DevOps
 
-> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-26 (8ª revisión) · **Rama:** `main`
+> **Creado:** 2026-08-21 · **Última actualización:** 2026-08-30 (9ª revisión) · **Rama:** `main`
 > **Alcance:** integrar Spec-Driven Development, construir la infraestructura de
 > pruebas sobre los runtimes reales, y cerrar el ciclo de despliegue con gates
 > verificables.
@@ -118,8 +118,9 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | BZ-82 | **Las galerías guardan el nombre del archivo** | 🔶 Código hecho, faltan resubir 6 fotos | 🔴 |
 | BZ-83 | Responsive del panel admin | ✅ Hecho | 🟠 |
 | BZ-84 | El panel en táctil (reordenar, overflow, targets) | ⬜ SPEC-907 en borrador | 🟠 |
+| BZ-85 | Runbook de despliegue en cuentas nuevas | ✅ Hecho | 🔴 |
 
-**Progreso:** 17 de 32 hechas, 6 parciales.
+**Progreso:** 18 de 33 hechas, 6 parciales.
 
 | Prioridad | Significado |
 |---|---|
@@ -127,6 +128,33 @@ y en la 2ª revisión de este tablero (historial de git). Resumen:
 | 🟠 P1 | Necesario para que los gates sirvan de verdad |
 | 🟡 P2 | Deuda con impacto real, sin urgencia |
 | ⚪ P3 | Evaluación o mejora |
+
+---
+
+## 🔴 BZ-85 · Desplegar en cuentas nuevas ✅
+
+**2026-08-30.** El sistema se va a redesplegar en cuentas nuevas de GitHub,
+Supabase y Cloudflare. Runbook completo en
+[`docs/1_inbox/20260830-0900-despliegue-cloudflare.md`](../1_inbox/20260830-0900-despliegue-cloudflare.md).
+
+**El hallazgo que justifica la tarea:** `schema.sql` **no tiene ni un `GRANT`**.
+Nunca hizo falta, porque hasta 2026 Supabase los concedía solos. Desde el
+**30-05-2026** los proyectos nuevos ya no, y desde el **30-10-2026** tampoco los
+existentes. Cargar el esquema tal cual en una cuenta nueva deja el sitio
+completamente muerto — y con un síntoma que engaña: la landing no da error, los
+servicios devuelven listas vacías y parece que falló el seed.
+
+Se añade [`supabase/grants-data-api.sql`](../../supabase/grants-data-api.sql),
+que incluye un detalle que solo aparece al crear un producto: `delta_crud`
+convierte `code` en `nextval(...)`, y un INSERT necesita **USAGE sobre esas dos
+secuencias** aunque la tabla tenga todos sus permisos.
+
+Otros tres cambios de 2026 documentados: claves `sb_publishable_` (las JWT
+quedan obsoletas a fin de año), Workers Builds con **Node 24 por defecto** frente
+al 22.12 del CI, y `r2.dev` desaconsejado para producción por límite de tasa.
+
+**Corregido de paso:** `schema.sql:339` no existe —el comentario está en la 336—
+y la referencia estaba mal en SPEC-904.
 
 ---
 
