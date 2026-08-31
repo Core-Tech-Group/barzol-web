@@ -19,10 +19,21 @@ const srcDir = fileURLToPath(new URL('./src', import.meta.url));
 // cubre una ejecución desde GitHub Actions.
 // El recorte a 7 caracteres se aplica sólo cuando hay SHA: si no, el texto de
 // respaldo saldría cortado ("descono") y parecería un hash corrupto.
-const shaCompleto =
+//
+// El valor se VALIDA como SHA antes de usarlo (SPEC-908 REQ-1009). No es
+// paranoia: el despliegue de la cuenta nueva informaba `commit: "main"` — el
+// nombre de la rama llegó por una de estas variables. Un valor que no es un SHA
+// hace algo peor que faltar: `TEST-S06` compara el commit desplegado contra el
+// que se acaba de publicar, y con una constante que nunca coincide la sonda
+// falla siempre, deja de significar nada y se termina ignorando. Justo la sonda
+// que existe porque dos commits tardaron un día en publicarse sin que nadie lo
+// notara (BZ-52). Si no hay SHA, el contrato es decirlo: `desconocido`.
+const ES_SHA = /^[0-9a-f]{7,40}$/i;
+const candidato =
   process.env.WORKERS_CI_COMMIT_SHA ??
   process.env.CF_PAGES_COMMIT_SHA ??
   process.env.GITHUB_SHA;
+const shaCompleto = candidato && ES_SHA.test(candidato.trim()) ? candidato.trim() : undefined;
 const commitSha = shaCompleto ? shaCompleto.slice(0, 7) : 'desconocido';
 
 // https://astro.build/config

@@ -65,5 +65,5 @@ for (const nombre of SECRETOS) {
 console.log(
   `\n${subidos} secreto(s) cargado(s). Verificá con:\n` +
     '  npx wrangler secret list\n' +
-    '  curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico'
+    '  curl https://barzol-web.barzolweb3d.workers.dev/api/diagnostico'
 );
