@@ -72,6 +72,36 @@ tests, build completo, `sdd:trace` GATE 4 PASA.
 **Queda un solo bloqueante para que el sitio sirva contenido: `BZ-87`, el SQL.**
 No lo puede cerrar un agente.
 
+### El despliegue de `dee3555`, verificado
+
+Publicado y desplegado. El humo, ejecutado **sin `--url`** para probar de paso que
+`BZ-88` quedó bien:
+
+```
+[FALLA] TEST-S01 · portada responde 200 con HTML        estado 500
+[FALLA] TEST-S02 · una ruta de catálogo devuelve productos
+[PASA]  TEST-S03 · 404 servido por la página propia
+[PASA]  TEST-S04 · el worker se reporta sano
+[AVISO] TEST-S05 · el worker recibe las tres variables   (sin token)
+[PASA]  TEST-S06 · el commit desplegado es el que se acaba de publicar
+[FALLA] TEST-S07 · una imagen de producto se sirve desde R2
+```
+
+**Los tres fallos son `BZ-87` y nada más.** El worker está vivo (S04), sirve su
+propio 404 (S03) y corre el bundle recién publicado (S06). Lo que no puede es leer
+un catálogo que todavía no existe.
+
+Y el error de fondo **cambió**, que es la señal que importa:
+
+```
+antes:   {"message":"Invalid API key"}                       ← proyecto equivocado
+ahora:   {"code":"PGRST205","message":"Could not find the
+          table 'public.product' in the schema cache"}       ← proyecto correcto, sin esquema
+```
+
+El worker ya habla con el Supabase que le corresponde. Cargar el SQL de `BZ-87`
+lo levanta **sin necesidad de otro despliegue**.
+
 ---
 
 ## Tablero
@@ -88,12 +118,12 @@ No lo puede cerrar un agente.
 | BZ-86 | `wrangler.jsonc` apunta al Supabase viejo → `Invalid API key` | ✅ Aplicado | 🔴 |
 | BZ-87 | El Supabase nuevo no tiene esquema ni GRANT | ⬜ **Bloqueante — SQL, humano** | 🔴 |
 | BZ-88 | `smoke.mjs` sondea por defecto el despliegue **viejo** | ✅ Aplicado | 🔴 |
-| BZ-89 | `/api/salud` informa `commit: "main"` en vez de un SHA | 🔶 Contenido, causa sin confirmar | 🟠 |
+| BZ-89 | `/api/salud` informa `commit: "main"` en vez de un SHA | ✅ Resuelto y confirmado | 🟠 |
 | BZ-90 | Clave publishable del proyecto viejo versionada en `.env.example` | ✅ Aplicado | 🟠 |
 | BZ-91 | Documentación y `.env` local apuntan al despliegue muerto | ✅ Aplicado | 🟡 |
 | BZ-92 | Build y CI corren versiones distintas de Node | ⬜ Pendiente, deliberado | 🟡 |
 
-**Progreso:** 4 de 7 cerradas. `BZ-87` es el único bloqueante que queda para que
+**Progreso:** 5 de 7 cerradas. `BZ-87` es el único bloqueante que queda para que
 el sitio sirva contenido, y **no lo puede cerrar un agente** (Constitución 8.5).
 
 ---
@@ -207,7 +237,7 @@ node scripts/smoke.mjs --url https://barzol-web.barzolweb3d.workers.dev \
 
 ---
 
-## 🟠 BZ-89 · `/api/salud` informa `commit: "main"` 🔶
+## 🟠 BZ-89 · `/api/salud` informa `commit: "main"` ✅
 
 ```json
 { "ok": false, "commit": "main", "momento": "2026-08-31T11:21:31.066Z" }
@@ -226,20 +256,24 @@ publicar. Con un valor constante nunca puede coincidir — y esa sonda existe
 porque en el proyecto viejo dos commits tardaron **un día** en publicarse sin que
 nadie lo notara (`BZ-52`).
 
-### Contenido, no resuelto 🔶
+### Resuelto — y el despliegue contestó la pregunta ✅
 
 `astro.config.mjs` ahora **valida la forma** antes de usar el valor: si no cumple
 `/^[0-9a-f]{7,40}$/i`, escribe `desconocido`. Eso cumple REQ-1009 e INV-4 y evita
 lo peor —una sonda que falla siempre acaba ignorándose, y era la única que detecta
 un bundle obsoleto—, pero **no explica de dónde sale `"main"`**.
 
-Sigue sin verificar. Se cierra mirando las variables de build del worker en el
-panel; el despliegue de este push dirá cuál de las dos cosas pasa:
+El despliegue de `dee3555` respondió, y con eso se cierra:
 
-| Lo que informe `/api/salud` | Significa |
-| :--- | :--- |
-| el SHA de este commit | Workers Builds sí inyecta el SHA; `"main"` venía de un build manual |
-| `desconocido` | alguna variable de build trae la rama, y hay que corregirla en el panel |
+```json
+{ "ok": true, "commit": "dee3555", "momento": "2026-08-31T12:31:55.433Z" }
+```
+
+Es el SHA real del commit, no `desconocido`. O sea que **Workers Builds sí inyecta
+`WORKERS_CI_COMMIT_SHA` correctamente**: el `"main"` anterior no venía de la build
+del repo, sino de un despliegue hecho por otra vía. La validación de forma no hizo
+falta para arreglarlo, pero es la que garantiza que un valor así no vuelva a pasar
+por SHA — y `TEST-S06` ya **pasa**.
 
 ---
 
@@ -325,17 +359,24 @@ a 24, o alguien comprueba primero que el build pasa en 22.12.
 
 ---
 
+## Resuelto por el despliegue de `dee3555`
+
+Dos de las tres incógnitas del apartado anterior las contestó el propio push:
+
+1. **Workers Builds está conectado a este repositorio.** Desplegó `dee3555`
+   ~40 s después del push a `git@github.com:Core-Tech-Group/barzol-web.git` y
+   `/api/salud` lo informa. La duda de si publicar desde esta máquina llegaba al
+   worker queda cerrada.
+2. **`WORKERS_CI_COMMIT_SHA` se inyecta bien** (`BZ-89`).
+
 ## No verificado
 
-Requiere acceso al panel, y ninguna de las tres se puede afirmar desde fuera:
-
-1. **A qué repositorio de GitHub está conectado Workers Builds.** El `origin`
-   local es `git@github.com:Core-Tech-Group/barzol-web.git`. Si Workers Builds
-   sigue apuntando al repo de la cuenta anterior, los commits que se empujen desde
-   aquí **no se despliegan** y el sitio se queda en el bundle actual sin ninguna
-   señal de error. Runbook 2.2 y 4.2.
-2. **Qué inyecta `WORKERS_CI_COMMIT_SHA`** en la build (`BZ-89`).
-3. **Si `admin_profile` del proyecto nuevo tiene su fila** (`BZ-87`, runbook 3.5b).
+1. **`npx wrangler secret list`** — REQ-1007. No se puede ejecutar desde esta
+   sesión: wrangler exige `CLOUDFLARE_API_TOKEN` en un entorno no interactivo y
+   **no se le piden credenciales a un agente**. Queda como paso humano.
+   Indirectamente hay evidencia de que el secreto sigue cargado: si faltara, el
+   error sería `MissingEnvError` como a las 22:43, y no lo es.
+2. **Si `admin_profile` del proyecto nuevo tiene su fila** (`BZ-87`, runbook 3.5b).
 
 ## Decisiones pendientes
 
