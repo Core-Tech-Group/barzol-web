@@ -2,7 +2,8 @@
 
 > **Abierto:** 2026-08-31 · **Continúa** `BZ-85` del
 > [kanban de SDD y DevOps](20260821-2218-kanban-sdd-integracion-pruebas-unitarias-devops.md)
-> **Contrato:** [SPEC-908](../../.sdd/specs/SPEC-908-despliegue-cuenta-barzolweb3d.md) — **APROBADA** 2026-08-31
+> **Contrato:** [SPEC-908](../../.sdd/specs/SPEC-908-despliegue-cuenta-barzolweb3d.md) — **APROBADA** 2026-08-31 · **Enmienda 1** 2026-09-01
+> **Verificación humana:** [checklist de SPEC-908](../../tests/manual/SPEC-908-verificacion-humana.md)
 > **Runbook:** [despliegue en cuentas nuevas](../1_inbox/20260830-0900-despliegue-cloudflare.md)
 > **Logs:** [observability del 2026-08-31](../1_inbox/20260831-0612-logs-despliegue-observability.md)
 
@@ -104,6 +105,58 @@ lo levanta **sin necesidad de otro despliegue**.
 
 ---
 
+## Estado — 2026-09-01, 2ª revisión
+
+**El sitio ya sirve.** `GET /` devuelve **200** — era 500 en las dos revisiones
+anteriores. El responsable cargó el SQL, y eso cerró `BZ-87`.
+
+Comprobado tabla por tabla con la clave anónima: las 8 responden `200`, o sea que
+el esquema está cargado **y** los GRANT aplicados. Un `INSERT` anónimo de prueba
+sobre `vendor` fue rechazado con `42501 new row violates row-level security
+policy`, que es la respuesta correcta: RLS está activo y `anon` no escribe. La
+sonda no dejó ninguna fila detrás.
+
+**Lo que falta ahora no es configuración, son datos.** Las 8 tablas están a cero
+filas.
+
+| Antes | Ahora |
+| :--- | :--- |
+| `Invalid API key` — proyecto equivocado | — |
+| `PGRST205` — sin esquema | — |
+| `GET /` → 500 | `GET /` → **200** |
+| humo 4 verdes / 2 fallos | humo **4 verdes / 2 fallos** (S02 y S07, por falta de datos) |
+| auditoría RLS **1 fallo** | auditoría **0 fallos**, 12 avisos |
+
+### Los gates confundían «vacío» con «roto»
+
+Con la base ya correcta pero sin filas, `npm run audit:rls` seguía en rojo:
+
+```
+[FALLA] TEST-P01 · anon lee productos publicados
+         no devolvió ningún producto publicado — ¿RLS demasiado estricto?
+```
+
+RLS no tenía nada de malo. **La base no tenía filas.** Y el mensaje no solo
+señalaba mal: proponía aflojar las policies de un despliegue recién montado,
+cuando `BZ-80` dice que la lectura de `product` está **demasiado abierta**. El
+gate sugería la corrección inversa a la correcta, en el único momento en que
+alguien lo lee sin contexto.
+
+La sonda de al lado ya resolvía la misma ambigüedad bien: `TEST-P02` devuelve
+AVISO y explica que no puede distinguir. La Enmienda 1 hace que las dos razonen
+igual (`BZ-93`).
+
+### Lo hecho en esta revisión
+
+- `BZ-93` — Enmienda 1 de SPEC-908 (`REQ-1016`, `REQ-1017`), aplicada.
+- `BZ-94` — el Gate 4 truncaba `REQ-1001` a `REQ-100` e **inventaba requisitos**.
+- SPEC-908 pasa de 7 REQ verificados a 17, con verificación registrada para todos.
+
+Gates: typecheck 0 errores · **210 + 31** tests (eran 186 + 31) · build completo ·
+`sdd:trace` **GATE 4 PASA**.
+
+---
+
 ## Tablero
 
 | Prioridad | Significado |
@@ -116,15 +169,18 @@ lo levanta **sin necesidad de otro despliegue**.
 | ID | Tarea | Estado | Prio |
 |---|---|---|---|
 | BZ-86 | `wrangler.jsonc` apunta al Supabase viejo → `Invalid API key` | ✅ Aplicado | 🔴 |
-| BZ-87 | El Supabase nuevo no tiene esquema ni GRANT | ⬜ **Bloqueante — SQL, humano** | 🔴 |
+| BZ-87 | El Supabase nuevo no tiene esquema ni GRANT | ✅ Cargado por el responsable | 🔴 |
+| BZ-93 | Los gates confunden «base vacía» con «RLS roto» | ✅ Enmienda 1 aplicada | 🟠 |
+| BZ-94 | El Gate 4 trunca `REQ-1001` e inventa requisitos | ✅ Aplicado | 🟠 |
+| BZ-95 | La base no tiene datos: falta el seed | ⬜ **Humano — panel admin** | 🔴 |
 | BZ-88 | `smoke.mjs` sondea por defecto el despliegue **viejo** | ✅ Aplicado | 🔴 |
 | BZ-89 | `/api/salud` informa `commit: "main"` en vez de un SHA | ✅ Resuelto y confirmado | 🟠 |
 | BZ-90 | Clave publishable del proyecto viejo versionada en `.env.example` | ✅ Aplicado | 🟠 |
 | BZ-91 | Documentación y `.env` local apuntan al despliegue muerto | ✅ Aplicado | 🟡 |
 | BZ-92 | Build y CI corren versiones distintas de Node | ⬜ Pendiente, deliberado | 🟡 |
 
-**Progreso:** 5 de 7 cerradas. `BZ-87` es el único bloqueante que queda para que
-el sitio sirva contenido, y **no lo puede cerrar un agente** (Constitución 8.5).
+**Progreso:** 8 de 10 cerradas. El bloqueante que queda es `BZ-95` —cargar los
+datos— y **no lo puede cerrar un agente** (Constitución 8.5).
 
 ---
 
@@ -169,7 +225,7 @@ bundle construido no contiene ninguna referencia al proyecto anterior.
 
 ---
 
-## 🔴 BZ-87 · El Supabase nuevo no tiene esquema ni GRANT
+## 🔴 BZ-87 · El Supabase nuevo no tiene esquema ni GRANT ✅
 
 **Humano, en el SQL Editor.** Constitución 8.5: ningún agente carga SQL en
 producción.
@@ -208,6 +264,31 @@ rollback;
 Y después el administrador, que son **dos** pasos (runbook 3.5): el usuario en
 Auth con *Auto Confirm* activado, y su fila en `admin_profile` con el **mismo
 `id`**. Con uno solo, el login entra y ninguna escritura pasa el RLS.
+
+### Cerrada el 2026-09-01 ✅
+
+Cargado por el responsable. Verificado desde fuera, tabla por tabla:
+
+```
+product 200 · category 200 · vendor 200 · product_photo 200
+product_feature 200 · gallery_item 200 · home_hero_image 200 · admin_profile 200
+```
+
+Las 8 responden, así que **el esquema está cargado y los GRANT aplicados** — sin
+los GRANT, PostgREST no las vería y devolvería `PGRST205` como el 31 de agosto.
+
+Y la escritura anónima está cerrada, que es la otra mitad:
+
+```
+POST /rest/v1/vendor  (rol anon)
+→ {"code":"42501","message":"new row violates row-level security policy for table \"vendor\""}
+```
+
+Es la respuesta correcta. La sonda no dejó ninguna fila detrás.
+
+**Sin verificar todavía:** la fila de `admin_profile` (runbook 3.5b). Requiere
+entrar al panel; está en el [checklist manual](../../tests/manual/SPEC-908-verificacion-humana.md),
+punto 3.
 
 ---
 
@@ -359,6 +440,110 @@ a 24, o alguien comprueba primero que el build pasa en 22.12.
 
 ---
 
+## 🔴 BZ-95 · La base no tiene datos
+
+Esquema correcto, policies correctas, **cero filas**. Es lo único que separa al
+sitio de estar terminado.
+
+Lo que falla por esto, y solo por esto:
+
+| Sonda | Por qué falla |
+| :--- | :--- |
+| `TEST-S02` | la portada no enlaza ninguna ruta `/catalogo/` porque no hay productos |
+| `TEST-S07` | no hay ninguna imagen de R2 que referenciar |
+| `TEST-P01` | ya no falla: desde la Enmienda 1 avisa en vez de acusar a RLS |
+
+**Camino elegido: el panel de admin** (runbook 7a). Entrar a `/admin/login` y
+cargar a mano. Las fotos suben bien a R2 porque pasan por `POST /api/media`, que
+es lo que valida las URL absolutas y evita el bug de `BZ-82` — seis filas de
+producción acabaron guardando `firefox_ix0xISR5X0.png` en lugar de una URL.
+
+> **Por qué no un script de seed.** `supabase/seed-data/` tiene los nueve JSON del
+> catálogo real, pero tres traen `REEMPLAZAR_URL_IMAGEN` y `gallery_item.image_url`
+> y `home_hero_image.image_url` son **NOT NULL**: hay que subir las fotos a R2
+> *antes* de insertar. Un script tendría que resolver ese huevo-y-gallina y
+> escribir en producción. El panel ya hace las dos cosas en el orden correcto.
+
+Al cargar el primer producto publicado, `TEST-S02` y `TEST-P01` pasan solos.
+
+---
+
+## 🟠 BZ-93 · Los gates confunden «base vacía» con «RLS roto» ✅
+
+`TEST-P01` daba **FALLA** con el detalle *"no devolvió ningún producto publicado —
+¿RLS demasiado estricto?"* sobre una base perfectamente sana pero vacía.
+
+Dos problemas, no uno:
+
+1. **Rojo donde no hay nada roto.** Un gate que da rojo en todos los despliegues
+   nuevos se termina ignorando, y con él se ignora el rojo que sí importaba.
+2. **La causa equivocada, en la dirección peligrosa.** El mensaje empuja a aflojar
+   las policies. `BZ-80` dice que la lectura de `product` está *demasiado abierta*.
+
+**Antes → después:**
+
+```
+[FALLA] TEST-P01 · no devolvió ningún producto publicado — ¿RLS demasiado estricto?
+[AVISO] TEST-P01 · la tabla product está vacía para anon: sin datos que leer,
+                   no se puede concluir nada sobre las policies (¿falta el seed?)
+```
+
+Desde fuera, con la clave anónima, «cero publicados» **nunca** se puede atribuir a
+las policies: es indistinguible de una tabla sin filas y de un catálogo entero en
+borrador. Lo único que sí es un fallo es no poder preguntar — error de red o
+estado HTTP distinto de 200, y eso sigue en rojo (`TEST-908-11`, `-12`).
+
+**Y una premisa que estaba en un comentario y no en la salida.** `sondas.mjs`
+documenta que una tabla «protegida» se reconoce por responder 200 con lista vacía,
+y que ese criterio solo vale **si la lectura pública ve filas**. Con la base vacía
+la auditoría imprimía once AVISO de protección que no sostenían nada, sin decirlo.
+Ahora lo dice (`REQ-1017`):
+
+```
+⚠ Las sondas de protección NO son concluyentes en esta ejecución: sin ninguna
+  fila visible para anon, "200 con lista vacía" es indistinguible de una tabla
+  sin filas. Cargá datos y volvé a auditar.
+```
+
+La decisión vive en `scripts/rls/veredictos.mjs` —lógica pura, 93 líneas, sin
+red— para poder probarla sin un Supabase delante. 10 tests.
+
+---
+
+## 🟠 BZ-94 · El Gate 4 truncaba los REQ e inventaba requisitos ✅
+
+Destapado al aprobar SPEC-908: `scripts/sdd/lectura.mjs` extraía los requisitos
+con `/REQ-\d{3}/` — **exactamente** tres dígitos. Con SPEC-908 el proyecto pasó de
+los 999 requisitos y empezó a numerar en el rango 1000:
+
+```
+REQ-1001  →  el gate leía  REQ-100
+REQ-1016  →  el gate leía  REQ-101
+```
+
+Y entonces reclamaba tests para `REQ-100`, **que no existe en ninguna spec**.
+
+Es peor que un hueco no detectado. Un hueco falso con un ID inventado **no se
+puede cerrar**: no hay nada que citar en un test, así que el gate queda en rojo
+permanente — y un gate que no se puede poner en verde se acaba desactivando.
+
+Arreglado a `/REQ-\d{3,4}/`. El límite superior es deliberado: con `\d+`, un
+`REQ-` pegado a una fecha o a un número de línea se tragaría el número entero.
+
+### El segundo hallazgo, sin arreglar
+
+El extractor **no distingue un requisito declarado de uno citado**. Cualquier
+`REQ-NNN` de otra spec que aparezca en el texto se cuenta como requisito propio y
+reclama un test que no le corresponde. Se ve en SPEC-901, que cita `REQ-905` y
+`REQ-933` de otras specs y arrastra dos huecos falsos.
+
+Se esquivó citando `SPEC-901` sin el número. **Es un parche, no un arreglo**:
+arreglarlo de verdad es leer solo los `### [REQ-NNNN]` declarados como encabezado,
+y eso cambia la semántica del gate para todas las specs a la vez. Merece su propia
+SPEC y no entra de rebote en esta.
+
+---
+
 ## Resuelto por el despliegue de `dee3555`
 
 Dos de las tres incógnitas del apartado anterior las contestó el propio push:
@@ -376,7 +561,15 @@ Dos de las tres incógnitas del apartado anterior las contestó el propio push:
    **no se le piden credenciales a un agente**. Queda como paso humano.
    Indirectamente hay evidencia de que el secreto sigue cargado: si faltara, el
    error sería `MissingEnvError` como a las 22:43, y no lo es.
-2. **Si `admin_profile` del proyecto nuevo tiene su fila** (`BZ-87`, runbook 3.5b).
+2. **Si `admin_profile` del proyecto nuevo tiene su fila** (runbook 3.5b). La
+   tabla existe y responde, pero desde fuera no se distingue "vacía" de "RLS la
+   oculta", que es justo la ambigüedad de `BZ-93`. Punto 3 del checklist manual.
+3. **El seed** (`BZ-95`): sin datos, `TEST-S02`, `TEST-S07` y `TEST-P01` no pueden
+   concluir nada.
+
+Los tres son puntos del
+[checklist de verificación humana](../../tests/manual/SPEC-908-verificacion-humana.md),
+que es donde SPEC-908 registra lo que ninguna sonda puede cubrir.
 
 ## Decisiones pendientes
 

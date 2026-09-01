@@ -62,7 +62,20 @@ export function estadoDeSpec(contenido) {
   return m ? m[1] : 'DESCONOCIDO';
 }
 
-/** IDs `REQ-NNN` únicos presentes en un texto. */
+/**
+ * IDs `REQ-NNN` únicos presentes en un texto.
+ *
+ * Acepta tres o cuatro dígitos. Empezó aceptando solo tres, y con SPEC-908 el
+ * proyecto pasó de los 999 requisitos: `REQ-1001` se truncaba a `REQ-100` y el
+ * Gate 4 reclamaba tests para requisitos **que no existen en ninguna spec**.
+ *
+ * Un hueco falso con un ID inventado es peor que un hueco no detectado: no hay
+ * nada que citar en un test para cerrarlo, así que el gate queda en rojo
+ * permanente — y un gate que no se puede poner en verde se acaba desactivando.
+ *
+ * El límite superior es deliberado: sin él, `\d+` se tragaría el año de una
+ * fecha o el número de una línea pegados a un `REQ-`.
+ */
 export function requisitosDe(contenido) {
-  return [...new Set(contenido.match(/REQ-\d{3}/g) ?? [])].sort();
+  return [...new Set(contenido.match(/REQ-\d{3,4}/g) ?? [])].sort();
 }

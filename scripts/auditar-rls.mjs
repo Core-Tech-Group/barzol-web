@@ -28,6 +28,7 @@ import {
   perfilesAdminOcultos,
   tablasAlcanzables,
 } from './rls/sondas.mjs';
+import { avisoNoConcluyente } from './rls/veredictos.mjs';
 
 // Tablas del esquema público según DATABASE_SCHEMA.md. `product` y
 // `admin_profile` tienen sonda propia y no se repiten acá.
@@ -94,6 +95,12 @@ async function main() {
 
   const fallos = resultados.filter((r) => r.estado === 'FALLA');
   const avisos = resultados.filter((r) => r.estado === 'AVISO');
+
+  // REQ-1017 — las sondas de protección se apoyan en que TEST-P01 vea filas.
+  // Si no las vio, sus AVISO no sostienen nada y hay que decirlo aquí, no
+  // dejarlo en un comentario del código que nadie lee durante un despliegue.
+  const advertencia = avisoNoConcluyente(resultados);
+  if (advertencia) console.log(`\n⚠ ${advertencia}`);
 
   console.log('');
   console.log(

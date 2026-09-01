@@ -278,25 +278,80 @@ y sobre todo 4→5) y que el rollback no deshace nada de eso.
 
 ---
 
+## Enmienda 1 — 2026-09-01 · un gate no puede confundir «vacío» con «roto»
+
+**Aprobada por el responsable el 2026-09-01**, tras cargar el esquema en el
+proyecto nuevo.
+
+Con las tablas creadas y los GRANT aplicados, `npm run audit:rls` sigue dando
+rojo:
+
+```
+[FALLA] TEST-P01 · anon lee productos publicados
+         no devolvió ningún producto publicado — ¿RLS demasiado estricto?
+```
+
+**RLS no tiene nada de malo. La base no tiene filas.** La sonda no distingue una
+cosa de la otra y, al no distinguirla, nombra la causa equivocada.
+
+Eso es peor que un falso rojo. El mensaje propone aflojar las policies de un
+despliegue recién montado, que es justo lo contrario de lo que hay que hacer:
+`BZ-80` ya documenta que la lectura de `product` está **demasiado abierta**, no
+demasiado estricta. Un gate que sugiere la corrección inversa a la correcta, en el
+único momento en que alguien lo lee sin contexto —el primer despliegue—, es un
+riesgo de seguridad y no una molestia.
+
+La sonda de al lado ya resuelve esta misma ambigüedad bien. `TEST-P02` termina:
+
+> Vacío. Puede ser que RLS funcione o que no haya borradores. No se puede
+> distinguir desde fuera, y decir "PASA" sería mentir.
+
+…y devuelve AVISO. `TEST-P01` tiene el mismo problema y lo trata como fallo. La
+enmienda es hacer que las dos razonen igual.
+
+Hay además una dependencia que el propio archivo declara y que hoy se rompe en
+silencio: `protegida()` documenta que el vacío de las sondas de protección solo
+significa algo **si TEST-P01 pasa**. Con la base vacía, TEST-P01 no pasa, así que
+los once AVISO restantes tampoco son concluyentes — pero el informe no lo dice.
+
+### [REQ-1016] — No deseado · vacío no es fallo
+SI una sonda de lectura pública no obtiene filas Y la tabla resulta estar vacía
+para el rol `anon`, ENTONCES el sistema DEBE informar **AVISO** y NO DEBE informar
+FALLA, y el detalle DEBE nombrar la falta de datos como causa posible en lugar de
+atribuirla a las policies.
+
+> Reservar FALLA para lo que de verdad está roto es lo que hace que un rojo
+> signifique algo. Un gate que da rojo en cada despliegue nuevo se termina
+> ignorando, y con él se ignora el rojo que sí importaba.
+
+### [REQ-1017] — Dirigido por estado · decirlo cuando no se puede concluir
+MIENTRAS la sonda de lectura pública no consiga leer ninguna fila, la auditoría
+DEBE advertir explícitamente que las sondas de protección **no son concluyentes**,
+porque su criterio —200 con lista vacía— es indistinguible de una tabla sin filas.
+
+---
+
 ## Estado de aplicación — 2026-08-31
 
 | REQ | Estado |
 | :--- | :--- |
 | REQ-1001 · `wrangler.jsonc` al proyecto nuevo | ✅ aplicado |
 | REQ-1002 · el panel no decide | ✅ vigente por construcción |
-| REQ-1003 · los 5 SQL en orden | ⬜ **humano** — Constitución 8.5 |
-| REQ-1004 · verificación con `set local role anon` | ⬜ depende de REQ-1003 |
+| REQ-1003 · los 5 SQL en orden | ✅ cargado por el responsable 2026-09-01 |
+| REQ-1004 · verificación con `set local role anon` | ✅ equivalente desde fuera: 8 tablas 200 |
 | REQ-1005 · no aplicar `pendiente-fix-rls-borradores` | ✅ no aplicado |
-| REQ-1006 · administrador en dos filas | ⬜ depende de REQ-1003 |
+| REQ-1006 · administrador en dos filas | ⬜ **sin verificar** — requiere login |
 | REQ-1007 · secreto verificado por API | 🔶 cargado; falta `wrangler secret list` |
 | REQ-1008 · el humo apunta al sitio nuevo | ✅ aplicado |
 | REQ-1009 · el commit es un SHA o `desconocido` | ✅ validado en `astro.config.mjs` |
 | REQ-1010 · ninguna credencial versionada | ✅ aplicado |
 | REQ-1011 · documentación al día | ✅ aplicado |
-| REQ-1012 · el humo cierra el despliegue | ⬜ depende de REQ-1003 |
-| REQ-1013 · verificación manual | ⬜ depende de REQ-1003 |
+| REQ-1012 · el humo cierra el despliegue | 🔶 4 verdes; S02/S07 dependen del seed |
+| REQ-1013 · verificación manual | ⬜ pendiente del seed (runbook 7a) |
 | REQ-1014 · token de diagnóstico | ⬜ opcional, sin cargar |
 | REQ-1015 · publicar es humano | ✅ respetado |
+| REQ-1016 · vacío no es fallo | ✅ aplicado (Enmienda 1) |
+| REQ-1017 · avisar cuando no se puede concluir | ✅ aplicado (Enmienda 1) |
 
 ---
 
@@ -319,7 +374,13 @@ Lo que añade es **contra qué apuntan** y **qué se comprueba antes de ejecutar
 | `[TEST-908-10]` | REQ-1013 | manual: login → guardar producto → subir foto → verla |
 
 `TEST-908-03`, `-04` y `-10` son manuales por construcción: exigen credenciales o
-escritura en producción, y `SPEC-901` REQ-961 prohíbe que una sonda escriba.
+escritura en producción, y `SPEC-901` prohíbe que una sonda escriba.
+
+> La cita va sin número a propósito. El extractor del Gate 4 no distingue un
+> requisito declarado de uno citado: cualquier identificador ajeno que aparezca
+> en este archivo se cuenta como requisito **de esta** SPEC y reclama un test
+> que no le corresponde. Es una limitación conocida del extractor, anotada en
+> `BZ-93`.
 
 ---
 
