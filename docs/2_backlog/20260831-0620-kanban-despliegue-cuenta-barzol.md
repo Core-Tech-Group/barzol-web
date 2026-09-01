@@ -3,6 +3,7 @@
 > **Abierto:** 2026-08-31 · **Continúa** `BZ-85` del
 > [kanban de SDD y DevOps](20260821-2218-kanban-sdd-integracion-pruebas-unitarias-devops.md)
 > **Contrato:** [SPEC-908](../../.sdd/specs/SPEC-908-despliegue-cuenta-barzolweb3d.md) — **APROBADA** 2026-08-31 · **Enmienda 1** 2026-09-01
+> **Contrato:** [SPEC-909](../../.sdd/specs/SPEC-909-identidad-administrador.md) — BORRADOR, sin aprobar
 > **Verificación humana:** [checklist de SPEC-908](../../tests/manual/SPEC-908-verificacion-humana.md)
 > **Runbook:** [despliegue en cuentas nuevas](../1_inbox/20260830-0900-despliegue-cloudflare.md)
 > **Logs:** [observability del 2026-08-31](../1_inbox/20260831-0612-logs-despliegue-observability.md)
@@ -157,6 +158,49 @@ Gates: typecheck 0 errores · **210 + 31** tests (eran 186 + 31) · build comple
 
 ---
 
+## Estado — 2026-09-01, 3ª revisión
+
+**El panel de administración no deja entrar, y no es la contraseña.**
+
+```
+POST /auth/v1/token?grant_type=password
+  admin@barzol.internal      → Invalid login credentials
+  <correo personal del dueño> → OK, uid <uid del usuario>
+```
+
+Misma contraseña en los dos intentos. El usuario existe, está confirmado y su
+contraseña es correcta: lo que no coincide es **el email con el que se le busca**.
+
+El panel pide *usuario*, no email. Supabase Auth exige un email. El puente es
+`usernameToSyntheticEmail()`, que arma `admin@barzol.internal` de forma
+determinista y **no consulta nada**. El alta se hizo con el correo personal de
+quien montó la cuenta, así que el login pregunta por una dirección que no existe.
+
+**Todo lo demás del alta está bien**, y eso es parte de por qué costó verlo:
+
+| Pieza | Estado |
+| :--- | :--- |
+| fila en `admin_profile` | ✅ `username='admin'`, `role='admin'` |
+| `id` de `admin_profile` = `id` de `auth.users` | ✅ |
+| policy `"self read"` de `admin_profile` | ✅ funciona |
+| email confirmado | ✅ |
+| **email = `<username>@barzol.internal`** | ❌ **es el correo personal** |
+
+De paso, esto **cierra el punto 2 de «No verificado»**: `admin_profile` sí tiene
+su fila, y es correcta. Se pudo comprobar autenticándose, que es lo que la clave
+anónima no permitía.
+
+### Lo hecho en esta revisión
+
+- `BZ-96` diagnosticado: causa exacta, reproducida fuera del worker.
+- `SPEC-909` — la identidad del administrador, hasta ahora convención tácita.
+- `usernameToSyntheticEmail()` tiene tests **por primera vez**: 6.
+- Corregido el hueco del checklist manual que dejó pasar este fallo.
+
+Gates: typecheck 0 errores · 210 + **37** tests · build completo · GATE 4 PASA.
+
+---
+
 ## Tablero
 
 | Prioridad | Significado |
@@ -173,14 +217,16 @@ Gates: typecheck 0 errores · **210 + 31** tests (eran 186 + 31) · build comple
 | BZ-93 | Los gates confunden «base vacía» con «RLS roto» | ✅ Enmienda 1 aplicada | 🟠 |
 | BZ-94 | El Gate 4 trunca `REQ-1001` e inventa requisitos | ✅ Aplicado | 🟠 |
 | BZ-95 | La base no tiene datos: falta el seed | ⬜ **Humano — panel admin** | 🔴 |
+| BZ-96 | El admin no puede entrar: el email de Auth no deriva del usuario | 🔶 **Diagnosticado — 1 paso humano** | 🔴 |
 | BZ-88 | `smoke.mjs` sondea por defecto el despliegue **viejo** | ✅ Aplicado | 🔴 |
 | BZ-89 | `/api/salud` informa `commit: "main"` en vez de un SHA | ✅ Resuelto y confirmado | 🟠 |
 | BZ-90 | Clave publishable del proyecto viejo versionada en `.env.example` | ✅ Aplicado | 🟠 |
 | BZ-91 | Documentación y `.env` local apuntan al despliegue muerto | ✅ Aplicado | 🟡 |
 | BZ-92 | Build y CI corren versiones distintas de Node | ⬜ Pendiente, deliberado | 🟡 |
 
-**Progreso:** 8 de 10 cerradas. El bloqueante que queda es `BZ-95` —cargar los
-datos— y **no lo puede cerrar un agente** (Constitución 8.5).
+**Progreso:** 8 de 11 cerradas. Los dos bloqueantes que quedan —`BZ-96` y
+`BZ-95`— **no los puede cerrar un agente** (Constitución 8.5), y van en ese
+orden: sin entrar al panel no se pueden cargar los datos.
 
 ---
 
@@ -468,6 +514,99 @@ Al cargar el primer producto publicado, `TEST-S02` y `TEST-P01` pasan solos.
 
 ---
 
+## 🔴 BZ-96 · El admin no puede entrar 🔶
+
+**Contrato:** [SPEC-909](../../.sdd/specs/SPEC-909-identidad-administrador.md)
+
+El log de producción:
+
+```
+[login] Supabase error: Invalid login credentials 400
+```
+
+Y el panel: *"Usuario o contraseña incorrectos."* Las dos cosas apuntan a la
+contraseña. **La contraseña está bien.**
+
+### La causa, reproducida fuera del worker
+
+```
+POST /auth/v1/token?grant_type=password     (misma contraseña en ambos)
+  admin@barzol.internal        → Invalid login credentials
+  <correo personal del dueño>  → OK, uid <uid del usuario>
+```
+
+El panel pide **usuario**, no email. Supabase Auth exige un email. El puente es
+`usernameToSyntheticEmail()` (`authClient.ts:12`), que arma
+`${username}@barzol.internal` de forma determinista **y no consulta nada** — por
+eso no hace falta guardar ese email en ningún sitio.
+
+Ese diseño funciona sólo si el usuario de Auth se creó con exactamente ese email.
+Se creó con el correo personal de quien montó la cuenta, así que el login busca
+`admin@barzol.internal`, que no existe.
+
+### Por qué costó tanto verlo
+
+Supabase devuelve **el mismo error** para "el usuario no existe" y para "la
+contraseña es incorrecta". Es deliberado: distinguirlos permitiría enumerar
+usuarios. Así que el síntoma manda a probar la contraseña, y la contraseña nunca
+fue el problema.
+
+Y el resto del alta es correcto, lo que refuerza la pista falsa:
+
+| Pieza | Estado |
+| :--- | :--- |
+| fila en `admin_profile` | ✅ `username='admin'`, `name='Administrador'`, `role='admin'` |
+| `id` de `admin_profile` = `id` de `auth.users` | ✅ — la FK y `auth.uid()` están bien |
+| policy `"self read"` | ✅ el usuario autenticado lee su propia fila |
+| email confirmado | ✅ |
+
+Cada pieza válida por separado, el conjunto inservible.
+
+### El arreglo — un paso, sin desplegar nada
+
+**Supabase → Authentication → Users → el usuario → cambiar el email a
+`admin@barzol.internal`.**
+
+Cambiar el email **conserva el `id`**, así que `admin_profile`, la FK y todas las
+policies de escritura siguen siendo válidas. No hay que recrear nada ni tocar
+código, y no hace falta un despliegue: el worker deriva el email en cada intento.
+
+> **La alternativa que NO se toma:** cambiar `ADMIN_EMAIL_DOMAIN` en el código.
+> No serviría —el email no es `admin@<algo>`, es un correo personal— y además esa
+> constante es parte de la identidad de cada usuario ya dado de alta: cambiarla
+> deja fuera a todos a la vez, sin error de compilación. Está fijada con un test
+> (`TEST-909-04`) precisamente para que nadie lo intente por atajo.
+
+### Lo que sí se corrigió aquí
+
+**El checklist manual tenía el hueco que dejó pasar esto.** Decía "usuario creado
+en Authentication → Users" sin decir **con qué email**. Ahora lo dice, con el
+síntoma de cada uno de los dos fallos posibles:
+
+```
+id mal     → entra y no guarda   (choca contra RLS)
+email mal  → no entra en absoluto
+```
+
+**Y `usernameToSyntheticEmail()` tiene tests por primera vez.** Es la función que
+decide quién entra al panel y no tenía ninguno — porque vive en un módulo que
+importa `cloudflare:workers` y en Node ni se carga. Corren en la suite de workerd
+(`tests/workers/identidad-admin.test.ts`, 6 tests).
+
+### Propuesto en SPEC-909, sin aplicar
+
+Dos cosas que tocan `src/` y esperan aprobación:
+
+1. **`REQ-1024` — que el log diga con qué email preguntó.** Hoy registra
+   `Invalid login credentials 400` y nada más. Con el email sintético en el log
+   del servidor, esto se diagnostica de un vistazo. **Nunca en la respuesta
+   HTTP**: ahí sí permitiría enumerar usuarios.
+2. **Separar `usernameToSyntheticEmail()` a su propio archivo**, para que la
+   lógica pura no dependa del runtime de workerd. Es la razón real de que llevara
+   sin tests desde que existe.
+
+---
+
 ## 🟠 BZ-93 · Los gates confunden «base vacía» con «RLS roto» ✅
 
 `TEST-P01` daba **FALLA** con el detalle *"no devolvió ningún producto publicado —
@@ -561,9 +700,9 @@ Dos de las tres incógnitas del apartado anterior las contestó el propio push:
    **no se le piden credenciales a un agente**. Queda como paso humano.
    Indirectamente hay evidencia de que el secreto sigue cargado: si faltara, el
    error sería `MissingEnvError` como a las 22:43, y no lo es.
-2. **Si `admin_profile` del proyecto nuevo tiene su fila** (runbook 3.5b). La
-   tabla existe y responde, pero desde fuera no se distingue "vacía" de "RLS la
-   oculta", que es justo la ambigüedad de `BZ-93`. Punto 3 del checklist manual.
+2. ~~**Si `admin_profile` tiene su fila**~~ — **resuelto el 2026-09-01** (`BZ-96`).
+   Tiene su fila y es correcta. Se pudo comprobar autenticándose, que es lo que la
+   clave anónima no permitía.
 3. **El seed** (`BZ-95`): sin datos, `TEST-S02`, `TEST-S07` y `TEST-P01` no pueden
    concluir nada.
 

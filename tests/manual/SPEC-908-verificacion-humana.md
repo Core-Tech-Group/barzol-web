@@ -61,17 +61,35 @@ rollback;
 Se hace **con el rol**, no con la clave. Desde fuera, `PGRST205` no distingue
 "la tabla no existe" de "existe sin `GRANT`"; esta consulta sí.
 
-## 3 · El administrador son dos filas — `REQ-1006`
+## 3 · El administrador son dos filas — `REQ-1006`, `SPEC-909`
 
 - [ ] usuario creado en **Authentication → Users** con *Auto Confirm User* activado
+- [ ] **su email es exactamente `<usuario>@barzol.internal`** — para el usuario
+      `admin`, `admin@barzol.internal`
 - [ ] su fila en `admin_profile`, con el **mismo `id`** que `auth.users`
 
 ```sql
 select id, username, name from admin_profile;   -- exactamente 1 fila
 ```
 
-Con uno solo de los dos, el login entra y **ninguna escritura pasa el RLS**. El
-`id` es una FK y es lo que `auth.uid()` compara en cada policy de escritura.
+Con el `id` distinto, el login entra y **ninguna escritura pasa el RLS**: el `id`
+es una FK y es lo que `auth.uid()` compara en cada policy de escritura.
+
+**Con el email distinto, el login no entra en absoluto.** El panel pide *usuario*,
+no email; Supabase Auth exige un email; el puente es
+`usernameToSyntheticEmail()`, que arma `${usuario}@barzol.internal` de forma
+determinista y **no consulta nada**. Si el usuario de Auth se creó con otro email
+—el correo personal de quien montó la cuenta, por ejemplo— el login pregunta por
+una dirección que no existe.
+
+> **Este punto tenía este hueco y costó una sesión.** La lista decía "usuario
+> creado" sin decir *con qué email*, y el alta se hizo con el correo del dueño de
+> la cuenta. Supabase responde `Invalid login credentials`, idéntico a una
+> contraseña equivocada, así que se prueba la contraseña una y otra vez. Fue
+> `BZ-96`.
+
+Son **dos fallos distintos con dos síntomas distintos**: `id` mal → entra y no
+guarda; email mal → no entra. Comprobá los dos.
 
 ## 4 · El secreto, por API — `REQ-1007`
 
