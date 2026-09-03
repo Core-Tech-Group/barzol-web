@@ -112,15 +112,19 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   // null = cerrado, -1 = creando nuevo, >=0 = editando products[index]
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
-  // Vista previa local del archivo elegido (blob: URL, solo para mostrar en
-  // esta sesión de edición) — lo que se guarda de verdad es el nombre del
-  // archivo (editDraft.photos[i]), nunca el contenido en base64.
+  // Vista previa local de la foto elegida (blob: URL, solo para mostrar en
+  // esta sesión de edición) — lo que se guarda de verdad es la URL pública de
+  // R2 (editDraft.photos[i]), nunca el contenido en base64.
   const [photoPreviews, setPhotoPreviews] = useState<Record<number, string>>({});
-  // true mientras una foto se está optimizando/subiendo a R2 en ese slot.
-  const [uploadingPhotos, setUploadingPhotos] = useState<Record<number, boolean>>({});
-  // Se incrementa cada vez que se empieza o se cancela una subida para ese
-  // índice — una subida vieja que resuelve tarde se compara contra esto y,
-  // si ya no es la vigente, no toca el estado (evita pisar una foto más
+  // true mientras una foto se está optimizando en ese slot (la subida a R2 ya
+  // no ocurre acá: pasa al guardar).
+  const [procesandoFotos, setProcesandoFotos] = useState<Record<number, boolean>>({});
+  // Fotos ya optimizadas esperando el "Guardar cambios" que las sube. Es un
+  // ref y no estado porque lo que se dibuja es la vista previa, no el blob.
+  const fotosPendientes = useRef<Record<number, Blob>>({});
+  // Se incrementa cada vez que se empieza o se cancela el procesado de ese
+  // índice — un resultado viejo que resuelve tarde se compara contra esto y,
+  // si ya no es el vigente, no toca el estado (evita pisar una foto más
   // nueva con el resultado de una más vieja).
   const photoUploadToken = useRef<Record<number, number>>({});
   const [showValidation, setShowValidation] = useState(false);
@@ -201,6 +205,9 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
       Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
       return {};
     });
+    // Las fotos que nunca llegaron a guardarse se descartan con la edición.
+    fotosPendientes.current = {};
+    setProcesandoFotos({});
   }
 
   function openEdit(i: number) {
@@ -247,12 +254,14 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
   async function saveEdit() {
     if (!editDraft) return;
-    if (Object.values(uploadingPhotos).some(Boolean)) {
-      showError('Esperá a que terminen de subir las fotos.');
+    if (Object.values(procesandoFotos).some(Boolean)) {
+      showError('Esperá a que terminen de procesarse las fotos.');
       return;
     }
     const needsPhoto = editDraft.statusLabel === 'Publicado' && editDraft.active;
-    const hasPhoto = editDraft.photos.some(Boolean);
+    // Cuenta tanto las ya guardadas como las que están por subirse en este
+    // mismo guardado.
+    const hasPhoto = editDraft.photos.some(Boolean) || Object.keys(fotosPendientes.current).length > 0;
     const errors: string[] = [];
     if (needsPhoto && !hasPhoto) errors.push('edit-section-photos');
     if (!editDraft.name.trim()) errors.push('edit-field-name');
@@ -271,13 +280,18 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     }
 
     const cleanFeatures = editDraft.features.filter((f) => f.trim().length > 0);
-    const payload = draftToWriteInput(editDraft, cleanFeatures);
     const isNew = editIndex === -1;
     const url = isNew ? '/api/productos' : `/api/productos/${products[editIndex as number].id}`;
 
     setSaving(true);
     setSavingMessage('Guardando producto...');
     try {
+      // Las fotos suben acá, no al elegirlas: ya se validó que el producto
+      // tiene nombre, que es con lo que se nombra el archivo en R2.
+      const fotos = await subirFotosPendientes(editDraft);
+      setSavingMessage('Guardando producto...');
+      const payload = { ...draftToWriteInput(editDraft, cleanFeatures), fotos };
+
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -304,6 +318,10 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     const draft = draftFromProduct(src);
     draft.name = src.name + ' (copia)';
     draft.statusLabel = 'Borrador';
+    // La copia arranca sin fotos: copiarlas dejaría dos productos apuntando al
+    // mismo objeto de R2, con el nombre del original en la URL. Se cargan las
+    // suyas al editarla.
+    draft.photos = [...EMPTY_PHOTOS];
     const payload = draftToWriteInput(draft, draft.features);
 
     setSaving(true);
@@ -349,23 +367,22 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     if (pendingHref) window.location.href = pendingHref;
   }
 
-  // ---------- Fotos: se elige el archivo del escritorio, se muestra una
-  // vista previa local al instante (blob: URL) y en paralelo se optimiza
-  // (redimensiona + reencoda a WebP, ver imageOptimizer.ts) y se sube a R2
-  // vía /api/media. `editDraft.photos[i]` queda en null hasta que la subida
-  // termina bien — recién ahí pasa a tener la URL pública real; así
-  // `saveEdit` nunca manda un nombre de archivo local como si fuera la foto.
+  // ---------- Fotos: en dos tiempos.
+  //
+  // Al elegir el archivo solo se optimiza (redimensiona + reencoda a WebP, ver
+  // imageOptimizer.ts) y el resultado queda en memoria con su vista previa. La
+  // subida a R2 vía /api/media ocurre al guardar, en `subirFotosPendientes`.
+  //
+  // Se separa así por dos motivos: al guardar ya se validó que el producto
+  // tiene nombre —que es con lo que se nombra el archivo en R2— y cancelar la
+  // edición no deja imágenes huérfanas en el bucket.
+  //
+  // `editDraft.photos[i]` guarda solo URLs públicas ya subidas; una foto
+  // recién elegida vive en `fotosPendientes` hasta que se guarda.
   // ----------
 
   async function handlePhotoFile(index: number, file: File | null) {
     if (!file) return;
-
-    const previewUrl = URL.createObjectURL(file);
-    setPhotoPreviews((prev) => {
-      const old = prev[index];
-      if (old) URL.revokeObjectURL(old);
-      return { ...prev, [index]: previewUrl };
-    });
 
     const myToken = (photoUploadToken.current[index] ?? 0) + 1;
     photoUploadToken.current[index] = myToken;
@@ -376,51 +393,71 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
       return;
     }
 
-    setUploadingPhotos((prev) => ({ ...prev, [index]: true }));
+    setProcesandoFotos((prev) => ({ ...prev, [index]: true }));
     try {
       const { blob } = await optimizeImageFile(file);
-      const extension = extensionForMimeType(blob.type);
-      const baseName = file.name.replace(/\.[^.]+$/, '').trim() || 'foto';
-      const guardada = await subirMedia(blob, { carpeta: 'productos', nombreArchivo: `${baseName}.${extension}` });
+      if (!isCurrent()) return; // se reemplazó o se quitó esta foto mientras se optimizaba
 
-      // Solo en dev: baja el mismo blob que se acaba de confirmar en R2, para
-      // poder revisarlo a simple vista (Descargas) sin entrar al bucket. Se
-      // elimina del bundle de producción — Vite descarta la rama en build.
-      if (import.meta.env.DEV) {
-        const debugUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = debugUrl;
-        a.download = `${baseName}.${extension}`;
-        a.click();
-        URL.revokeObjectURL(debugUrl);
-      }
+      // Queda en memoria hasta "Guardar cambios": recién ahí se sube, cuando
+      // el nombre del producto ya está definido y sirve para nombrar el
+      // archivo. Además, cancelar la edición no deja huérfanos en R2.
+      fotosPendientes.current[index] = blob;
 
-      if (!isCurrent()) return; // se reemplazó o se quitó esta foto mientras subía
-      setEditDraft((d) => {
-        if (!d) return d;
-        const photos = [...d.photos];
-        photos[index] = guardada.publicUrl;
-        return { ...d, photos };
-      });
-    } catch (e) {
-      if (!isCurrent()) return;
-      showError((e as Error).message || 'No se pudo subir la imagen.');
+      // La vista previa sale del blob YA optimizado, no del archivo original:
+      // se ve exactamente lo que se va a subir.
+      const previewUrl = URL.createObjectURL(blob);
       setPhotoPreviews((prev) => {
         const old = prev[index];
         if (old) URL.revokeObjectURL(old);
-        const next = { ...prev };
-        delete next[index];
-        return next;
+        return { ...prev, [index]: previewUrl };
       });
+
+      // Si el slot tenía una foto ya guardada, se descarta: la reemplaza esta.
       setEditDraft((d) => {
         if (!d) return d;
         const photos = [...d.photos];
         photos[index] = null;
         return { ...d, photos };
       });
+    } catch (e) {
+      if (!isCurrent()) return;
+      showError((e as Error).message || 'No se pudo procesar la imagen.');
     } finally {
-      if (isCurrent()) setUploadingPhotos((prev) => ({ ...prev, [index]: false }));
+      if (isCurrent()) setProcesandoFotos((prev) => ({ ...prev, [index]: false }));
     }
+  }
+
+  /**
+   * Sube a R2 las fotos que quedaron pendientes y devuelve la lista final de
+   * URLs, en el orden de los slots. Se llama desde `saveEdit`, no al elegir el
+   * archivo: para entonces el producto ya tiene nombre.
+   */
+  async function subirFotosPendientes(draft: EditDraft): Promise<string[]> {
+    const pendientes = Object.entries(fotosPendientes.current);
+    const fotos = [...draft.photos];
+
+    if (pendientes.length > 0) {
+      setSavingMessage(pendientes.length === 1 ? 'Subiendo la foto...' : 'Subiendo las fotos...');
+      // El nombre del producto, no el del archivo que eligió el admin: las
+      // cámaras y WhatsApp producen nombres como "IMG_2481" o "WhatsApp Image
+      // 2026-07-10 at 6.17.07 PM", que terminaban dentro de la URL pública. Se
+      // manda en crudo — `sanitizeFileName` (mediaKey.ts) ya lo pasa a
+      // minúsculas, le quita tildes y lo separa con guiones al armar la clave.
+      const baseName = draft.name.trim() || 'producto';
+
+      const subidas = await Promise.all(
+        pendientes.map(async ([indice, blob]) => {
+          const extension = extensionForMimeType(blob.type);
+          const guardada = await subirMedia(blob, { carpeta: 'productos', nombreArchivo: `${baseName}.${extension}` });
+          return { indice: Number(indice), url: guardada.publicUrl };
+        })
+      );
+      subidas.forEach(({ indice, url }) => {
+        fotos[indice] = url;
+      });
+    }
+
+    return fotos.filter((p): p is string => !!p);
   }
 
   // Botón de arriba: elegir varias fotos de una — llena los espacios vacíos
@@ -434,8 +471,9 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
   }
 
   function removePhoto(index: number) {
-    photoUploadToken.current[index] = (photoUploadToken.current[index] ?? 0) + 1; // invalida una subida en curso
-    setUploadingPhotos((prev) => {
+    photoUploadToken.current[index] = (photoUploadToken.current[index] ?? 0) + 1; // invalida un procesado en curso
+    delete fotosPendientes.current[index];
+    setProcesandoFotos((prev) => {
       const next = { ...prev };
       delete next[index];
       return next;
@@ -457,6 +495,14 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
   function swapPhotos(a: number, b: number) {
     setPhotoPreviews((prev) => ({ ...prev, [a]: prev[b], [b]: prev[a] }));
+    // Los blobs pendientes acompañan a su slot, o al guardar terminarían en la
+    // posición equivocada.
+    const pend = fotosPendientes.current;
+    const [pa, pb] = [pend[a], pend[b]];
+    if (pb) pend[a] = pb;
+    else delete pend[a];
+    if (pa) pend[b] = pa;
+    else delete pend[b];
     setEditDraft((d) => {
       if (!d) return d;
       const photos = [...d.photos];
@@ -978,15 +1024,15 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                               {i === 0 ? 'Foto principal' : `Foto ${i + 1}`}
                             </label>
                           )}
-                          {uploadingPhotos[i] && (
+                          {procesandoFotos[i] && (
                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,24,39,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'white' }}>Subiendo...</span>
+                              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'white' }}>Procesando...</span>
                             </div>
                           )}
                           <div style={{ position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 5, background: 'rgba(17,24,39,0.65)', color: 'white', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                             {i + 1}
                           </div>
-                          {(photo || preview) && !uploadingPhotos[i] && (
+                          {(photo || preview) && !procesandoFotos[i] && (
                             <button
                               type="button"
                               onClick={() => removePhoto(i)}
@@ -1004,7 +1050,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
                   })}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 10 }}>
-                  La foto 1 es la principal. Arrastra las tarjetas para reordenar. Las imágenes se optimizan (se redimensionan y convierten a WebP) y se suben automáticamente.
+                  La foto 1 es la principal. Arrastra las tarjetas para reordenar. Las imágenes se optimizan (se redimensionan y convierten a WebP) y se suben al guardar los cambios.
                 </div>
                 {showValidation && editDraft.statusLabel === 'Publicado' && editDraft.active && !editDraft.photos.some(Boolean) && (
                   <div style={{ fontSize: 11, color: 'var(--color-danger)', fontWeight: 600, marginTop: 4 }}>Un producto publicado y activo necesita al menos 1 foto</div>
