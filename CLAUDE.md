@@ -10,7 +10,7 @@ instrumentos de viento impresos en 3D: soportes de celular, sordinas, BERP.
   `@astrojs/cloudflare` v14.1.4
 - **Supabase** (Postgres + RLS) para datos · **R2** (binding `MEDIA`) para multimedia
 - Node ≥ 22.12.0 · npm · dev en `localhost:4321`
-- Producción: <https://barzol-web.willymichael-cardenas.workers.dev/>
+- Producción: <https://barzol-web.barzolweb3d.workers.dev/>
 
 ## Lee esto antes de escribir código
 

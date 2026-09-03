@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Verificación de humo post-despliegue — implementa SPEC-901, cierra BZ-24.
 //
-//   node scripts/smoke.mjs --url https://barzol-web.willymichael-cardenas.workers.dev \
+//   node scripts/smoke.mjs --url https://barzol-web.barzolweb3d.workers.dev \
 //                          [--commit <sha>] [--token <t>]
 //
 // Salida: 0 todas pasan · 1 alguna falla · 2 error de invocación.
@@ -20,7 +20,12 @@ import {
   portadaViva,
 } from './smoke/sondas.mjs';
 
-const URL_POR_DEFECTO = 'https://barzol-web.willymichael-cardenas.workers.dev';
+// El defecto apunta al despliegue VIGENTE, y cambiarlo es obligatorio al mudar
+// de cuenta (SPEC-908 REQ-1008). Un defecto obsoleto no falla: interroga el sitio
+// anterior —que sigue en pie y sano— y sale en VERDE sin haber mirado el
+// despliegue que se acaba de publicar. Es el peor modo de fallo de un gate: no
+// avisa de que no comprobó nada, afirma que todo está bien. Fue BZ-88.
+const URL_POR_DEFECTO = 'https://barzol-web.barzolweb3d.workers.dev';
 
 function argumentos(argv) {
   const leer = (nombre) => {

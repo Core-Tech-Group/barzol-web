@@ -18,12 +18,22 @@
 	// de Supabase y el segundo, el dominio público desde el que se sirven las
 	// imágenes. Ambos ya viajan al navegador en cada visita.
 	//
-	// La anon key NO está acá: va como **Secret** en el panel. Ver BZ-49 en el
-	// kanban — hoy el despliegue no se la está entregando al worker y hay dos
-	// caminos posibles para resolverlo, uno de ellos pendiente de decisión.
+	// La anon key NO está acá: va como **Secret** del worker. Se verifica con
+	// `npx wrangler secret list`, nunca con el panel (Constitución 8.3).
+	//
+	// Las dos URLs de arriba se pegan SIN RUTA. `createClient` concatena
+	// `/rest/v1/` por su cuenta: una base que ya lo lleve produce
+	// `.../rest/v1/rest/v1/product` y un 404 en cada consulta. Ver BZ-86.
+	//
+	// Y se cambian ACÁ, no en el panel: corregir el panel y no este archivo
+	// funciona hasta el siguiente `wrangler deploy`, que lo borra. Fue BZ-34,
+	// BZ-46 y otra vez BZ-86, cuando estas dos líneas quedaron apuntando al
+	// Supabase anterior mientras el secreto ya era el del proyecto nuevo: el
+	// worker le hablaba al proyecto viejo con una credencial ajena y toda la
+	// web devolvía 500 con `Invalid API key`.
 	"vars": {
-		"BARZOL_SUPABASE_URL": "https://rnfcccnesxunjtpwahce.supabase.co",
-		"BARZOL_R2_PUBLIC_URL": "https://pub-12c5101b37f34f829bbea3f12287ee9e.r2.dev"
+		"BARZOL_SUPABASE_URL": "https://hlyhkoxnadkxbrjtzuzx.supabase.co",
+		"BARZOL_R2_PUBLIC_URL": "https://pub-196defbdd1404f548b687793c485d74d.r2.dev"
 	},
 	// Protege cualquier otra variable que se cargue desde el panel a futuro.
 	// Con el bloque `vars` de arriba ya es redundante para esas dos, pero

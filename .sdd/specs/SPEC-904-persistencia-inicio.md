@@ -45,7 +45,7 @@ revisar — el navegador nunca los emitió.
 | Servicio · `homeService.ts` | solo `getHeroImages()` y `getHomeItems()` |
 | Base · policies `"admin write"` | **ausentes** en `home_item`, `home_hero_image`, `home_section_product` |
 
-La última la documenta el propio esquema en `supabase/schema.sql:339`:
+La última la documenta el propio esquema en `supabase/schema.sql:336`:
 
 ```sql
 -- Pendiente (CRUD todavía no implementado para esas pantallas):

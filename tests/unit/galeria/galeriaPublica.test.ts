@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -21,11 +21,25 @@ import { describe, expect, it } from 'vitest';
  * esto es lo más cerca que se llega sin fingir cobertura.
  */
 
-const lightbox = readFileSync('src/landing/servicios/GalleryLightbox.tsx', 'utf8');
-const vistas = {
-  'ServiciosView.astro': readFileSync('src/landing/servicios/ServiciosView.astro', 'utf8'),
-  'IngenieriaView.astro': readFileSync('src/landing/servicios/IngenieriaView.astro', 'utf8'),
-};
+const DIR = 'src/landing/servicios';
+const lightbox = readFileSync(`${DIR}/GalleryLightbox.tsx`, 'utf8');
+
+/**
+ * Las vistas se descubren, no se nombran.
+ *
+ * La primera versión de este test leía `ServiciosView.astro` e
+ * `IngenieriaView.astro` por su ruta, y se rompió en cuanto alguien renombró la
+ * primera a `AccesoriosView.astro`. Peor que romperse: un test que nombra sus
+ * archivos solo vigila los que ya existían, y la regresión que este test
+ * persigue —una vista que descarta `imagenUrl` antes de pintarla— es
+ * exactamente la que traería una vista **nueva**.
+ */
+const vistas = Object.fromEntries(
+  readdirSync(DIR)
+    .filter((f) => f.endsWith('.astro'))
+    .map((f) => [f, readFileSync(`${DIR}/${f}`, 'utf8')])
+    .filter(([, fuente]) => (fuente as string).includes('GalleryLightbox'))
+);
 
 describe('SPEC-905 · GalleryLightbox · renderiza la imagen (REQ-982)', () => {
   it('[TEST-528] el item lleva `imagenUrl`', () => {
@@ -65,6 +79,14 @@ describe('SPEC-905 · GalleryLightbox · degrada sin romper (REQ-983)', () => {
 });
 
 describe('SPEC-905 · las vistas no tiran la URL por el camino (REQ-982)', () => {
+  it('[TEST-528] se encontró al menos una vista que use el componente', () => {
+    // Sin esto, un cambio de carpeta dejaría el bloque de abajo con cero casos
+    // y la suite pasaría en verde sin haber comprobado nada — la vacuidad que
+    // SPEC-900 INV-3 prohíbe.
+    // Assert
+    expect(Object.keys(vistas).length).toBeGreaterThanOrEqual(2);
+  });
+
   it.each(Object.entries(vistas))('[TEST-528] %s pasa `imagenUrl` al componente', (_nombre, fuente) => {
     // Assert — ésta es, literalmente, la línea que causó la mitad del bug.
     expect(fuente).toMatch(/imagenUrl:\s*g\.imagenUrl/);

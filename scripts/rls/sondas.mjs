@@ -9,6 +9,8 @@
 // La anon key no es un secreto: viaja al navegador en cada visita. Lo que estas
 // sondas comprueban es precisamente qué puede hacer alguien que la tenga.
 
+import { veredictoLecturaPublica } from './veredictos.mjs';
+
 const TIMEOUT_MS = 15_000;
 
 /** Consulta PostgREST con el rol anon. Nunca lanza. */
@@ -58,19 +60,36 @@ function protegida(r) {
   return r.estado === 200 && Array.isArray(r.datos) && r.datos.length === 0;
 }
 
-/** REQ-922 — anon lee el catálogo publicado. */
+/**
+ * REQ-922 — anon lee el catálogo publicado.
+ *
+ * Consulta DOS veces a propósito: los publicados y, si no hay ninguno, el total.
+ * La segunda es la que separa "la base está vacía" de "hay catálogo pero nada
+ * publicado", y sin ella la sonda no puede decir más que "no vi nada" — que es
+ * justo lo que antes traducía, mal, como "¿RLS demasiado estricto?" (REQ-1016).
+ *
+ * El veredicto lo decide `veredictos.mjs`, que es lógica pura y está probado.
+ */
 export async function catalogoPublicoLegible(base, clave) {
   const id = 'TEST-P01';
   const d = 'anon lee productos publicados';
-  const r = await consultar(base, clave, 'product?select=id,status&status=eq.published&limit=5');
+  const publicados = await consultar(
+    base,
+    clave,
+    'product?select=id,status&status=eq.published&limit=5'
+  );
 
-  if (!r.ok) return falla(id, d, r.error);
-  if (r.estado !== 200) return falla(id, d, `PostgREST devolvió ${r.estado}`);
-  if (!Array.isArray(r.datos) || r.datos.length === 0) {
-    return falla(id, d, 'no devolvió ningún producto publicado — ¿RLS demasiado estricto?');
-  }
+  const sinFilas =
+    publicados.ok &&
+    publicados.estado === 200 &&
+    Array.isArray(publicados.datos) &&
+    publicados.datos.length === 0;
+  const total = sinFilas ? await consultar(base, clave, 'product?select=id&limit=5') : null;
 
-  return pasa(id, `${d} (${r.datos.length} filas)`);
+  const v = veredictoLecturaPublica(publicados, total);
+  if (v.estado === 'PASA') return pasa(id, `${d} (${v.filas} filas)`);
+  if (v.estado === 'AVISO') return aviso(id, d, v.detalle);
+  return falla(id, d, v.detalle);
 }
 
 /** REQ-923 — anon NO ve borradores. El requisito de más riesgo real. */

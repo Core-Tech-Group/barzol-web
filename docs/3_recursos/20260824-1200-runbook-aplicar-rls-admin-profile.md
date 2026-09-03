@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-08-24 · **Tarea:** `BZ-80` parte C · **SPEC:** `SPEC-902` REQ-921, REQ-927
 **Archivo a ejecutar:** [`supabase/fix-rls-admin-profile.sql`](../../supabase/fix-rls-admin-profile.sql)
-**Proyecto:** `rnfcccnesxunjtpwahce` · **Duración:** ~6 minutos · **Requiere:** rol Owner o Developer
+**Proyecto:** `hlyhkoxnadkxbrjtzuzx` · **Duración:** ~6 minutos · **Requiere:** rol Owner o Developer
 
 > Este cambio lo ejecuta un humano. Ningún agente corre DDL contra producción
 > (Constitución 8.5). El agente escribe el SQL y la verificación; aplicarlo es
@@ -50,9 +50,9 @@ Guardá la salida. La línea que importa hoy:
 ## Paso 1 · Entrar al SQL Editor y averiguar si hace falta (2 min)
 
 1. Entrá a <https://supabase.com/dashboard> y elegí el proyecto
-   **`rnfcccnesxunjtpwahce`**.
+   **`hlyhkoxnadkxbrjtzuzx`**.
 2. Barra lateral izquierda → **SQL Editor**.
-   URL directa: `https://supabase.com/dashboard/project/rnfcccnesxunjtpwahce/sql/new`
+   URL directa: `https://supabase.com/dashboard/project/hlyhkoxnadkxbrjtzuzx/sql/new`
 3. Pegá esto y ejecutalo con **Run** (o `Ctrl`+`Enter`):
 
 ```sql
@@ -90,7 +90,7 @@ select id, username, name from admin_profile;
 
 ## Paso 2 · Baseline del panel (1 min) — no lo saltes
 
-Abrí <https://barzol-web.willymichael-cardenas.workers.dev/admin/login>, entrá y
+Abrí <https://barzol-web.barzolweb3d.workers.dev/admin/login>, entrá y
 **editá algo trivial de un producto y guardalo** (por ejemplo, corregí y
 descorregí una palabra de la descripción).
 
@@ -178,7 +178,7 @@ indistinguible desde fuera de lo que ya devolvía. La prueba de que el cambio
 funcionó es la del punto (a), no la de la sonda.
 
 **d) Advisor de Supabase** — barra lateral → **Database** → **Security Advisor**
-(`.../project/rnfcccnesxunjtpwahce/database/security-advisor`). El lint
+(`.../project/hlyhkoxnadkxbrjtzuzx/database/security-advisor`). El lint
 `rls_disabled_in_public` (0013) ya no debe listar `admin_profile`. El advisor
 cachea: usá el botón de recarga de la página si sigue apareciendo.
 

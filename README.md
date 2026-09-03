@@ -69,7 +69,7 @@ El script no imprime los valores ni los pasa por la línea de comandos —donde 
 Para comprobar qué recibió el worker, sin exponer ningún valor:
 
 ```bash
-curl https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+curl https://barzol-web.barzolweb3d.workers.dev/api/diagnostico
 ```
 
 El campo `clavesRecibidas` lista los **nombres** de las variables que llegaron.

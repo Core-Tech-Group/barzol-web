@@ -1,6 +1,6 @@
 # Runbook — diagnosticar producción
 
-> **Creado:** 2026-08-13 · **Worker:** `barzol-web` · **URL:** https://barzol-web.willymichael-cardenas.workers.dev
+> **Creado:** 2026-08-13 · **Worker:** `barzol-web` · **URL:** https://barzol-web.barzolweb3d.workers.dev
 
 Qué hacer cuando el sitio devuelve "Algo salió mal". Está escrito para resolverlo **sin abrir el código**.
 
@@ -13,7 +13,7 @@ Ese log responde "¿se subió el código?". La pregunta cuando el sitio falla es
 ## Paso 0 — ¿está vivo y qué código corre? (5 segundos)
 
 ```
-https://barzol-web.willymichael-cardenas.workers.dev/api/salud
+https://barzol-web.barzolweb3d.workers.dev/api/salud
 ```
 
 Público y sin autenticación. Devuelve tres cosas: `ok`, el `commit` desplegado y
@@ -27,7 +27,7 @@ cabecera `x-diagnostico-token` con el valor de `BARZOL_DIAGNOSTICO_TOKEN`:
 
 ```bash
 curl -H "x-diagnostico-token: $BARZOL_DIAGNOSTICO_TOKEN" \
-  https://barzol-web.willymichael-cardenas.workers.dev/api/diagnostico
+  https://barzol-web.barzolweb3d.workers.dev/api/diagnostico
 ```
 
 Sin la cabecera responde **404**, no 403 — un 403 confirmaría que la ruta
@@ -121,8 +121,8 @@ Buscar por el campo `contexto` para filtrar: `middleware`, `api.diagnostico.supa
 Si hace falta confirmar el alcance de la falla:
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://barzol-web.willymichael-cardenas.workers.dev/
-curl -s https://barzol-web.willymichael-cardenas.workers.dev/api/productos
+curl -s -o /dev/null -w "%{http_code}\n" https://barzol-web.barzolweb3d.workers.dev/
+curl -s https://barzol-web.barzolweb3d.workers.dev/api/productos
 ```
 
 `/api/productos` hoy devuelve el mensaje de error interno completo. **Es útil para depurar y a la vez es una fuga que hay que cerrar** — está fichada como `BZ-14`. Cuando se cierre, esta vía deja de funcionar y queda `/api/diagnostico`, que fue construido justamente para reemplazarla sin filtrar nada.
