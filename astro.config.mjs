@@ -44,10 +44,11 @@ export default defineConfig({
   // renombrado a AccesoriosView la dejó importando un archivo inexistente y el
   // build entero dejó de compilar.
   //
-  // No se borra la ruta a secas: el CTA del hero sigue apuntando ahí
-  // (HomeView.astro:58) y hay enlaces ya publicados. Se redirige al destino que
-  // esa URL ya servía —accesorios personalizados—, así que lo que ve el
-  // visitante no cambia y queda una sola URL canónica.
+  // No se borra la ruta a secas: hay enlaces ya publicados que apuntan ahí.
+  // (El botón "Servicios →" del hero ya no la usa: lleva a #servicios, la
+  // sección de servicios de la propia home.) Se redirige al destino que esa
+  // URL ya servía —accesorios personalizados—, así que lo que ve el visitante
+  // no cambia y queda una sola URL canónica.
   redirects: {
     '/servicios': '/servicios/accesorios-personalizados',
   },
