@@ -450,7 +450,12 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
       {/* CONTENT */}
       <div className="bz-content-pad" style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 820, margin: '0 auto' }}>
-          {/* Imágenes del home */}
+          {/* Imágenes del home — COMENTADA: la foto del hero ahora vive en el
+              repo (src/assets/hero-sordinas.png, ver HomeView.astro), así que
+              subirla desde acá no tenía efecto en la home. El estado
+              `heroImages` sigue viajando en el guardado, así que las URLs ya
+              guardadas no se pierden. Para reactivarla, descomentar el bloque.
+
           <div style={{ background: 'white', border: '1px solid var(--color-border-soft)', borderRadius: 12 }}>
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 18px', background: 'var(--color-surface-soft)', borderRadius: '12px 12px 0 0', borderBottom: heroImagesOpen ? '1px solid var(--color-border-faint)' : 'none' }}
@@ -506,6 +511,7 @@ export default function InicioAdmin({ initialItems, allProducts, initialHeroImag
               </div>
             )}
           </div>
+          */}
 
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0 2px', marginTop: 6 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-faint)', textTransform: 'uppercase' }}>Secciones de productos y banners</div>
