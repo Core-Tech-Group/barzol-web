@@ -6,6 +6,7 @@ import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/succes
 import { subirImagen } from '@shared/lib/media/uploadClient';
 import { estadoImagen } from '@shared/lib/galeria/imagenGaleria';
 import { fotosIncompletas, planificarGaleria, guardarGaleria } from '@admin/shared/guardarGaleria';
+import type { GalleryItem } from '@shared/types';
 
 export interface GalleryPhoto {
   id: string;
@@ -18,7 +19,7 @@ interface Props {
   title: string;
   saveConfirmMessage: string;
   initialPhotos: GalleryPhoto[];
-  tipo: 'accesorios' | 'trabajos';
+  tipo: GalleryItem['tipo'];
 }
 
 // ---------- Iconos ----------

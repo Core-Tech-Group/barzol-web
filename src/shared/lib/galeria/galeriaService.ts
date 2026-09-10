@@ -3,13 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GalleryItem } from '../../types';
 import { mapGalleryItemRowToGalleryItem, type GalleryItemRow } from './galeriaMapper';
 
-// ÚNICA fuente de la galería del proyecto — sirve a las dos galerías del
-// sitio (Accesorios personalizados y Trabajos de ingeniería), distinguidas
-// por `tipo`.
+// ÚNICA fuente de la galería del proyecto — sirve a las tres galerías del
+// sitio (Accesorios personalizados, Trabajos de ingeniería y Diseño CAD e
+// impresión 3D), distinguidas por `tipo`.
 
 const TIPO_TO_TYPE: Record<GalleryItem['tipo'], GalleryItemRow['type']> = {
   accesorios: 'accessories',
   trabajos: 'projects',
+  diseno: 'design',
 };
 
 export async function getGaleria(tipo?: GalleryItem['tipo']): Promise<GalleryItem[]> {

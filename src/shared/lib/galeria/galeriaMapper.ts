@@ -3,7 +3,7 @@ import type { GalleryItem } from '../../types';
 // Fila cruda de la tabla `gallery_item`.
 export interface GalleryItemRow {
   id: string;
-  type: 'accessories' | 'projects';
+  type: 'accessories' | 'projects' | 'design';
   image_url: string | null;
   title: string | null;
   sort_order: number;
@@ -12,6 +12,7 @@ export interface GalleryItemRow {
 const TYPE_TO_TIPO: Record<GalleryItemRow['type'], GalleryItem['tipo']> = {
   accessories: 'accesorios',
   projects: 'trabajos',
+  design: 'diseno',
 };
 
 export function mapGalleryItemRowToGalleryItem(row: GalleryItemRow): GalleryItem {

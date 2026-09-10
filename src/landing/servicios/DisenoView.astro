@@ -1,0 +1,39 @@
+---
+import PublicLayout from '@landing/layout/PublicLayout.astro';
+import GalleryLightbox from './GalleryLightbox.tsx';
+import { getGaleria } from '@shared/lib/galeria/galeriaService';
+
+// Tercer servicio, misma estructura que AccesoriosView e IngenieriaView: hero
+// y galería administrada desde /admin/galeria-diseno.
+const galeriaDb = await getGaleria('diseno');
+const galeria = galeriaDb
+  .slice()
+  .sort((a, b) => a.orden - b.orden)
+  .map((g) => ({ name: g.titulo, imagenUrl: g.imagenUrl }));
+---
+
+<PublicLayout title="Diseño CAD e impresión 3D — Barzol">
+	<!-- HERO -->
+	<div style="position:relative; padding:80px 32px; overflow:hidden; background:var(--gradient-hero-dark);">
+		<div style="max-width:1200px; margin:0 auto; position:relative; z-index:1;">
+			<div style="display:inline-flex; align-items:center; gap:8px; padding:5px 14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:99px; font-size:11px; font-weight:600; letter-spacing:0.08em; color:white; text-transform:uppercase; margin-bottom:14px; white-space:nowrap;">
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="white" stroke-width="2" stroke-linejoin="round"></path><path d="M3 7l9 5 9-5M12 12v10" stroke="white" stroke-width="2" stroke-linejoin="round"></path></svg>
+				Modelado y fabricación
+			</div>
+			<h1 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:10px;">Diseño CAD e impresión 3D</h1>
+			<p style="font-size:15px; color:rgba(255,255,255,0.9); line-height:1.6; max-width:560px;">Llevamos tu idea a un modelo 3D listo para fabricar y lo imprimimos con materiales de ingeniería: prototipos, piezas funcionales y series cortas.</p>
+		</div>
+	</div>
+
+	<!-- GALERÍA -->
+	<div id="servicios" style="background:white; padding:64px 32px;">
+		<div style="max-width:1200px; margin:0 auto;">
+			<div style="text-align:center; margin-bottom:48px;">
+				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Galería</div>
+				<h2 style="font-size:34px; font-weight:700; color:var(--color-text); line-height:1.2;">Nuestros diseños e impresiones</h2>
+			</div>
+
+			<GalleryLightbox items={galeria} client:load />
+		</div>
+	</div>
+</PublicLayout>

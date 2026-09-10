@@ -27,10 +27,11 @@ describe('SPEC-905 · galeriaWriteSchema · lo que acepta', () => {
     expect(r.success).toBe(true);
   });
 
-  it('[TEST-522] acepta las dos galerías', () => {
+  it('[TEST-522] acepta las tres galerías', () => {
     // Assert
     expect(galeriaWriteSchema.safeParse(cuerpo({ tipo: 'trabajos' })).success).toBe(true);
     expect(galeriaWriteSchema.safeParse(cuerpo({ tipo: 'accesorios' })).success).toBe(true);
+    expect(galeriaWriteSchema.safeParse(cuerpo({ tipo: 'diseno' })).success).toBe(true);
   });
 });
 

@@ -12,7 +12,7 @@ const instrumentLinks = categoriasDb
 	.sort((a, b) => a.orden - b.orden)
 	.map((cat) => ({ name: cat.nombre, href: `/catalogo/${cat.slug}` }));
 
-const navCats = [...instrumentLinks, { name: 'Accesorios Personalizados', href: '/servicios/accesorios-personalizados' }, { name: 'Trabajos de Ingeniería', href: '/servicios/trabajos-de-ingenieria' }];
+const navCats = [...instrumentLinks, { name: 'Accesorios Personalizados', href: '/servicios/accesorios-personalizados' }, { name: 'Trabajos de Ingeniería', href: '/servicios/trabajos-de-ingenieria' }, { name: 'Diseño CAD e Impresión 3D', href: '/servicios/diseno-cad-impresion-3d' }];
 
 const announcement = { text: 'Envío a nivel nacional e internacional', icons: true };
 ---
@@ -57,7 +57,7 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 					<div class="cat-sidebar" style="width:222px; padding:10px 0 6px; display:flex; flex-direction:column; gap:1px;">
 						{navCats.map((cat) => (
 							<a href={cat.href} class="cat-sidebar-item" style="width:100%; display:flex; align-items:center; gap:10px; padding:9px 16px; background:transparent; text-decoration:none; white-space:nowrap; overflow:hidden; box-sizing:border-box;">
-								<span style="font-size:13px; font-weight:600; color:var(--color-text-soft); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{cat.name}</span>
+								<span style="font-size:13.2px; font-weight:600; color:var(--color-text-soft); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{cat.name}</span>
 							</a>
 						))}
 					</div>
@@ -139,7 +139,7 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 		transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
 	}
 	.bz-cat-btn:hover {
-		background: var(--color-primary-dark);
+		background: #183761;
 		box-shadow: 0 4px 14px rgba(var(--color-primary-rgb), 0.4);
 	}
 	.bz-cat-btn:active {
@@ -166,7 +166,12 @@ const announcement = { text: 'Envío a nivel nacional e internacional', icons: t
 	}
 	.cat-sidebar-item:hover {
 		background: var(--color-primary-light) !important;
+	}
+	/* El color va sobre el <span>, no sobre el <a>: el span trae su propio
+	   color inline, así que heredar del enlace no tenía efecto. */
+	.cat-sidebar-item:hover span {
 		color: var(--color-primary) !important;
+		font-weight: 700 !important;
 	}
 	.bz-nosotros:hover {
 		background: var(--color-bg);

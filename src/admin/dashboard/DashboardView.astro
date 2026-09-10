@@ -12,20 +12,21 @@ interface CmsSection {
 	iconBg: string;
 }
 
-const [productos, categorias, galeriaAccesorios, galeriaTrabajos] = await Promise.all([
-	getProductos(),
-	getCategorias(),
-	getGaleria('accesorios'),
-	getGaleria('trabajos'),
-]);
+// Una sola consulta a la galería, contada en memoria, en vez de una filtrada
+// por servicio: con tres servicios serían tres idas a Supabase para obtener
+// tres números. Además un filtro `.eq('type', …)` con un valor que la base
+// todavía no conoce falla (22P02) y tumbaría todo el resumen.
+const [productos, categorias, galeria] = await Promise.all([getProductos(), getCategorias(), getGaleria()]);
 const productosPublicados = productos.filter((p) => p.publicado).length;
+const fotosDe = (tipo: (typeof galeria)[number]['tipo']) => galeria.filter((g) => g.tipo === tipo).length;
 
 const cmsSections: CmsSection[] = [
 	{ title: 'Página de inicio', desc: 'Hero, banners y textos destacados', href: '/admin/inicio', icon: 'home', iconBg: 'var(--color-primary-light)' },
 	{ title: 'Productos', desc: `${productosPublicados} productos publicados`, href: '/admin/productos', icon: 'products', iconBg: 'var(--color-orange-bg)' },
 	{ title: 'Categorías', desc: `${categorias.length} categorías activas`, href: '/admin/categorias', icon: 'cats', iconBg: 'var(--color-success-soft-bg)' },
-	{ title: 'Galería: Accesorios personalizados', desc: `${galeriaAccesorios.length} fotos publicadas`, href: '/admin/galeria-accesorios', icon: 'gallery', iconBg: 'var(--color-primary-light)' },
-	{ title: 'Galería: Trabajos de ingeniería', desc: `${galeriaTrabajos.length} fotos publicadas`, href: '/admin/galeria-trabajos', icon: 'gallery', iconBg: 'var(--color-primary-light)' },
+	{ title: 'Galería: Accesorios personalizados', desc: `${fotosDe('accesorios')} fotos publicadas`, href: '/admin/galeria-accesorios', icon: 'gallery', iconBg: 'var(--color-primary-light)' },
+	{ title: 'Galería: Trabajos de ingeniería', desc: `${fotosDe('trabajos')} fotos publicadas`, href: '/admin/galeria-trabajos', icon: 'gallery', iconBg: 'var(--color-primary-light)' },
+	{ title: 'Galería: Diseño CAD e impresión 3D', desc: `${fotosDe('diseno')} fotos publicadas`, href: '/admin/galeria-diseno', icon: 'gallery', iconBg: 'var(--color-primary-light)' },
 	{ title: 'Configuración', desc: 'Contacto, WhatsApp y redes', href: '#', icon: 'settings', iconBg: 'var(--color-surface-muted)' },
 ];
 

@@ -5,7 +5,7 @@ import { esUrlPublica } from '@shared/lib/galeria/imagenGaleria';
 // `GaleriaWriteInput` en galeriaService.ts.
 
 export const galeriaWriteSchema = z.object({
-  tipo: z.enum(['accesorios', 'trabajos']),
+  tipo: z.enum(['accesorios', 'trabajos', 'diseno']),
   titulo: z.string().trim().min(1, 'requerido'),
   // SPEC-905 REQ-981. Hasta `BZ-82` esto era un `min(1)`, y por ahí entraron
   // seis filas de producción con el nombre del archivo del escritorio dentro.

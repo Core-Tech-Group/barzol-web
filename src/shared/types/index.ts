@@ -49,7 +49,7 @@ export interface Product {
 
 export interface GalleryItem {
   id: string;
-  tipo: 'accesorios' | 'trabajos';
+  tipo: 'accesorios' | 'trabajos' | 'diseno';
   imagenUrl: string | null;
   titulo: string;
   orden: number;

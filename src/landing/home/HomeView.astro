@@ -92,7 +92,7 @@ const sections = visibleSections
 
 	<!-- SERVICES -->
 	<div style="max-width:1200px; margin:52px auto 0; padding:0 32px;">
-		<div class="bz-services-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+		<div class="bz-services-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
 			<ServicePromoCard
 				title="Accesorios personalizados"
 				href="/servicios/accesorios-personalizados"
@@ -102,6 +102,11 @@ const sections = visibleSections
 				title="Trabajos de ingeniería"
 				href="/servicios/trabajos-de-ingenieria"
 				gradient="linear-gradient(135deg,#7c2d12 0%,var(--color-orange) 55%,#f97316 100%)"
+			/>
+			<ServicePromoCard
+				title="Diseño CAD e impresión 3D"
+				href="/servicios/diseno-cad-impresion-3d"
+				gradient="linear-gradient(135deg,#0a2e4f 0%,#13598a 60%,#3b9ad9 100%)"
 			/>
 		</div>
 	</div>

@@ -72,7 +72,7 @@ erDiagram
     }
     GALLERY_ITEM {
         integer id PK
-        gallery_item_type type "enum: accessories / projects"
+        gallery_item_type type "enum: accessories / projects / design"
         text image_url
         varchar(200) title
         int sort_order
@@ -192,7 +192,7 @@ erDiagram
 | Columna | Tipo | Notas |
 |---|---|---|
 | id | integer | PK, identity |
-| type | `gallery_item_type` (enum) | `accessories` \| `projects`. Ver definición del tipo abajo |
+| type | `gallery_item_type` (enum) | `accessories` \| `projects` \| `design`. Ver definición del tipo abajo |
 | image_url | text | referencia a R2 — URLs firmadas pueden traer tokens largos |
 | title | varchar(200) | caption bajo la foto |
 | sort_order | int | reordenable, independiente por `type` |
@@ -322,7 +322,7 @@ Este paso 3 es seguro porque el "email interno" no protege nada por sí mismo �
 Igual que `product.status`, se define como `ENUM` nativo en vez de `varchar` — no por una ganancia de velocidad real (con el volumen de una tabla de galería administrada a mano, la diferencia de performance es inmedible), sino por **validación a nivel de base de datos** y para aprovechar el **autocompletado de TypeScript** que Supabase genera automáticamente a partir de tipos enum.
 
 ```sql
-CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects');
+CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects', 'design');
 ```
 
 ## Nota sobre optimización de espacio (plan gratuito de Supabase, 500 MB)

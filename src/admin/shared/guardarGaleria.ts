@@ -1,4 +1,5 @@
 import type { ApiResponse } from '@shared/api/apiResponse';
+import type { GalleryItem } from '@shared/types';
 import { estadoImagen } from '@shared/lib/galeria/imagenGaleria';
 
 // SPEC-905 · REQ-984, REQ-985, REQ-986 — el guardado de la galería, fuera de la
@@ -107,7 +108,7 @@ async function pedir(enviar: Enviar, url: string, method: string, body?: unknown
  * media escritura" de "la galería se quedó vacía".
  */
 export async function guardarGaleria(
-  tipo: 'accesorios' | 'trabajos',
+  tipo: GalleryItem['tipo'],
   plan: PlanGaleria,
   enviar: Enviar = enviarPorDefecto
 ): Promise<void> {

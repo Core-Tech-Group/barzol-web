@@ -12,7 +12,8 @@ CREATE TYPE product_status AS ENUM ('draft', 'published');
 -- Para agregar un estado nuevo más adelante (ej. 'agotado'):
 --   ALTER TYPE product_status ADD VALUE 'agotado';
 
-CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects');
+-- 'design' se agregó con supabase/pendiente-galeria-diseno.sql (2026-09-10).
+CREATE TYPE gallery_item_type AS ENUM ('accessories', 'projects', 'design');
 
 
 -- =========================================================
