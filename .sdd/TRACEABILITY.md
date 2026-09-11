@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — SPEC ↔ TEST ↔ código
 
-> **Última actualización:** 2026-08-22 (4ª revisión)
+> **Última actualización:** 2026-09-11 (5ª revisión — alta de SPEC-004 y SPEC-005, enmienda de SPEC-905)
 > **Verificación automática:** `npm run sdd:trace`. Este documento es el resumen
 > legible; **la fuente de verdad es el gate**, que sí falla.
 
@@ -13,6 +13,8 @@
 | [SPEC-001](specs/SPEC-001-precio-catalogo.md) · Precio de catálogo | BORRADOR | ⬜ sin implementar | ⬜ |
 | [SPEC-002](specs/SPEC-002-media-key-r2.md) · Claves de R2 | **APROBADA** | ✅ `storage/mediaKey.ts` + `POST /api/media` | ✅ 22 unit + 7 workerd |
 | [SPEC-003](specs/SPEC-003-slug-publico.md) · Slug público | **APROBADA** | ✅ `text/slugify.ts` | ✅ 19 tests |
+| [SPEC-004](specs/SPEC-004-orden-productos.md) · Orden manual de productos | BORRADOR | ⬜ sin implementar (necesita migración + función `reordenar_productos`) | ⬜ matriz de 33 casos |
+| [SPEC-005](specs/SPEC-005-borrado-media-r2.md) · Borrado de imágenes en desuso (BZ-11) | BORRADOR | ⬜ sin implementar | ⬜ matriz de 22 casos |
 | [SPEC-900](specs/SPEC-900-gates-cicd.md) · Gates de CI/CD | BORRADOR | 🔶 workflow escrito, sin correr | ⬜ matriz de 14 provocaciones |
 | [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios |
 | [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | 🔶 auditoría de lectura hecha | ⬜ pgTAP pendiente |
@@ -33,12 +35,14 @@ estar citados en algún test o el gate falla.
 | SPEC-001 | 001–007 | 0 / 7 | implementar `catalogPrice.ts` |
 | SPEC-002 | 201–208 | **8 / 8** | — |
 | SPEC-003 | 301–305 | **5 / 5** | — |
+| SPEC-004 | 401–416 | 0 / 16 | aprobación humana · `/sdd-red` |
+| SPEC-005 | 501–512 | 0 / 12 | aprobación humana · despliegue por etapas (galerías → productos → inicio) |
 | SPEC-900 | 901–911 | 0 / 11 | ejecutar la matriz de `SPEC-900.plan.md` |
 | SPEC-901 | 951–961 | 0 / 11 | tests unitarios del evaluador de sondas |
 | SPEC-902 | 921–933 | 0 / 13 | `BZ-70` · pgTAP |
 | SPEC-903 | 941–947 | **7 / 7** | aprobarla tras revisión humana |
 | SPEC-904 | 970–979 | **11 / 11** | aplicar `pendiente-policies-home.sql` (REQ-979) |
-| SPEC-905 | 980–986 | **7 / 7** | volver a subir las 6 fotos desde el panel |
+| SPEC-905 | 980–986, 988 | **8 / 8** | revisión humana de la enmienda del 2026-09-10 (REQ-980, REQ-988) |
 | SPEC-906 | 990–995, 997 | **7 / 7** | — |
 | SPEC-907 | 996, 998–999 | 0 / 3 | `BZ-84` · aprobación y BZ-74 |
 

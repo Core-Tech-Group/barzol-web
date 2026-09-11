@@ -115,6 +115,7 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 					))}
 				</ul>
 
+				
 				<div style="display:flex; flex-direction:row; gap:8px; margin-bottom:24px; flex-wrap:wrap;">
 					<a href={`https://wa.me/51950759032?text=${encodeURIComponent(`Hola, me interesa: ${nombre}`)}`} target="_blank" rel="noopener" class="product-cta-primary" style="display:inline-flex; align-items:center; gap:7px; padding:11px 15px; background:var(--color-whatsapp); color:white; font-size:12.5px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 3px 12px rgba(var(--color-whatsapp-rgb),0.3); white-space:nowrap;">
 						<WhatsAppIcon size={16} fill="white" />
@@ -124,20 +125,34 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 						<a href={breadcrumbMiddle.href} class="product-cta-secondary" style="display:inline-flex; align-items:center; padding:11px 13px; background:white; border:1px solid var(--color-border); border-radius:9px; font-size:12.5px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap;">Ver más de {breadcrumbMiddle.label}</a>
 					)}
 				</div>
-				<div style="background:var(--color-surface-soft); border:1px solid var(--color-border-soft); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:10px;">
+				<div style="background:var(--color-surface-soft); margin-bottom:24px; border:1px solid var(--color-border-soft); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:10px;">
 					<div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--color-text-soft);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="1" y="3" width="15" height="13" rx="2" stroke="var(--color-primary)" stroke-width="1.8"></rect><path d="M16 8h3l3 4v5h-6V8z" stroke="var(--color-primary)" stroke-width="1.8"></path><circle cx="5.5" cy="18.5" r="1.5" stroke="var(--color-primary)" stroke-width="1.5"></circle><circle cx="18.5" cy="18.5" r="1.5" stroke="var(--color-primary)" stroke-width="1.5"></circle></svg>
 						Envío a nivel nacional e internacional
 					</div>
-					<div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--color-text-soft);">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
-						Personalización disponible (nombre, logo, grabado)
-					</div>
+					
 					<div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--color-text-soft);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.13 1.18 2 2 0 012.11 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z" stroke="var(--color-primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 						Atención directa por WhatsApp — respuesta rápida
 					</div>
 				</div>
+
+				{/* Solo si el producto tiene activado "Personalizable" en el admin
+				    (columna is_personalizable). Lleva a la galería de ejemplos del
+				    servicio, justo antes de los botones: es el momento en que el
+				    cliente decide si consulta. */}
+				{producto.personalizable && (
+					<a href="/servicios/accesorios-personalizados" class="bz-personalizable">
+						<span class="bz-personalizable-icon" aria-hidden="true">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" stroke="white" stroke-width="1.8" stroke-linejoin="round"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" stroke="white" stroke-width="1.5" stroke-linejoin="round"></path></svg>
+						</span>
+						<span class="bz-personalizable-text">
+							<span class="bz-personalizable-title">Este producto se puede personalizar</span>
+							<span class="bz-personalizable-link">Ver personalizaciones <span class="bz-personalizable-arrow" aria-hidden="true">→</span></span>
+						</span>
+					</a>
+				)}
+
 			</div>
 		</div>
 	</div>
@@ -155,6 +170,71 @@ const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nomb
 </PublicLayout>
 
 <style>
+	/* Aviso de producto personalizable (ver arriba). */
+	.bz-personalizable {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin: -6px 0 20px;
+		padding: 12px 14px;
+		background: var(--color-primary-light);
+		border: 1px solid var(--color-primary-border);
+		border-radius: 10px;
+		text-decoration: none;
+		transition: background-color 0.18s ease, border-color 0.18s ease;
+	}
+	.bz-personalizable-icon {
+		width: 32px;
+		height: 32px;
+		flex-shrink: 0;
+		border-radius: 8px;
+		background: var(--color-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.bz-personalizable-text {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.bz-personalizable-title {
+		font-size: 13.5px;
+		font-weight: 600;
+		color: var(--color-primary);
+	}
+	.bz-personalizable-link {
+		font-size: 12.5px;
+		font-weight: 500;
+		color: var(--color-primary-accent);
+	}
+	.bz-personalizable-arrow {
+		display: inline-block;
+		transition: transform 0.18s ease;
+	}
+	@media (hover: hover) {
+		.bz-personalizable:hover {
+			background: #e3edff;
+			border-color: var(--color-primary-soft);
+		}
+		.bz-personalizable:hover .bz-personalizable-link {
+			text-decoration: underline;
+		}
+		.bz-personalizable:hover .bz-personalizable-arrow {
+			transform: translateX(3px);
+		}
+	}
+	.bz-personalizable:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bz-personalizable,
+		.bz-personalizable-arrow {
+			transition: none;
+		}
+	}
+
 	.product-cta-primary:hover {
 		background: var(--color-whatsapp-dark);
 	}

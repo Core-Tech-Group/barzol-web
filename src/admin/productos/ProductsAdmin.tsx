@@ -43,9 +43,14 @@ interface EditDraft {
   customizable: boolean;
 }
 
+/** Rótulo del filtro "sin filtrar". Una sola fuente: ProductosView lo antepone a
+ *  la lista de categorías y esta isla lo reconoce. Si difieren, el filtro deja
+ *  la lista vacía y el rótulo aparece como categoría elegible en el formulario. */
+export const TODAS_LAS_CATEGORIAS = 'Todos';
+
 interface Props {
   initialProducts: AdminProduct[];
-  categories: string[]; // incluye 'Todas' como primer elemento
+  categories: string[]; // incluye TODAS_LAS_CATEGORIAS como primer elemento
   instrumentsByCategory: Record<string, string[]>;
   vendors: string[];
 }
@@ -106,7 +111,7 @@ function Icon({ children, size = 15 }: { children: React.ReactNode; size?: numbe
 export default function ProductsAdmin({ initialProducts, categories, instrumentsByCategory, vendors }: Props) {
   const [products, setProducts] = useState<AdminProduct[]>(initialProducts);
   const [query, setQuery] = useState('');
-  const [activeCat, setActiveCat] = useState('Todas');
+  const [activeCat, setActiveCat] = useState(TODAS_LAS_CATEGORIAS);
   const [page, setPage] = useState(1);
 
   // null = cerrado, -1 = creando nuevo, >=0 = editando products[index]
@@ -190,7 +195,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
     const q = query.trim().toLowerCase();
     return products
       .map((p, i) => ({ ...p, _i: i }))
-      .filter((p) => (activeCat === 'Todas' || p.category === activeCat) && (!q || p.name.toLowerCase().includes(q)));
+      .filter((p) => (activeCat === TODAS_LAS_CATEGORIAS || p.category === activeCat) && (!q || p.name.toLowerCase().includes(q)));
   }, [products, query, activeCat]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -219,7 +224,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
   function openNewProduct() {
     resetPhotoPreviews();
-    const firstCat = categories.find((c) => c !== 'Todas') || '';
+    const firstCat = categories.find((c) => c !== TODAS_LAS_CATEGORIAS) || '';
     setEditDraft(emptyDraft(firstCat, vendors[0] || 'BARZOL'));
     setEditIndex(-1);
     setShowValidation(false);
@@ -539,7 +544,7 @@ export default function ProductsAdmin({ initialProducts, categories, instruments
 
   if (!editDraft && editIndex !== null) return null; // safety guard, no debería pasar
 
-  const catOptions = categories.filter((c) => c !== 'Todas');
+  const catOptions = categories.filter((c) => c !== TODAS_LAS_CATEGORIAS);
   const filteredCatOptions = catOptions.filter((c) => c.toLowerCase().includes(catSearchQuery.toLowerCase()));
   const subOptions = editDraft ? instrumentsByCategory[editDraft.category] || [] : [];
 

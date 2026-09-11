@@ -3,6 +3,7 @@ import {
   fotosIncompletas,
   planificarGaleria,
   guardarGaleria,
+  subirPendientes,
 } from '../../../src/admin/shared/guardarGaleria';
 import type { FotoIsla } from '../../../src/admin/shared/guardarGaleria';
 
@@ -80,6 +81,98 @@ describe('SPEC-905 · planificarGaleria · qué se escribe (REQ-985)', () => {
 
     // Assert
     expect(planificar).toThrow(/imagen/i);
+  });
+});
+
+describe('SPEC-905 · planificarGaleria · solo viaja lo que cambió (REQ-988)', () => {
+  it('[TEST-531] una foto existente sin cambios no se envía', () => {
+    // Arrange
+    const iniciales = [foto('1', 'Uno'), foto('2', 'Dos')];
+
+    // Act
+    const plan = planificarGaleria(iniciales, [foto('1', 'Uno'), foto('2', 'Dos editada')]);
+
+    // Assert
+    expect(plan.actualizar.map((a) => a.id)).toEqual(['2']);
+  });
+
+  it('[TEST-531] sin ningún cambio, el plan queda vacío', () => {
+    // Arrange
+    const iniciales = [foto('1', 'Uno'), foto('2', 'Dos')];
+
+    // Act
+    const plan = planificarGaleria(iniciales, [foto('1', 'Uno'), foto('2', 'Dos')]);
+
+    // Assert
+    expect(plan).toEqual({ crear: [], actualizar: [], borrar: [] });
+  });
+
+  it('[TEST-531] espacios de más en el título no cuentan como cambio', () => {
+    // Act
+    const plan = planificarGaleria([foto('1', 'Uno')], [foto('1', '  Uno  ')]);
+
+    // Assert
+    expect(plan.actualizar).toEqual([]);
+  });
+
+  it('[TEST-531] cambiar solo la imagen sí cuenta', () => {
+    // Act
+    const plan = planificarGaleria([foto('1', 'Uno', URL_A)], [foto('1', 'Uno', URL_B)]);
+
+    // Assert
+    expect(plan.actualizar).toEqual([{ id: '1', titulo: 'Uno', imagenUrl: URL_B, orden: 0 }]);
+  });
+
+  it('[TEST-531] al intercambiar dos fotos se envían esas dos, no las demás', () => {
+    // Arrange
+    const iniciales = [foto('1', 'A'), foto('2', 'B'), foto('3', 'C')];
+
+    // Act
+    const plan = planificarGaleria(iniciales, [foto('2', 'B'), foto('1', 'A'), foto('3', 'C')]);
+
+    // Assert
+    expect(plan.actualizar.map((a) => [a.id, a.orden])).toEqual([
+      ['2', 0],
+      ['1', 1],
+    ]);
+  });
+});
+
+describe('SPEC-905 · subirPendientes · la imagen sube al guardar (REQ-980 enmendado)', () => {
+  it('[TEST-530] sube solo las fotos con archivo pendiente y devuelve su URL por id', async () => {
+    // Arrange
+    const blob = new Blob(['x'], { type: 'image/webp' });
+    const subir = vi.fn(async (_b: Blob, titulo: string) => `https://media.barzol.test/galeria/${titulo}.webp`);
+
+    // Act
+    const urls = await subirPendientes([foto('1', 'Con logo', null), foto('2', 'Sin cambios')], { '1': blob }, subir);
+
+    // Assert
+    expect(subir).toHaveBeenCalledTimes(1);
+    expect(urls).toEqual({ '1': 'https://media.barzol.test/galeria/Con logo.webp' });
+  });
+
+  it('[TEST-530] el archivo se nombra con el título recortado', async () => {
+    // Arrange
+    const subir = vi.fn(async () => URL_A);
+
+    // Act
+    await subirPendientes([foto('new-1', '  Sordina grabada  ', null)], { 'new-1': new Blob(['x']) }, subir);
+
+    // Assert
+    expect(subir).toHaveBeenCalledWith(expect.any(Blob), 'Sordina grabada');
+  });
+
+  it('[TEST-530] sin pendientes no sube nada', async () => {
+    // Arrange
+    const subir = vi.fn(async () => URL_A);
+
+    // Act
+    const urls = await subirPendientes([foto('1', 'Uno')], {}, subir);
+
+    // Assert
+    expect(subir).not.toHaveBeenCalled();
+    expect(urls).toEqual({});
   });
 });
 

@@ -3,9 +3,11 @@ import ConfirmModal from '@admin/shared/ConfirmModal.tsx';
 import Toast from '@admin/shared/Toast.tsx';
 import SavingOverlay from '@admin/shared/SavingOverlay.tsx';
 import { queueSuccessMessage, consumeSuccessMessage } from '@admin/shared/successMessage';
-import { subirImagen } from '@shared/lib/media/uploadClient';
+import { subirMedia } from '@shared/lib/media/uploadClient';
+import { optimizeImageFile, extensionForMimeType } from '@shared/lib/media/imageOptimizer';
+import { IMAGE_MIME_TYPES } from '@shared/lib/validation/mediaSchema';
 import { estadoImagen } from '@shared/lib/galeria/imagenGaleria';
-import { fotosIncompletas, planificarGaleria, guardarGaleria } from '@admin/shared/guardarGaleria';
+import { fotosIncompletas, planificarGaleria, guardarGaleria, subirPendientes } from '@admin/shared/guardarGaleria';
 import type { GalleryItem } from '@shared/types';
 
 export interface GalleryPhoto {
@@ -57,13 +59,12 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [opsDone, setOpsDone] = useState(0);
-  // Ids de las fotos cuya imagen se está subiendo a R2 en este momento.
-  //
-  // Antes acá había un mapa de `blob:` URLs: la vista previa era local y lo que
-  // se guardaba era `file.name`. Ya no hace falta ninguna de las dos cosas —la
-  // imagen sube al elegirla y `p.image` ES la URL definitiva—, y de paso
-  // desaparece el `URL.revokeObjectURL` que había que recordar en tres sitios.
-  const [subiendo, setSubiendo] = useState<Record<string, boolean>>({});
+  // La imagen elegida se optimiza y queda en memoria (`pendientes`) con su
+  // vista previa; sube a R2 recién al guardar (ver `subirPendientes`).
+  // `p.image` solo guarda URLs ya subidas. `procesando`: ids optimizándose.
+  const [procesando, setProcesando] = useState<Record<string, boolean>>({});
+  const pendientes = useRef<Record<string, Blob>>({});
+  const [previews, setPreviews] = useState<Record<string, string>>({});
 
   const [delConfirmIndex, setDelConfirmIndex] = useState(-1);
 
@@ -136,23 +137,25 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
   }
 
   /**
-   * SPEC-905 REQ-980 — la imagen sube a R2 al elegirla.
-   *
-   * Hasta `BZ-82` esta función guardaba `file.name`. Eso llegaba tal cual a
-   * `gallery_item.image_url` y la landing lo resolvía como ruta relativa: 404
-   * silencioso, marcador de posición, y seis filas así en producción.
+   * Elegir un archivo solo lo optimiza y lo deja pendiente; la subida a R2 es
+   * al guardar (enmienda a SPEC-905 REQ-980, que la hacía al elegirlo).
    */
   async function handlePhotoFile(id: string, file: File | null) {
     if (!file) return;
-    setSubiendo((prev) => ({ ...prev, [id]: true }));
+    if (!(IMAGE_MIME_TYPES as readonly string[]).includes(file.type)) return mostrarError('Formato no soportado — usá JPG, PNG, WEBP o AVIF.');
+    setProcesando((prev) => ({ ...prev, [id]: true }));
     try {
-      const url = await subirImagen(file, 'galeria');
-      setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image: url } : p)));
+      const { blob } = await optimizeImageFile(file);
+      pendientes.current[id] = blob;
+      setPreviews((prev) => {
+        if (prev[id]) URL.revokeObjectURL(prev[id]);
+        return { ...prev, [id]: URL.createObjectURL(blob) };
+      });
       markDirty();
     } catch (e) {
       mostrarError((e as Error).message);
     } finally {
-      setSubiendo((prev) => {
+      setProcesando((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
@@ -162,6 +165,7 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
 
   function confirmDeletePhoto() {
     if (delConfirmIndex < 0) return;
+    delete pendientes.current[photos[delConfirmIndex].id];
     setPhotos((prev) => prev.filter((_, i) => i !== delConfirmIndex));
     markDirty();
     setDelConfirmIndex(-1);
@@ -185,14 +189,17 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
   // REQ-984 — se bloquea ANTES de la petición y diciendo cuál falla. Sin esto,
   // las filas que `BZ-82` dejó en producción harían que tocar un título
   // devolviera un 400 del servidor, sin pista de qué tarjeta lo provocó.
-  const { sinImagen, sinTitulo } = fotosIncompletas(photos);
+  // Una imagen pendiente de subir cuenta como imagen: se sube al guardar.
+  const incompletas = fotosIncompletas(photos);
+  const sinTitulo = incompletas.sinTitulo;
+  const sinImagen = incompletas.sinImagen.filter((id) => !previews[id]);
 
   function requestSaveConfirm() {
     if (sinTitulo.length > 0 || sinImagen.length > 0) {
       setShowValidation(true);
       mostrarError(
         sinImagen.length > 0
-          ? `Hay ${sinImagen.length} foto(s) sin imagen válida. Subilas antes de guardar.`
+          ? `Hay ${sinImagen.length} foto(s) sin imagen válida. Elegí una imagen para cada una antes de guardar.`
           : 'Completa los títulos vacíos antes de guardar',
         2800
       );
@@ -208,7 +215,17 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
     setSaving(true);
     setOpsDone(0);
     try {
-      const plan = planificarGaleria(initialPhotos, photos);
+      // 1) Subir a R2 las imágenes pendientes, nombradas con el título.
+      const urls = await subirPendientes(photos, pendientes.current, async (blob, titulo) =>
+        (await subirMedia(blob, { carpeta: 'galeria', nombreArchivo: `${titulo}.${extensionForMimeType(blob.type)}` })).publicUrl
+      );
+      const actuales = photos.map((p) => (urls[p.id] ? { ...p, image: urls[p.id] } : p));
+      // Ya están en R2: si el guardado falla, reintentar no las vuelve a subir.
+      setPhotos(actuales);
+      Object.keys(urls).forEach((id) => delete pendientes.current[id]);
+
+      // 2) Enviar solo lo que cambió.
+      const plan = planificarGaleria(initialPhotos, actuales);
       await guardarGaleria(tipo, plan, async (url, init) => {
         const res = await fetch(url, init);
         setOpsDone((n) => n + 1);
@@ -328,7 +345,8 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
               const captionHasError = showValidation && !p.caption.trim();
               const isOver = overIndex === i;
               const estado = estadoImagen(p.image);
-              const cargando = subiendo[p.id] === true;
+              const cargando = procesando[p.id] === true;
+              const preview = previews[p.id];
               return (
                 <div
                   key={p.id}
@@ -353,12 +371,12 @@ export default function GalleryAdmin({ title, saveConfirmMessage, initialPhotos,
                   <div style={{ position: 'relative' }}>
                     {cargando ? (
                       <div style={{ width: '100%', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-muted)', color: 'var(--color-text-faint)', fontSize: 12 }}>
-                        Subiendo…
+                        Procesando…
                       </div>
-                    ) : estado === 'ok' ? (
+                    ) : preview || estado === 'ok' ? (
                       <label style={{ width: '100%', height: 170, display: 'block', cursor: 'pointer' }}>
                         <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(p.id, e.target.files?.[0] ?? null)} />
-                        <img src={p.image!} alt={p.caption} style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+                        <img src={preview ?? p.image!} alt={p.caption} style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
                       </label>
                     ) : estado === 'invalida' ? (
                       // Las seis filas que dejó `BZ-82`. Se dice qué pasó y qué

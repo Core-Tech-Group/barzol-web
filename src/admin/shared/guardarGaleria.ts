@@ -52,6 +52,14 @@ export function fotosIncompletas(fotos: FotoIsla[]): { sinImagen: string[]; sinT
 /**
  * Calcula qué peticiones hacen falta para dejar la galería como está en la isla.
  *
+ * Solo entra lo que cambió: una foto existente se actualiza únicamente si su
+ * título, su imagen o su posición son distintos de los que tenía al abrir la
+ * página. Antes cada foto existente viajaba en un PUT aunque nadie la hubiera
+ * tocado — editar un título en una galería de diez eran diez peticiones.
+ *
+ * La posición se compara contra el índice inicial. Borrar o mover una foto
+ * corre a las que quedan detrás, y esas sí se envían: su orden cambió.
+ *
  * Lanza si alguna foto no tiene una imagen válida: el plan es la última
  * frontera antes de la red, y `BZ-82` fue precisamente un valor inválido que
  * viajó sin que nadie lo mirara.
@@ -63,18 +71,43 @@ export function planificarGaleria(iniciales: FotoIsla[], actuales: FotoIsla[]): 
   }
 
   const plan: PlanGaleria = { crear: [], actualizar: [], borrar: [] };
+  const antes = new Map(iniciales.map((f, orden) => [f.id, { titulo: f.caption.trim(), imagenUrl: f.image, orden }]));
 
   actuales.forEach((foto, orden) => {
     // `image` ya pasó por `fotosIncompletas`, así que no es null.
     const entrada = { titulo: foto.caption.trim(), imagenUrl: foto.image as string, orden };
-    if (esNueva(foto.id)) plan.crear.push(entrada);
-    else plan.actualizar.push({ id: foto.id, ...entrada });
+    if (esNueva(foto.id)) {
+      plan.crear.push(entrada);
+      return;
+    }
+    const previa = antes.get(foto.id);
+    const cambio =
+      !previa || previa.titulo !== entrada.titulo || previa.imagenUrl !== entrada.imagenUrl || previa.orden !== entrada.orden;
+    if (cambio) plan.actualizar.push({ id: foto.id, ...entrada });
   });
 
   const sobreviven = new Set(actuales.filter((f) => !esNueva(f.id)).map((f) => f.id));
   plan.borrar = iniciales.filter((f) => !sobreviven.has(f.id)).map((f) => f.id);
 
   return plan;
+}
+
+/**
+ * Sube a R2 las imágenes elegidas y todavía no subidas; devuelve la URL de
+ * cada una, por id de foto.
+ *
+ * Se llama al guardar, no al elegir el archivo: cambiar de imagen varias veces
+ * o descartar los cambios ya no deja objetos huérfanos en el bucket, y para
+ * entonces el título está validado y sirve para nombrar el archivo.
+ */
+export async function subirPendientes(
+  fotos: FotoIsla[],
+  pendientes: Record<string, Blob>,
+  subir: (blob: Blob, titulo: string) => Promise<string>
+): Promise<Record<string, string>> {
+  const conArchivo = fotos.filter((f) => pendientes[f.id]);
+  const urls = await Promise.all(conArchivo.map((f) => subir(pendientes[f.id], f.caption.trim() || 'foto')));
+  return Object.fromEntries(conArchivo.map((f, i) => [f.id, urls[i]]));
 }
 
 type Enviar = (url: string, init: RequestInit) => Promise<Response>;

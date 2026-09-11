@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '@admin/layout/AdminLayout.astro';
-import ProductsAdmin, { type AdminProduct } from './ProductsAdmin.tsx';
+import ProductsAdmin, { type AdminProduct, TODAS_LAS_CATEGORIAS } from './ProductsAdmin.tsx';
 import { getProductos, getVendors } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 
@@ -15,11 +15,19 @@ const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
 const subcategoryById = new Map(categoriasDb.flatMap((c) => c.subcategorias.map((s) => [s.id, s] as const)));
 const vendorById = new Map(vendorsDb.map((v) => [v.id, v]));
 
-const categories = ['Todas', ...categoriasDb.map((c) => c.nombre)];
+const categories = [TODAS_LAS_CATEGORIAS, ...categoriasDb.map((c) => c.nombre)];
 const vendors = vendorsDb.map((v) => v.nombre);
 const instrumentsByCategory: Record<string, string[]> = Object.fromEntries(categoriasDb.map((c) => [c.nombre, c.subcategorias.map((s) => s.nombre)]));
 
-const products: AdminProduct[] = productosDb.map((p) => ({
+// Del más reciente al más antiguo: lo último cargado es lo que el admin busca
+// primero. `getProductos()` no pide orden y Postgres devuelve las filas en
+// cualquier orden. A igual fecha (datos cargados de una vez) gana el id más
+// alto, que es el insertado después.
+const recientesPrimero = productosDb
+	.slice()
+	.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || Number(b.id) - Number(a.id));
+
+const products: AdminProduct[] = recientesPrimero.map((p) => ({
 	id: p.id,
 	name: p.nombre,
 	category: p.categoriaId ? categoryById.get(p.categoriaId)?.nombre ?? '' : '',

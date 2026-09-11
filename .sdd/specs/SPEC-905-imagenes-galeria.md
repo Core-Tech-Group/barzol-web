@@ -92,14 +92,28 @@ trabajo del administrador.
 
 ## Requisitos (EARS)
 
-### [REQ-980] — Dirigido por evento · subir de verdad
-CUANDO el administrador elija un archivo para una tarjeta de la galería, el
-sistema DEBE subirlo a R2 y DEBE conservar la **URL pública** que devuelva la
-subida.
+### [REQ-980] — Dirigido por evento · subir de verdad *(enmendado 2026-09-10)*
+CUANDO el administrador **guarde** la galería, el sistema DEBE subir a R2 cada
+imagen elegida y todavía no subida, y DEBE conservar la **URL pública** que
+devuelva la subida. Elegir el archivo solo lo optimiza y lo deja pendiente, con
+vista previa local.
 
-> Reutiliza `subirImagen()` de `uploadClient.ts`, escrita para `SPEC-904`
-> REQ-975. Éste es el segundo uso previsto, y el motivo de que aquella no se
-> resolviera con un helper local.
+> **Enmienda.** La versión aprobada subía al *elegir* el archivo. Se cambió a
+> pedido del responsable, como cambio directo sin pasar por `/sdd-spec`:
+> reemplazar una imagen o descartar los cambios dejaba objetos huérfanos en R2,
+> y al guardar el título ya está validado y sirve para nombrar el archivo (igual
+> que las fotos de producto). La subida vive en `subirPendientes()`
+> (`guardarGaleria.ts`, `TEST-530`). **Pendiente de revisión humana.**
+
+### [REQ-988] — Ubicuo · solo viaja lo que cambió *(agregado 2026-09-10)*
+El sistema DEBE enviar al guardar únicamente las altas, los borrados y las fotos
+existentes cuyo título, imagen o posición difieran de los que tenían al abrir la
+página.
+
+> Antes cada foto existente viajaba en un `PUT` aunque no se hubiera tocado. La
+> posición se compara contra el índice inicial: borrar o mover una foto corre a
+> las de detrás, y esas sí se envían. Cambio directo, `TEST-531`. **Pendiente de
+> revisión humana.**
 
 ### [REQ-981] — No deseado · nada que no sea una URL
 SI el valor de la imagen no es una URL absoluta `http(s)`, ENTONCES el sistema NO
@@ -198,6 +212,8 @@ del límite y no tiene trinquete que lo cubra.
 | TEST-525 | REQ-986 | 1 | un error del servidor se propaga con su mensaje |
 | TEST-526 | REQ-984 | 1 | una foto con imagen inválida cuenta como "falta subir" |
 | TEST-527 | REQ-980 | 1 | el plan solo acepta URLs; una foto sin subir no llega a la petición |
+| TEST-530 | REQ-980 | 1 | `subirPendientes` sube solo las fotos con archivo pendiente, nombradas con el título |
+| TEST-531 | REQ-988 | 1 | el plan omite las fotos existentes sin cambios; título, imagen y posición cuentan |
 
 REQ-982 y REQ-983 son de presentación y los cubre `BZ-74` (E2E). Se documentan
 como hueco explícito en `TRACEABILITY.md` en vez de inventar un test que no
