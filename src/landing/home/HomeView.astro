@@ -5,6 +5,11 @@ import ProductCarousel from '@landing/producto/ProductCarousel.astro';
 import ServicePromoCard from './ServicePromoCard.astro';
 import heroImpresion from '@/assets/hero-impresion-3d.jpg';
 import heroDiseno from '@/assets/hero-diseno-cad.jpg';
+// Fotos de las tarjetas de servicios. PROVISORIAS en Ingeniería y Diseño CAD:
+// usan sordinas personalizadas hasta tener las fotos de esos servicios.
+import fotoServAccesorios from '@/assets/personalizado-nombre-firma.png';
+import fotoServIngenieria from '@/assets/personalizado-logo-banda.png';
+import fotoServDiseno from '@/assets/personalizado-nombre-diseno.png';
 import { getHomeItems } from '@shared/lib/home/homeService';
 import { getProductosByIds } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
@@ -118,20 +123,33 @@ const heroSlides = [
 	<!-- SERVICES — destino del botón "Servicios →" del hero -->
 	<div id="servicios" class="bz-services-anchor" style="max-width:1200px; margin:52px auto 0; padding:0 32px;">
 		<div class="bz-services-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+			{/* Un tono claro de la paleta por servicio: celeste de marca, gris
+			    azulado y azul cielo (familia de --color-primary-soft).
+			    Los títulos van en dos líneas cortas a propósito: en una sola, el
+			    texto pasa por encima de la foto de la derecha. */}
 			<ServicePromoCard
-				title="Accesorios personalizados"
+				title="Accesorios<br />personalizados"
 				href="/servicios/accesorios-personalizados"
-				gradient="linear-gradient(135deg,#0d3b8c 0%,var(--color-primary) 60%,#2979ff 100%)"
+				fondo="linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-border) 100%)"
+				arco="#c3d7f7"
+				acento="var(--color-primary)"
+				imagen={fotoServAccesorios}
 			/>
 			<ServicePromoCard
-				title="Trabajos de ingeniería"
+				title="Trabajos de<br />ingeniería"
 				href="/servicios/trabajos-de-ingenieria"
-				gradient="linear-gradient(135deg,#7c2d12 0%,var(--color-orange) 55%,#f97316 100%)"
+				fondo="linear-gradient(135deg, #f5f7fa 0%, #e1e6ee 100%)"
+				arco="#cfd7e3"
+				acento="#334155"
+				imagen={fotoServIngenieria}
 			/>
 			<ServicePromoCard
-				title="Diseño CAD e impresión 3D"
+				title="Diseño CAD e<br />impresión 3D"
 				href="/servicios/diseno-cad-impresion-3d"
-				gradient="linear-gradient(135deg,#0a2e4f 0%,#13598a 60%,#3b9ad9 100%)"
+				fondo="linear-gradient(135deg, #eaf4ff 0%, #c7e0fd 100%)"
+				arco="#a9cdf8"
+				acento="#1d5fa8"
+				imagen={fotoServDiseno}
 			/>
 		</div>
 	</div>

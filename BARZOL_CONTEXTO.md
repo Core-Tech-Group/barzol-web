@@ -11,7 +11,7 @@
 | Nombre comercial | BARZOL |
 | Sede | Ayacucho, Perú |
 | WhatsApp principal | +51 950 759 032 (William Barzola — fundador) |
-| Email | atencioncliente@barzol.com |
+| Email | barzol.3d@gmail.com |
 | Facebook | Barzol 3D music |
 | TikTok | Barzol 3D music |
 

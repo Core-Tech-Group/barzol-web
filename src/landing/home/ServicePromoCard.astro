@@ -1,40 +1,159 @@
 ---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+// Tarjeta de servicio del home: fondo claro con el tono propio del servicio,
+// un arco de color detrás de la foto y el texto en azul oscuro.
 interface Props {
   title: string;
   href: string;
-  gradient: string;
+  /** Fondo de la tarjeta (degradado claro de la paleta). */
+  fondo: string;
+  /** Color del arco detrás de la foto. */
+  arco: string;
+  /** Color de la etiqueta "Servicios" y del botón. */
+  acento: string;
+  /** Foto sin fondo. Es decorativa: el nombre del servicio ya lo dice el título. */
+  imagen: ImageMetadata;
 }
 
-const { title, href, gradient } = Astro.props;
+const { title, href, fondo, arco, acento, imagen } = Astro.props;
 ---
 
-<a href={href} class="bz-service-card service-promo-card" style={`position:relative; height:288px; border-radius:12px; overflow:hidden; background:${gradient}; cursor:pointer; display:block; text-decoration:none;`}>
-	<div style="position:absolute; inset:0; background:rgba(0,0,0,0.28);"></div>
-	<div style="position:absolute; top:-40px; right:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,0.05); pointer-events:none;"></div>
-	<div style="position:absolute; top:30px; right:30px; width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,0.04); pointer-events:none;"></div>
-	<div style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:flex-end; padding:28px 30px 32px;">
-		<div style="font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.7); margin-bottom:8px;">SERVICIOS</div>
-		<h3 class="bz-service-card-title" style="font-size:clamp(21px, 2.1vw, 28px); font-weight:700; color:white; line-height:1.1; margin-bottom:22px;" set:html={title} />
-		<span style="display:inline-flex; align-items:center; gap:8px; padding:11px 20px; background:#111827; color:white; font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; border-radius:7px; align-self:flex-start;">
-			VER MÁS
-			<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-		</span>
+<a href={href} class="bz-service-card" style={`--fondo:${fondo}; --arco:${arco}; --acento:${acento};`}>
+	<div class="bz-sc-arco" aria-hidden="true"></div>
+	{/* Caja de tamaño fijo: las tres fotos quedan en la misma posición y con el
+	    mismo giro, sin importar la proporción de cada imagen. */}
+	<div class="bz-sc-foto">
+		<Image src={imagen} alt="" widths={[200, 400]} sizes="190px" />
+	</div>
+	<div class="bz-sc-cuerpo">
+		<div class="bz-sc-etiqueta">Servicios</div>
+		<h3 class="bz-service-card-title" set:html={title} />
+		<span class="bz-sc-boton">Ver más <span class="bz-sc-flecha" aria-hidden="true">→</span></span>
 	</div>
 </a>
 
 <style>
-	.service-promo-card:hover {
-		filter: brightness(1.06);
+	.bz-service-card {
+		position: relative;
+		display: block;
+		height: 288px;
+		border-radius: 14px;
+		overflow: hidden;
+		text-decoration: none;
+		background: var(--fondo);
+		border: 1px solid rgba(var(--color-primary-rgb), 0.08);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+	/* Arco que se desvanece hacia abajo, detrás de la foto. */
+	.bz-sc-arco {
+		position: absolute;
+		top: 24px;
+		right: 20px;
+		bottom: 0;
+		width: 44%;
+		border-radius: 999px 999px 0 0;
+		background: linear-gradient(180deg, var(--arco), rgba(255, 255, 255, 0));
+	}
+	.bz-sc-foto {
+		position: absolute;
+		z-index: 2;
+		top: 12px;
+		right: 16px;
+		width: 46%;
+		height: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transform: rotate(-8deg);
+		transition: transform 0.25s ease;
+	}
+	.bz-sc-foto :global(img) {
+		max-width: 100%;
+		max-height: 100%;
+		width: auto;
+		height: auto;
+		object-fit: contain;
+		filter: drop-shadow(0 14px 16px rgba(15, 30, 70, 0.24));
+	}
+	.bz-sc-cuerpo {
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		padding: 26px 28px 28px;
+	}
+	.bz-sc-etiqueta {
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--acento);
+		opacity: 0.75;
+		margin-bottom: 8px;
+	}
+	.bz-service-card-title {
+		font-size: clamp(20px, 2vw, 24px);
+		font-weight: 700;
+		color: var(--color-navy-dark, #0f1e46);
+		line-height: 1.12;
+		margin-bottom: 20px;
+	}
+	.bz-sc-boton {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		align-self: flex-start;
+		padding: 10px 18px;
+		background: var(--acento);
+		color: white;
+		font-size: 12px;
+		font-weight: 600;
+		border-radius: 8px;
+	}
+	.bz-sc-flecha {
+		display: inline-block;
+		transition: transform 0.2s ease;
+	}
+
+	/* Solo con puntero real: en táctil el hover queda "pegado". */
+	@media (hover: hover) {
+		.bz-service-card:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 14px 30px rgba(15, 30, 70, 0.12);
+		}
+	
+		.bz-service-card:hover .bz-sc-flecha {
+			transform: translateX(3px);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bz-service-card,
+		.bz-sc-foto,
+		.bz-sc-flecha {
+			transition: none;
+		}
 	}
 
 	@media (max-width: 768px) {
 		.bz-service-card {
-			height: 220px !important;
+			height: 220px;
 		}
 		/* En móvil la grilla pasa a una columna: la tarjeta vuelve a ser
 		   ancha y el título no necesita achicarse con el viewport. */
 		.bz-service-card-title {
-			font-size: 26px !important;
+			font-size: 22px;
+		}
+		.bz-sc-foto {
+			width: 40%;
+			height: 62%;
+		}
+		.bz-sc-arco {
+			width: 40%;
+			top: 26px;
 		}
 	}
 </style>
