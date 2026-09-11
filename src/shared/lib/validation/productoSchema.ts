@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// Contrato de entrada de POST /api/vendedores y PUT /api/vendedores/[id].
+// El máximo es el de la columna (`vendor.name varchar(100)`).
+export const vendedorWriteSchema = z.object({
+  nombre: z.string().trim().min(1, 'requerido').max(100, 'máximo 100 caracteres'),
+});
+
 // Contrato de entrada de POST/PUT /api/productos — misma forma que
 // `ProductoWriteInput` en productoService.ts.
 

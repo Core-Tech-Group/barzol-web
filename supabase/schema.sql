@@ -334,5 +334,12 @@ create policy "admin write" on site_configuration for all to authenticated
   using (exists (select 1 from admin_profile where id = auth.uid()))
   with check (exists (select 1 from admin_profile where id = auth.uid()));
 
+-- Agregada con supabase/pendiente-policies-vendor.sql (2026-09-11), al sumar
+-- el mantenimiento de vendedores en /admin/configuracion.
+create policy "admin write" on vendor for all to authenticated
+  using (exists (select 1 from admin_profile where id = auth.uid()))
+  with check (exists (select 1 from admin_profile where id = auth.uid()));
+
 -- Pendiente (CRUD todavía no implementado para esas pantallas):
--- home_hero_image, home_item, home_section_product, vendor.
+-- home_hero_image, home_item, home_section_product
+-- (las cubre supabase/pendiente-policies-home.sql).

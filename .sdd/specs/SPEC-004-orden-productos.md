@@ -130,8 +130,9 @@ SI el cuerpo no tiene cambios, repite un `id` o trae un `orden` que no es entero
 ≥ 0, ENTONCES el sistema DEBE responder `400` y NO DEBE escribir nada.
 
 > La falta de sesión la rechaza el middleware existente con `401`
-> (`src/middleware.ts:53`) para todo `PATCH` bajo `/api/` — *no verificado para
-> `PATCH`: el comentario del middleware nombra POST/PUT/DELETE.*
+> (`src/middleware.ts:53`). **Verificado el 2026-09-11:** la condición es
+> `method !== 'GET'` (`middleware.ts:41`), así que cubre `PATCH` aunque el
+> comentario solo nombre POST/PUT/DELETE.
 
 ### Sitio público
 

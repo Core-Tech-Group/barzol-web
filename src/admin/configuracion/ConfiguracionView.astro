@@ -1,19 +1,13 @@
 ---
 import AdminLayout from '@admin/layout/AdminLayout.astro';
-import ConfiguracionAdmin from './ConfiguracionAdmin.tsx';
-import { getConfiguracion } from '@shared/lib/configuracion/configuracionService';
+import ConfiguracionAdmin, { type AdminVendedor } from './ConfiguracionAdmin.tsx';
+import { getVendedoresConProductos } from '@shared/lib/productos/productoService';
 
-const c = await getConfiguracion();
-
-const configuracion = {
-	whatsappNumero: c.whatsappNumero,
-	emailContacto: c.emailContacto,
-	instagramUrl: c.instagramUrl ?? '',
-	facebookUrl: c.facebookUrl ?? '',
-	direccion: c.direccion ?? '',
-};
+// Con el cliente del administrador (lo deja el middleware en locals) el conteo
+// incluye los productos en borrador, que el cliente anónimo no debería ver.
+const vendedores: AdminVendedor[] = await getVendedoresConProductos(Astro.locals.supabase);
 ---
 
 <AdminLayout title="Admin · Configuración — Barzol" active="configuracion">
-	<ConfiguracionAdmin client:load initialConfiguracion={configuracion} />
+	<ConfiguracionAdmin client:load initialVendedores={vendedores} />
 </AdminLayout>

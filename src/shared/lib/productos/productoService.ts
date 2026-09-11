@@ -274,3 +274,99 @@ export async function deleteProducto(supabaseAuth: SupabaseClient, id: string): 
   const { error } = await supabaseAuth.from('product').delete().eq('id', Number(id));
   if (error) throw error;
 }
+
+// ---------- Vendedores (tabla `vendor`) ----------
+//
+// Mantenimiento desde /admin/configuracion. Viven acá, junto a getVendors(),
+// porque `vendor` solo existe para los productos: es el "Vendedor" del
+// formulario de producto.
+
+export type VendedorErrorCode = 'NOMBRE_DUPLICADO' | 'CON_PRODUCTOS' | 'SIN_PERMISO';
+
+/** Error de negocio del mantenimiento de vendedores (Constitución 4.2). */
+export class VendedorError extends Error {
+  constructor(
+    readonly code: VendedorErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'VendedorError';
+  }
+}
+
+export interface VendedorConProductos extends Vendor {
+  productos: number;
+}
+
+/**
+ * Vendedores con cuántos productos los usan, para el panel. Recibe el cliente
+ * del administrador para contar también los borradores.
+ */
+export async function getVendedoresConProductos(cliente: SupabaseClient = getSupabase()): Promise<VendedorConProductos[]> {
+  const { data, error } = await cliente.from('vendor').select('id, name, product(count)').order('name');
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: String(r.id),
+    nombre: r.name,
+    productos: (r.product as { count: number }[] | null)?.[0]?.count ?? 0,
+  }));
+}
+
+const normalizarNombre = (nombre: string) => nombre.trim().toLowerCase();
+
+/**
+ * `vendor.name` no es único en la base, pero el guardado de productos resuelve
+ * el vendedor por nombre exacto (resolveVendorId): con dos iguales, guardar un
+ * producto de ese vendedor fallaría. Se impide acá, sin distinguir mayúsculas.
+ */
+async function exigirNombreLibre(supabaseAuth: SupabaseClient, nombre: string, exceptoId?: string): Promise<void> {
+  const { data, error } = await supabaseAuth.from('vendor').select('id, name');
+  if (error) throw error;
+  const choca = (data ?? []).some((r) => String(r.id) !== exceptoId && normalizarNombre(r.name) === normalizarNombre(nombre));
+  if (choca) throw new VendedorError('NOMBRE_DUPLICADO', `Ya existe un vendedor llamado "${nombre}".`);
+}
+
+// Con RLS, un UPDATE o DELETE que la policy no permite NO da error: afecta cero
+// filas. Sin este control el panel diría "guardado" sin haber guardado nada
+// (es lo que pasa hasta aplicar supabase/pendiente-policies-vendor.sql).
+function exigirFilaAfectada(filas: unknown[] | null): void {
+  if (!filas || filas.length === 0) {
+    throw new VendedorError('SIN_PERMISO', 'No se pudo guardar: el vendedor no existe o falta el permiso de escritura en la base.');
+  }
+}
+
+export async function createVendedor(supabaseAuth: SupabaseClient, nombre: string): Promise<Vendor> {
+  const limpio = nombre.trim();
+  await exigirNombreLibre(supabaseAuth, limpio);
+  const { data, error } = await supabaseAuth.from('vendor').insert({ name: limpio }).select('id, name').single();
+  if (error) throw error;
+  return { id: String(data.id), nombre: data.name };
+}
+
+export async function updateVendedor(supabaseAuth: SupabaseClient, id: string, nombre: string): Promise<Vendor> {
+  const limpio = nombre.trim();
+  await exigirNombreLibre(supabaseAuth, limpio, id);
+  const { data, error } = await supabaseAuth.from('vendor').update({ name: limpio }).eq('id', Number(id)).select('id, name');
+  if (error) throw error;
+  exigirFilaAfectada(data);
+  return { id, nombre: limpio };
+}
+
+/**
+ * La base impide borrar un vendedor con productos (`product.vendor_id … ON
+ * DELETE RESTRICT`, error 23503). Se traduce a un mensaje que diga cuántos y
+ * qué hacer, en vez del error de Postgres.
+ */
+export async function deleteVendedor(supabaseAuth: SupabaseClient, id: string): Promise<void> {
+  const { data, error } = await supabaseAuth.from('vendor').delete().eq('id', Number(id)).select('id');
+  if (error?.code === '23503') {
+    const { count } = await supabaseAuth.from('product').select('id', { count: 'exact', head: true }).eq('vendor_id', Number(id));
+    const cuantos = count ?? 0;
+    throw new VendedorError(
+      'CON_PRODUCTOS',
+      `Este vendedor tiene ${cuantos} ${cuantos === 1 ? 'producto asociado' : 'productos asociados'}. Reasignalos a otro vendedor antes de eliminarlo.`
+    );
+  }
+  if (error) throw error;
+  exigirFilaAfectada(data);
+}

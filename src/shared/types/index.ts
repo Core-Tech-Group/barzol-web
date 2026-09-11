@@ -71,14 +71,3 @@ export interface HomeItem {
   link: string | null;
   productoIds: string[];
 }
-
-// Fila única (singleton) — respaldada por el backlog: "Admin > Configuración
-// > Panel de configuración" (issue #28).
-export interface Configuracion {
-  id: string;
-  whatsappNumero: string;
-  emailContacto: string;
-  instagramUrl: string | null;
-  facebookUrl: string | null;
-  direccion: string | null;
-}
