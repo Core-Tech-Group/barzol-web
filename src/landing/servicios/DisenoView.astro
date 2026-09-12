@@ -1,6 +1,10 @@
 ---
+import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
+import HeroServicio from './HeroServicio.astro';
+import fotoImpresora from '@/assets/escaneo-hero-impresora.jpg';
+import fotoEscaner from '@/assets/escaneo-hero-escaner.jpg';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
 // Tercer servicio, misma estructura que AccesoriosView e IngenieriaView: hero
@@ -12,28 +16,115 @@ const galeria = galeriaDb
   .map((g) => ({ name: g.titulo, imagenUrl: g.imagenUrl }));
 ---
 
-<PublicLayout title="Diseño CAD e impresión 3D — Barzol">
-	<!-- HERO -->
-	<div style="position:relative; padding:80px 32px; overflow:hidden; background:var(--gradient-hero-dark);">
-		<div style="max-width:1200px; margin:0 auto; position:relative; z-index:1;">
-			<h1 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:10px;">Diseño CAD e impresión 3D</h1>
-			<p style="font-size:15px; color:rgba(255,255,255,0.9); line-height:1.6; max-width:560px;">
-			Ofrecemos servicios de escaneado 3D e impresión 3D para tus proyectos, digitalizando piezas y objetos con precisión para su reproducción, modificación o fabricación.
-Realizamos envíos de tus impresiones 3D a todo el Perú.
-			</p>
+<PublicLayout title="Escaneo e impresión 3D — Barzol">
+	<!-- HERO — misma altura que Accesorios personalizados; a la derecha, las dos
+	     fotos completas a toda la altura: la impresora (oscura) junto al azul y
+	     el escaneo (claro) contra el borde. -->
+	<HeroServicio titulo="Escaneo e impresión 3D" arco="clamp(120px, 13.5vw, 210px)" arcoMovil="min(27vw, 130px)" altoMedia={1.5} zonaClara={false}>
+		Ofrecemos servicios de escaneado 3D e impresión 3D para tus proyectos, digitalizando piezas y objetos con precisión para su reproducción, modificación o fabricación.<br />Realizamos envíos de tus impresiones 3D a todo el Perú.
+		<div class="bz-esc-fotos" slot="media">
+			<div class="bz-esc-foto is-impresora">
+				<Image src={fotoImpresora} alt="Impresora 3D de Barzol fabricando una pieza" widths={[300, 600]} sizes="(max-width: 768px) 30vw, 280px" loading="eager" />
+				<div class="bz-esc-fundido" aria-hidden="true"></div>
+			</div>
+			<div class="bz-esc-foto is-escaner">
+				<Image src={fotoEscaner} alt="Escaneo 3D de una pieza metálica sobre la plataforma giratoria" widths={[700, 1400]} sizes="(max-width: 768px) 70vw, 660px" loading="eager" />
+			</div>
 		</div>
-	</div>
+	</HeroServicio>
 
-	
 	<!-- GALERÍA -->
 	<div id="servicios" style="background:white; padding:64px 32px;">
 		<div style="max-width:1200px; margin:0 auto;">
 			<div style="text-align:center; margin-bottom:48px;">
 				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Galería</div>
-				<h2 style="font-size:34px; font-weight:700; color:var(--color-text); line-height:1.2;">Nuestros diseños e impresiones</h2>
+				<h2 style="font-size:34px; font-weight:700; color:var(--color-text); line-height:1.2;">Nuestros escaneos e impresiones</h2>
 			</div>
 
 			<GalleryLightbox items={galeria} client:load />
 		</div>
 	</div>
 </PublicLayout>
+
+<style>
+	/* ---------- Fotos del hero ---------- */
+	/* Pegadas al borde derecho y a toda la altura del hero (--alto-hero, lo da
+	   HeroServicio). A su proporción real las dos suman 2.53 veces el alto:
+	   impresora 0.75 (1086x1448) y escaneo 1.78 (1673x940). Se le restan 30px
+	   para correr la impresora a la derecha; si no entran junto al texto
+	   (72px + 440px + 40px de separación), el escaneo cede ancho. La
+	   impresora siempre se ve entera. */
+	.bz-esc-fotos {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: min(calc(var(--alto-hero) * 2.53 - 30px), calc(100% - 552px));
+		display: flex;
+	}
+	.bz-esc-foto {
+		position: relative;
+		height: 100%;
+		overflow: hidden;
+	}
+	.bz-esc-foto :global(img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.bz-esc-foto.is-impresora {
+		flex: 0 0 calc(var(--alto-hero) * 0.75);
+	}
+	.bz-esc-foto.is-escaner {
+		flex: 1 1 auto;
+		min-width: 0;
+		border-left: 4px solid #e6eefa;
+	}
+	/* Si tiene que ceder ancho, recorta de los dos lados y deja al centro la
+	   mano, el escáner y la plataforma. */
+	.bz-esc-foto.is-escaner :global(img) {
+		object-position: 62% center;
+	}
+	/* Funde el borde izquierdo de la impresora con el azul: corto, para que la
+	   foto se vea casi entera. */
+	.bz-esc-fundido {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(90deg, #0f1e46 0%, rgba(15, 30, 70, 0.55) 14%, rgba(15, 30, 70, 0) 32%);
+	}
+
+	@media (max-width: 1000px) {
+		.bz-esc-fotos {
+			width: min(calc(var(--alto-hero) * 2.53 - 30px), calc(100% - 416px));
+		}
+	}
+	/* Móvil: debajo del texto, de borde a borde, las dos enteras a la misma
+	   altura (el ancho de pantalla repartido según sus proporciones). */
+	@media (max-width: 768px) {
+		.bz-esc-fotos {
+			position: relative;
+			width: auto;
+			height: calc(100vw / 2.53);
+			margin: 0 -20px;
+		}
+		/* Fundido muy corto: el azul baja solo 16px sobre el borde superior,
+		   para quitar el corte duro sin tapar las fotos. */
+		.bz-esc-fotos::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 16px;
+			background: linear-gradient(180deg, #0f1e46, rgba(15, 30, 70, 0));
+			pointer-events: none;
+		}
+		.bz-esc-foto.is-impresora {
+			flex-basis: calc(100vw / 2.53 * 0.75);
+		}
+		.bz-esc-fundido {
+			display: none;
+		}
+	}
+</style>

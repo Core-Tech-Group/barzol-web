@@ -1,7 +1,10 @@
 ---
+import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
+import HeroServicio from './HeroServicio.astro';
+import fotoHero from '@/assets/ingenieria-hero.jpg';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
 const galeriaDb = await getGaleria('trabajos');
@@ -19,17 +22,16 @@ const proceso = [
 ];
 ---
 
-<PublicLayout title="Trabajos de ingeniería — Barzol">
-	<!-- HERO -->
-	<div style="position:relative; padding:80px 32px; overflow:hidden; background:var(--gradient-hero-dark);">
-		<div style="max-width:1200px; margin:0 auto; position:relative; z-index:1;">
-			<h1 style="font-size:32px; font-weight:700; color:white; line-height:1.2; margin-bottom:10px;">Trabajos de ingeniería avanzada</h1>
-			<p style="font-size:15px; color:rgba(255,255,255,0.9); line-height:1.6; max-width:560px;">
-			Convertimos piezas reales en <strong>modelos digitales de precisión</strong> mediante escaneo 3D, 
-			 ingeniería inversa y diseño CAD/CAE, para fabricar <strong>repuestos y piezas a medida </strong>.			
-			</p>
+<PublicLayout title="Trabajos de ingeniería avanzada — Barzol">
+	<!-- HERO — misma altura que Accesorios y Escaneo; la foto a la derecha, a
+	     toda la altura, unida al azul con un degradado. -->
+	<HeroServicio titulo="Trabajos de ingeniería avanzada" arco="clamp(120px, 13.5vw, 210px)" arcoMovil="min(27vw, 130px)" altoMedia={1.5} zonaClara={false}>
+		Convertimos piezas reales en modelos digitales de precisión mediante escaneo 3D, ingeniería inversa y diseño CAD/CAE, para fabricar repuestos y piezas a medida.
+		<div class="bz-ing-foto" slot="media">
+			<Image src={fotoHero} alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" widths={[768, 1280]} sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
+			<div class="bz-ing-fundido" aria-hidden="true"></div>
 		</div>
-	</div>
+	</HeroServicio>
 
 	<!-- GALERÍA -->
 	<div id="servicios" style="background:white; padding:64px 32px;">
@@ -45,6 +47,81 @@ const proceso = [
 </PublicLayout>
 
 <style>
+	/* ---------- Foto del hero ---------- */
+	/* La zona de la foto va del texto (72px + 440px + 40px de separación) al
+	   borde derecho. La foto se apoya a la derecha, a toda la altura del hero
+	   (--alto-hero, lo da HeroServicio) y un 18% más grande que su tamaño
+	   completo (1672x941 = 1.777): se recorta un poco por abajo (la regla) y
+	   queda más cerca del texto. Lo que sobra a su izquierda es un degradado
+	   del azul al blanco del fondo de la foto, que termina justo donde ella
+	   empieza. */
+	.bz-ing-foto {
+		/* Siempre deja al menos 90px de degradado: en pantallas angostas la foto
+		   cede ancho (recorta los costados) antes que pegarse al azul. */
+		--foto-ancho: min(calc(var(--alto-hero) * 1.777 * 1.18), calc(100% - 90px));
+		--puente: calc(100% - var(--foto-ancho));
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: calc(100% - 552px);
+		overflow: hidden;
+		background: linear-gradient(
+			90deg,
+			#0f1e46 0,
+			#213157 calc(var(--puente) * 0.18),
+			#516182 calc(var(--puente) * 0.36),
+			#909eb7 calc(var(--puente) * 0.55),
+			#cad4e4 calc(var(--puente) * 0.73),
+			#fefefe var(--puente)
+		);
+	}
+	.bz-ing-foto :global(img) {
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: var(--foto-ancho);
+		height: 100%;
+		object-fit: cover;
+		object-position: 60% top;
+		/* El borde izquierdo se funde con el degradado: sin línea de corte. */
+		-webkit-mask-image: linear-gradient(90deg, transparent 0, #000 70px);
+		mask-image: linear-gradient(90deg, transparent 0, #000 70px);
+	}
+	.bz-ing-fundido {
+		display: none;
+	}
+
+	@media (max-width: 1000px) {
+		.bz-ing-foto {
+			width: calc(100% - 416px);
+		}
+	}
+	/* Móvil: debajo del texto, de borde a borde y entera. El azul baja solo
+	   16px sobre el borde superior, como en Escaneo. */
+	@media (max-width: 768px) {
+		.bz-ing-foto {
+			position: relative;
+			width: auto;
+			height: calc(100vw / 1.777);
+			margin: 0 -20px;
+			background: none;
+		}
+		.bz-ing-foto :global(img) {
+			position: static;
+			width: 100%;
+			object-position: center;
+			-webkit-mask-image: none;
+			mask-image: none;
+		}
+		.bz-ing-fundido {
+			display: block;
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(180deg, #0f1e46 0, rgba(15, 30, 70, 0) 16px);
+		}
+	}
+
 	.cta-final-primary:hover {
 		background: var(--color-success-dark);
 	}

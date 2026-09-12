@@ -15,15 +15,27 @@ interface Props {
   acento: string;
   /** Foto sin fondo. Es decorativa: el nombre del servicio ya lo dice el título. */
   imagen: ImageMetadata;
+  /** Agranda la foto dentro de su caja, para piezas delgadas que con el
+   *  mismo tamaño que las demás se ven chicas. Por defecto 1. */
+  escala?: number;
+  /** Giro de la foto en grados. Por defecto -8; 0 para fotos que ya vienen
+   *  compuestas y se ven mejor derechas. */
+  giro?: number;
+  /** Punto desde el que crece la foto al escalarla (transform-origin). Por
+   *  defecto el centro; 'top right' para fotos altas, que desde el centro
+   *  se saldrían por arriba de la tarjeta. */
+  origen?: string;
+  /** Corre la foto a la derecha, en px (negativo: a la izquierda). Por defecto 0. */
+  correrX?: number;
 }
 
-const { title, href, fondo, arco, acento, imagen } = Astro.props;
+const { title, href, fondo, arco, acento, imagen, escala = 1, giro = -8, origen = 'center', correrX = 0 } = Astro.props;
 ---
 
-<a href={href} class="bz-service-card" style={`--fondo:${fondo}; --arco:${arco}; --acento:${acento};`}>
+<a href={href} class="bz-service-card" style={`--fondo:${fondo}; --arco:${arco}; --acento:${acento}; --escala:${escala}; --giro:${giro}deg; --origen:${origen}; --correr-x:${correrX}px;`}>
 	<div class="bz-sc-arco" aria-hidden="true"></div>
-	{/* Caja de tamaño fijo: las tres fotos quedan en la misma posición y con el
-	    mismo giro, sin importar la proporción de cada imagen. */}
+	{/* Caja de tamaño fijo: las tres fotos quedan en la misma posición, sin
+	    importar la proporción de cada imagen. */}
 	<div class="bz-sc-foto">
 		<Image src={imagen} alt="" widths={[200, 400]} sizes="190px" />
 	</div>
@@ -66,7 +78,7 @@ const { title, href, fondo, arco, acento, imagen } = Astro.props;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transform: rotate(-8deg);
+		transform: translateX(var(--correr-x)) rotate(var(--giro));
 		transition: transform 0.25s ease;
 	}
 	.bz-sc-foto :global(img) {
@@ -75,6 +87,8 @@ const { title, href, fondo, arco, acento, imagen } = Astro.props;
 		width: auto;
 		height: auto;
 		object-fit: contain;
+		transform: scale(var(--escala));
+		transform-origin: var(--origen);
 		filter: drop-shadow(0 14px 16px rgba(15, 30, 70, 0.24));
 	}
 	.bz-sc-cuerpo {
@@ -101,6 +115,11 @@ const { title, href, fondo, arco, acento, imagen } = Astro.props;
 		color: var(--color-navy-dark, #0f1e46);
 		line-height: 1.12;
 		margin-bottom: 20px;
+	}
+	/* Salto de línea que solo aplica en móvil, para títulos que ahí pasarían
+	   por encima de la foto. */
+	.bz-service-card-title :global(.bz-sc-br-movil) {
+		display: none;
 	}
 	.bz-sc-boton {
 		display: inline-flex;
@@ -147,9 +166,17 @@ const { title, href, fondo, arco, acento, imagen } = Astro.props;
 		.bz-service-card-title {
 			font-size: 22px;
 		}
+		.bz-service-card-title :global(.bz-sc-br-movil) {
+			display: inline;
+		}
 		.bz-sc-foto {
 			width: 40%;
 			height: 62%;
+		}
+		/* La caja ya es proporcionalmente más grande en móvil: la mitad del
+		   aumento basta y evita que la foto toque el título. */
+		.bz-sc-foto :global(img) {
+			transform: scale(calc(1 + (var(--escala) - 1) / 2));
 		}
 		.bz-sc-arco {
 			width: 40%;

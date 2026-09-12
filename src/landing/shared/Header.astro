@@ -12,7 +12,7 @@ const instrumentLinks = categoriasDb
 	.sort((a, b) => a.orden - b.orden)
 	.map((cat) => ({ name: cat.nombre, href: `/catalogo/${cat.slug}` }));
 
-const navCats = [...instrumentLinks, { name: 'Accesorios Personalizados', href: '/servicios/accesorios-personalizados' }, { name: 'Trabajos de Ingeniería', href: '/servicios/trabajos-de-ingenieria' }, { name: 'Diseño CAD e Impresión 3D', href: '/servicios/diseno-cad-impresion-3d' }];
+const navCats = [...instrumentLinks, { name: 'Accesorios Personalizados', href: '/servicios/accesorios-personalizados' }, { name: 'Trabajos de Ingeniería', href: '/servicios/trabajos-de-ingenieria-avanzada' }, { name: 'Escaneo e Impresión 3D', href: '/servicios/escaneo-impresion-3d' }];
 
 const announcement = { text: 'Envío a nivel nacional e internacional', icons: true };
 ---

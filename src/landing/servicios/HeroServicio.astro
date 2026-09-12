@@ -1,0 +1,153 @@
+---
+// Hero de las páginas de servicio: azul oscuro a todo el ancho con el texto a
+// la izquierda y una zona clara a la derecha, fundidos con un degradado. Lo
+// que va a la derecha (arcos, fotos) lo pone cada página en el slot "media",
+// apoyado en el borde inferior.
+//
+// Los tamaños salen de --arco (ancho base de lo que va a la derecha), así las
+// fotos crecen con la pantalla sin descuadrarse:
+//   arco / arcoMovil: valor de --arco en desktop y en móvil.
+//   altoMedia: alto de lo más alto del slot, en múltiplos de --arco. Fija el
+//              alto del hero y, en móvil, el de la franja clara inferior.
+//   zonaClara: false deja el fondo todo azul, para cuando el slot cubre el
+//              lado derecho entero con fotos.
+// El slot puede leer --alto-hero (alto del hero en desktop) para dimensionarse.
+interface Props {
+  titulo: string;
+  arco: string;
+  arcoMovil: string;
+  altoMedia: number;
+  zonaClara?: boolean;
+}
+
+const { titulo, arco, arcoMovil, altoMedia, zonaClara = true } = Astro.props;
+---
+
+<div class="bz-sh" style={`--arco-desktop:${arco}; --arco-movil:${arcoMovil}; --alto-media:${altoMedia};`}>
+	{zonaClara && <div class="bz-sh-fondo" aria-hidden="true"></div>}
+	<div class="bz-sh-inner">
+		<div class="bz-sh-texto">
+			<h1>{titulo}</h1>
+			<p><slot /></p>
+		</div>
+		<slot name="media" />
+	</div>
+</div>
+
+<style>
+	.bz-sh {
+		--arco: var(--arco-desktop);
+		--alto-hero: calc(var(--arco) * var(--alto-media) + 70px);
+		position: relative;
+		overflow: hidden;
+		background: #0f1e46;
+	}
+	/* Paso del azul a la zona clara entre el 35% y el 60% del ancho. Colores
+	   opacos calculados en OKLab con curva suave (smoothstep): sin el gris que
+	   deja un azul semitransparente sobre el celeste y sin corte visible al
+	   inicio ni al final de la transición. */
+	.bz-sh-fondo {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			90deg,
+			#0f1e46 35%,
+			#14234b 37.5%,
+			#213157 40%,
+			#36466a 42.5%,
+			#516182 45%,
+			#707f9c 47.5%,
+			#909eb7 50%,
+			#afbbd0 52.5%,
+			#cad4e4 55%,
+			#dce6f3 57.5%,
+			#e3ecf8 60%,
+			#eef3fa 72%,
+			#d5e3f7 100%
+		);
+	}
+	.bz-sh-inner {
+		position: relative;
+		z-index: 2;
+		min-height: var(--alto-hero);
+		padding: 0 72px;
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 40px;
+	}
+	.bz-sh-texto {
+		align-self: center;
+		padding: 44px 0;
+		max-width: 440px;
+	}
+	/* Texto sobre el azul oscuro: mismos tonos que el hero del home. */
+	.bz-sh-texto h1 {
+		font-size: 34px;
+		font-weight: 700;
+		color: white;
+		line-height: 1.18;
+		margin-bottom: 14px;
+	}
+	.bz-sh-texto p {
+		font-size: 15px;
+		color: rgba(255, 255, 255, 0.85);
+		line-height: 1.7;
+	}
+	.bz-sh-texto :global(strong) {
+		color: var(--color-primary-soft);
+	}
+
+	@media (max-width: 1000px) {
+		.bz-sh-inner {
+			padding: 0 32px;
+			gap: 24px;
+		}
+		.bz-sh-texto {
+			max-width: 360px;
+		}
+		.bz-sh-texto h1 {
+			font-size: 30px;
+		}
+	}
+	/* Móvil: texto arriba sobre el azul y el slot abajo sobre la zona clara,
+	   que pasa a ser una franja inferior; la misma transición, en vertical. */
+	@media (max-width: 768px) {
+		.bz-sh {
+			--arco: var(--arco-movil);
+		}
+		.bz-sh-fondo {
+			top: auto;
+			height: calc(var(--arco) * var(--alto-media) + 40px);
+			background: linear-gradient(
+				180deg,
+				#0f1e46 0%,
+				#14234b 5%,
+				#213157 10%,
+				#36466a 15%,
+				#516182 20%,
+				#707f9c 25%,
+				#909eb7 30%,
+				#afbbd0 35%,
+				#cad4e4 40%,
+				#dce6f3 45%,
+				#e3ecf8 50%,
+				#d5e3f7 100%
+			);
+		}
+		.bz-sh-inner {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 14px;
+			padding: 0 20px;
+			min-height: 0;
+		}
+		.bz-sh-texto {
+			padding: 30px 0 0;
+			max-width: none;
+		}
+		.bz-sh-texto h1 {
+			font-size: 26px;
+		}
+	}
+</style>

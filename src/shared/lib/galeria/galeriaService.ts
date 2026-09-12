@@ -4,7 +4,7 @@ import type { GalleryItem } from '../../types';
 import { mapGalleryItemRowToGalleryItem, type GalleryItemRow } from './galeriaMapper';
 
 // ÚNICA fuente de la galería del proyecto — sirve a las tres galerías del
-// sitio (Accesorios personalizados, Trabajos de ingeniería y Diseño CAD e
+// sitio (Accesorios personalizados, Trabajos de ingeniería avanzada y Escaneo e
 // impresión 3D), distinguidas por `tipo`.
 
 const TIPO_TO_TYPE: Record<GalleryItem['tipo'], GalleryItemRow['type']> = {

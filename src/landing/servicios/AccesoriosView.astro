@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
+import HeroServicio from './HeroServicio.astro';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 import fotoNombreFirma from '@/assets/personalizado-nombre-firma.png';
 import fotoLogoBanda from '@/assets/personalizado-logo-banda.png';
@@ -31,24 +32,17 @@ const proceso = [
 ---
 
 <PublicLayout title="Accesorios personalizados — Barzol">
-	<!-- HERO — fondo claro de la paleta (a diferencia de las otras páginas de
-	     servicios, que usan el azul oscuro) y tres ejemplos sobre arcos. -->
-	<div class="bz-acc-hero">
-		<div class="bz-acc-dots" aria-hidden="true"></div>
-		<div class="bz-acc-inner">
-			<div class="bz-acc-text">
-				<h1>Accesorios personalizados</h1>
-				<p><strong>¡Hazlo único!</strong><br />Personalizamos tu soporte, sordina o accesorio con tu nombre, para que lleves algo exclusivo y hecho especialmente para ti.</p>
-			</div>
-			<div class="bz-acc-arcs">
-				{fotosHero.map((foto, i) => (
-					<div class:list={['bz-acc-arc', { 'is-mid': i === 1 }]}>
-						<Image src={foto.src} alt={foto.alt} widths={[200, 400]} sizes="(max-width: 768px) 28vw, 170px" loading="eager" />
-					</div>
-				))}
-			</div>
+	<!-- HERO — tres ejemplos sobre arcos a la derecha. -->
+	<HeroServicio titulo="Accesorios personalizados" arco="clamp(120px, 13.5vw, 210px)" arcoMovil="min(27vw, 130px)" altoMedia={1.5}>
+		<strong>¡Hazlo único!</strong><br />Personalizamos tu soporte, sordina o accesorio con tu nombre, para que lleves algo exclusivo y hecho especialmente para ti.
+		<div class="bz-acc-arcs" slot="media">
+			{fotosHero.map((foto, i) => (
+				<div class:list={['bz-acc-arc', { 'is-mid': i === 1 }]}>
+					<Image src={foto.src} alt={foto.alt} widths={[200, 400]} sizes="(max-width: 768px) 28vw, 170px" loading="eager" />
+				</div>
+			))}
 		</div>
-	</div>
+	</HeroServicio>
 
 	<!-- GALERÍA -->
 	<div id="servicios" style="background:white; padding:64px 32px 16px;">
@@ -67,150 +61,45 @@ const proceso = [
 </PublicLayout>
 
 <style>
-	/* ---------- Hero con arcos ---------- */
-	.bz-acc-hero {
-		position: relative;
-		overflow: hidden;
-		/* Dos tonos: casi blanco del lado del texto (se lee mejor) que pasa a
-		   celeste detrás de las fotos (las enmarca). Se separa de las páginas de
-		   servicios oscuras sin salirse de la paleta. */
-		background: linear-gradient(90deg, #f8fafd 0%, #eef3fa 42%, #d5e3f7 100%);
-	}
-	/* Textura de puntos solo del lado de las fotos: se desvanece hacia el texto. */
-	.bz-acc-dots {
-		position: absolute;
-		inset: 0;
-		background-size: 18px 18px;
-		-webkit-mask-image: linear-gradient(90deg, transparent 35%, #000 80%);
-		mask-image: linear-gradient(90deg, transparent 35%, #000 80%);
-		pointer-events: none;
-	}
-	.bz-acc-inner {
-		position: relative;
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 32px;
-		min-height: 310px;
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 48px;
-		align-items: end;
-	}
-	.bz-acc-text {
-		align-self: center;
-		padding: 42px 0;
-		max-width: 460px;
-	}
-	.bz-acc-text h1 {
-		font-size: 32px;
-		font-weight: 700;
-		color: var(--color-navy-dark, #0f1e46);
-		line-height: 1.2;
-		margin-bottom: 12px;
-	}
-	.bz-acc-text p {
-		font-size: 15px;
-		color: var(--color-text-body);
-		line-height: 1.65;
-	}
-	.bz-acc-text strong {
-		color: var(--color-primary);
-	}
+	/* ---------- Arcos del hero ---------- */
+	/* --arco lo define HeroServicio: los arcos crecen con la pantalla. */
 	/* Los arcos se apoyan en el borde inferior del hero. */
 	.bz-acc-arcs {
 		display: flex;
 		align-items: flex-end;
-		gap: 18px;
+		gap: calc(var(--arco) * 0.1);
+		flex-shrink: 0;
 	}
 	.bz-acc-arc {
-		width: 168px;
-		height: 210px;
-		border-radius: 84px 84px 0 0;
+		width: var(--arco);
+		height: calc(var(--arco) * 1.25);
+		border-radius: 999px 999px 0 0;
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.25));
 		display: flex;
 		align-items: flex-start;
 		justify-content: center;
-		padding-top: 36px;
+		padding-top: calc(var(--arco) * 0.2);
 		box-sizing: border-box;
 	}
 	.bz-acc-arc.is-mid {
-		height: 258px;
-		padding-top: 40px;
+		height: calc(var(--arco) * 1.5);
+		padding-top: calc(var(--arco) * 0.24);
 		background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.16), rgba(var(--color-primary-rgb), 0.04));
 	}
 	.bz-acc-arc :global(img) {
-		width: 142px;
-		height: 132px;
+		width: calc(var(--arco) * 0.88);
+		height: calc(var(--arco) * 0.82);
 		object-fit: contain;
 		filter: drop-shadow(0 14px 14px rgba(15, 30, 70, 0.22));
 	}
 	.bz-acc-arc.is-mid :global(img) {
-		width: 158px;
-		height: 148px;
+		width: calc(var(--arco) * 0.96);
+		height: calc(var(--arco) * 0.9);
 	}
 
-	@media (max-width: 1000px) {
-		.bz-acc-inner {
-			gap: 28px;
-		}
-		.bz-acc-arcs {
-			gap: 12px;
-		}
-		.bz-acc-arc {
-			width: 130px;
-			height: 164px;
-			padding-top: 26px;
-		}
-		.bz-acc-arc.is-mid {
-			height: 200px;
-		}
-		.bz-acc-arc :global(img),
-		.bz-acc-arc.is-mid :global(img) {
-			width: 110px;
-			height: 102px;
-		}
-	}
-	/* Móvil: el texto arriba y los arcos debajo, centrados. */
 	@media (max-width: 768px) {
-		/* El degradado acompaña la disposición: claro arriba (texto) y
-		   celeste abajo (fotos). */
-		.bz-acc-hero {
-			background: linear-gradient(180deg, #f8fafd 0%, #eef3fa 45%, #d5e3f7 100%);
-		}
-		.bz-acc-inner {
-			grid-template-columns: 1fr;
-			gap: 8px;
-			padding: 0 20px;
-			min-height: 0;
-		}
-		.bz-acc-text {
-			padding: 28px 0 10px;
-		}
-		.bz-acc-text h1 {
-			font-size: 26px;
-		}
 		.bz-acc-arcs {
 			justify-content: center;
-			gap: 10px;
-		}
-		.bz-acc-arc {
-			width: 30%;
-			max-width: 140px;
-			height: 130px;
-			padding-top: 20px;
-		}
-		.bz-acc-arc.is-mid {
-			height: 156px;
-			padding-top: 24px;
-		}
-		.bz-acc-arc :global(img),
-		.bz-acc-arc.is-mid :global(img) {
-			width: 82%;
-			height: auto;
-		}
-		.bz-acc-dots {
-			-webkit-mask-image: linear-gradient(180deg, transparent 30%, #000 85%);
-			mask-image: linear-gradient(180deg, transparent 30%, #000 85%);
 		}
 	}
 

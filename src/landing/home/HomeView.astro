@@ -5,14 +5,13 @@ import ProductCarousel from '@landing/producto/ProductCarousel.astro';
 import ServicePromoCard from './ServicePromoCard.astro';
 import heroImpresion from '@/assets/hero-impresion-3d.jpg';
 import heroDiseno from '@/assets/hero-diseno-cad.jpg';
-// Fotos de las tarjetas de servicios. PROVISORIAS en Ingeniería y Diseño CAD:
-// usan sordinas personalizadas hasta tener las fotos de esos servicios.
+import heroEscaneo from '@/assets/hero-escaneo-3d.jpg';
+// Fotos de las tarjetas de servicios (sin fondo).
 import fotoServAccesorios from '@/assets/personalizado-nombre-firma.png';
-import fotoServIngenieria from '@/assets/personalizado-logo-banda.png';
-import fotoServDiseno from '@/assets/personalizado-nombre-diseno.png';
+import fotoServIngenieria from '@/assets/servicio-ingenieria-avanzada.png';
+import fotoServEscaneo from '@/assets/servicio-escaneo-impresion-3d.png';
 import { getHomeItems } from '@shared/lib/home/homeService';
 import { getProductosByIds } from '@shared/lib/productos/productoService';
-import { getCategorias } from '@shared/lib/categorias/categoriaService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 // Adaptador: las secciones de productos del home (administradas en
@@ -26,24 +25,16 @@ const visibleSections = homeItemsDb.filter((it) => it.tipo === 'seccion' && it.v
 // Solo se piden los productos que las secciones visibles realmente
 // referencian — no toda la tabla product (a diferencia de getProductos()).
 const neededProductIds = [...new Set(visibleSections.flatMap((it) => it.productoIds))];
-const [productosDb, categoriasDb] = await Promise.all([getProductosByIds(neededProductIds), getCategorias()]);
+const productosDb = await getProductosByIds(neededProductIds);
 
 const productById = new Map(productosDb.map((p) => [p.id, p]));
-const categoryById = new Map(categoriasDb.map((c) => [c.id, c]));
 
 const sections = visibleSections
   .sort((a, b) => a.orden - b.orden)
   .map((it) => {
     const productos = it.productoIds.map((pid) => productById.get(pid)).filter((p): p is NonNullable<typeof p> => !!p);
-    // "Ver todo" solo tiene sentido si TODOS los productos de la sección son
-    // del mismo instrumento (categoría) — si la sección mezcla instrumentos
-    // (ej. "Soportes para celular" con productos de Trompeta, Clarinete...)
-    // no hay una única página de categoría a la que enlazar.
-    const categoriaIds = new Set(productos.map((p) => p.categoriaId));
-    const singleCategoria = categoriaIds.size === 1 ? categoryById.get([...categoriaIds][0] ?? '') : undefined;
     return {
       title: it.titulo ?? '',
-      viewAllHref: singleCategoria ? `/catalogo/${singleCategoria.slug}` : undefined,
       products: productos.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] })),
     };
   })
@@ -56,6 +47,7 @@ const sections = visibleSections
 const heroSlides = [
   { src: heroImpresion, alt: 'Ingeniero de Barzol supervisando la impresión 3D de una sordina', posicion: '78% center' },
   { src: heroDiseno, alt: 'Ingeniero de Barzol diseñando en CAD un soporte para celular', posicion: '72% center' },
+  { src: heroEscaneo, alt: 'Ingeniero de Barzol escaneando en 3D una pieza metálica', posicion: '75% center' },
 ];
 ---
 
@@ -92,7 +84,7 @@ const heroSlides = [
 		<div class="bz-hero-text" style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:20px 72px 0; z-index:10; max-width:720px;">
 			<div style="font-size:10px; font-weight:700; letter-spacing:0.16em; color:rgba(255,255,255,0.75); text-transform:uppercase; margin-bottom:14px; animation:fadeSlide 0.6s ease both; animation-delay:0.1s;">Barzol, Perú</div>
 			<h1 class="bz-hero-title" style="font-size:44px; font-weight:700; color:white; line-height:1.12; margin-bottom:16px; animation:fadeSlide 0.7s ease both; animation-delay:0.3s;">Accesorios exclusivos,<br /><span style="color:var(--color-primary-soft);">diseñados para tu instrumento musical</span></h1>
-			<p class="bz-hero-desc" style="font-size:15px; color:rgba(255,255,255,0.82); margin-bottom:24px; line-height:1.7; max-width:440px; animation:fadeSlide 0.7s ease both; animation-delay:0.55s;">Diseñados con ingeniería y fabricados con impresión 3D, para músicos de bandas y orquestas.</p>
+			<p class="bz-hero-desc" style="font-size:15px; color:rgba(255,255,255,0.82); margin-bottom:24px; line-height:1.7; max-width:440px; animation:fadeSlide 0.7s ease both; animation-delay:0.55s;">Diseñados con ingeniería y fabricados con tecnología 3D, para músicos de bandas y orquestas.</p>
 			<p class="bz-hero-badges" style="font-size:12.5px; font-weight:500; color:rgba(255,255,255,0.75); margin-bottom:32px; animation:fadeSlide 0.7s ease both; animation-delay:0.7s;">· Diseño propio &nbsp; · Ingeniería aplicada &nbsp; · Envíos nacionales e internacionales</p>
 			<div class="bz-hero-cta" style="display:flex; gap:12px; align-items:center; animation:fadeSlide 0.7s ease both; animation-delay:0.8s;">
 				<a href="/busqueda" class="hero-cta-primary" style="display:inline-flex; align-items:center; gap:8px; padding:13px 26px; background:var(--color-primary); color:white; font-size:14px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 6px 20px rgba(var(--color-primary-rgb),0.4);">
@@ -115,7 +107,7 @@ const heroSlides = [
 	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px;">
 		{sections.map((section, i) => (
 			<div style={i === 0 ? 'margin-top:48px;' : undefined}>
-				<ProductCarousel title={section.title} viewAllHref={section.viewAllHref} products={section.products} />
+				<ProductCarousel title={section.title} products={section.products} />
 			</div>
 		))}
 	</div>
@@ -136,20 +128,25 @@ const heroSlides = [
 				imagen={fotoServAccesorios}
 			/>
 			<ServicePromoCard
-				title="Trabajos de<br />ingeniería"
-				href="/servicios/trabajos-de-ingenieria"
+				title="Trabajos de<br />ingeniería <br class='bz-sc-br-movil' />avanzada"
+				href="/servicios/trabajos-de-ingenieria-avanzada"
 				fondo="linear-gradient(135deg, #f5f7fa 0%, #e1e6ee 100%)"
 				arco="#cfd7e3"
 				acento="#334155"
 				imagen={fotoServIngenieria}
+				escala={1.1}
 			/>
 			<ServicePromoCard
-				title="Diseño CAD e<br />impresión 3D"
-				href="/servicios/diseno-cad-impresion-3d"
+				title="Escaneo e<br />impresión 3D"
+				href="/servicios/escaneo-impresion-3d"
 				fondo="linear-gradient(135deg, #eaf4ff 0%, #c7e0fd 100%)"
 				arco="#a9cdf8"
 				acento="#1d5fa8"
-				imagen={fotoServDiseno}
+				imagen={fotoServEscaneo}
+				escala={1.32}
+				giro={0}
+				origen="top right"
+				correrX={14}
 			/>
 		</div>
 	</div>

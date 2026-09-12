@@ -13,11 +13,11 @@ const photos: GalleryPhoto[] = galeriaDb
 	.map((g) => ({ id: g.id, caption: g.titulo, image: g.imagenUrl }));
 ---
 
-<AdminLayout title="Admin · Galería: Diseño CAD e impresión 3D — Barzol" active="galeria-diseno">
+<AdminLayout title="Admin · Galería: Escaneo e impresión 3D — Barzol" active="galeria-diseno">
 	<GalleryAdmin
 		client:load
-		title="Galería: Diseño CAD e impresión 3D"
-		saveConfirmMessage="Se actualizará la galería de diseño CAD e impresión 3D."
+		title="Galería: Escaneo e impresión 3D"
+		saveConfirmMessage="Se actualizará la galería de escaneo e impresión 3D."
 		initialPhotos={photos}
 		tipo="diseno"
 	/>
