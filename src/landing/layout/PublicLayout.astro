@@ -7,9 +7,22 @@ import WhatsAppButton from '@landing/shared/WhatsAppButton.astro';
 
 interface Props {
   title?: string;
+  /** Resumen de la página para buscadores y para la tarjeta de un link compartido. */
+  descripcion?: string;
+  /** URL absoluta de la imagen de esa tarjeta (WhatsApp, Facebook...). Sin ella, sale solo texto. */
+  imagen?: string;
 }
 
-const { title = 'Barzol' } = Astro.props;
+const {
+  title = 'Barzol',
+  descripcion = 'Accesorios exclusivos para tu instrumento musical, diseñados y fabricados con tecnología 3D.',
+  imagen,
+} = Astro.props;
+
+// Open Graph: lo que leen WhatsApp, Facebook, etc. al pegar un link del sitio
+// para armar la vista previa. La URL va sin query string para que todas las
+// variantes de una página compartan la misma tarjeta.
+const urlCanonica = new URL(Astro.url.pathname, Astro.url.origin).href;
 ---
 
 <html lang="es">
@@ -25,6 +38,15 @@ const { title = 'Barzol' } = Astro.props;
 			href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
 		/>
 		<title>{title}</title>
+		<meta name="description" content={descripcion} />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Barzol" />
+		<meta property="og:locale" content="es_PE" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={descripcion} />
+		<meta property="og:url" content={urlCanonica} />
+		{imagen && <meta property="og:image" content={imagen} />}
+		<meta name="twitter:card" content={imagen ? 'summary_large_image' : 'summary'} />
 		<ClientRouter />
 	</head>
 	<body>

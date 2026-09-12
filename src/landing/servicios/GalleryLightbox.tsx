@@ -26,6 +26,16 @@ function PhotoIcon({ size = 40 }: { size?: number }) {
   );
 }
 
+// Columnas de la rejilla según el ancho. Van acá y no en las vistas: el
+// <style> de una vista de Astro es scoped y no alcanza los nodos que pinta
+// esta isla de React, así que las reglas responsive de las vistas nunca se
+// aplicaban y en móvil quedaban tres columnas diminutas.
+const GALERIA_CSS = `
+.bz-serv-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 860px) { .bz-serv-gallery { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (max-width: 480px) { .bz-serv-gallery { grid-template-columns: 1fr; } }
+`;
+
 const lightboxNavBtnStyle: React.CSSProperties = {
   width: 48,
   height: 48,
@@ -67,7 +77,8 @@ export default function GalleryLightbox({ items }: Props) {
 
   return (
     <>
-      <div className="bz-serv-gallery" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <style>{GALERIA_CSS}</style>
+      <div className="bz-serv-gallery">
         {items.map((item, i) => {
           const hovered = hoverIndex === i;
           return (

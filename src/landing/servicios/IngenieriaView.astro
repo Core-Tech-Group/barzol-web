@@ -28,13 +28,13 @@ const proceso = [
 	<HeroServicio titulo="Trabajos de ingeniería avanzada" arco="clamp(120px, 13.5vw, 210px)" arcoMovil="min(27vw, 130px)" altoMedia={1.5} zonaClara={false}>
 		Convertimos piezas reales en modelos digitales de precisión mediante escaneo 3D, ingeniería inversa y diseño CAD/CAE, para fabricar repuestos y piezas a medida.
 		<div class="bz-ing-foto" slot="media">
-			<Image src={fotoHero} alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" widths={[768, 1280]} sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
 			<div class="bz-ing-fundido" aria-hidden="true"></div>
+			<Image src={fotoHero} alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" widths={[768, 1280]} sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
 		</div>
 	</HeroServicio>
 
 	<!-- GALERÍA -->
-	<div id="servicios" style="background:white; padding:64px 32px;">
+	<div id="servicios" class="bz-section-wrap" style="background:white; padding:64px 32px;">
 		<div style="max-width:1200px; margin:0 auto;">
 			<div style="text-align:center; margin-bottom:48px;">
 				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Galería</div>
@@ -48,31 +48,40 @@ const proceso = [
 
 <style>
 	/* ---------- Foto del hero ---------- */
-	/* La zona de la foto va del texto (72px + 440px + 40px de separación) al
-	   borde derecho. La foto se apoya a la derecha, a toda la altura del hero
-	   (--alto-hero, lo da HeroServicio) y un 18% más grande que su tamaño
-	   completo (1672x941 = 1.777): se recorta un poco por abajo (la regla) y
-	   queda más cerca del texto. Lo que sobra a su izquierda es un degradado
+	/* El degradado empieza al 35% del ancho, igual que el de Accesorios, o
+	   donde termina el texto (72px + 440px) si eso queda más a la derecha: nunca
+	   lo tapa. La foto se apoya a la
+	   derecha, a toda la altura del hero (--alto-hero, lo da HeroServicio) y un
+	   18% más grande que su tamaño completo (1672x941 = 1.777): se recorta un
+	   poco por abajo (la regla). Lo que queda a su izquierda es un degradado
 	   del azul al blanco del fondo de la foto, que termina justo donde ella
 	   empieza. */
 	.bz-ing-foto {
-		/* Siempre deja al menos 90px de degradado: en pantallas angostas la foto
-		   cede ancho (recorta los costados) antes que pegarse al azul. */
-		--foto-ancho: min(calc(var(--alto-hero) * 1.777 * 1.18), calc(100% - 90px));
+		/* Siempre deja al menos 130px de degradado: en pantallas angostas la
+		   foto cede ancho (recorta los costados) antes que pegarse al azul. */
+		--foto-ancho: min(calc(var(--alto-hero) * 1.777 * 1.18), calc(100% - 130px));
 		--puente: calc(100% - var(--foto-ancho));
 		position: absolute;
 		top: 0;
 		right: 0;
 		bottom: 0;
-		width: calc(100% - 552px);
+		width: min(65%, calc(100% - 512px));
 		overflow: hidden;
+		/* Azul → blanco de la foto calculado en OKLab con curva suave, y el medio
+		   con un 35% menos de color: pasa por grises pizarra, como el degradado
+		   de Accesorios, en vez de por celestes. */
 		background: linear-gradient(
 			90deg,
 			#0f1e46 0,
-			#213157 calc(var(--puente) * 0.18),
-			#516182 calc(var(--puente) * 0.36),
-			#909eb7 calc(var(--puente) * 0.55),
-			#cad4e4 calc(var(--puente) * 0.73),
+			#15244a calc(var(--puente) * 0.1),
+			#253354 calc(var(--puente) * 0.2),
+			#3e4a65 calc(var(--puente) * 0.3),
+			#5d677b calc(var(--puente) * 0.4),
+			#808797 calc(var(--puente) * 0.5),
+			#a3a9b5 calc(var(--puente) * 0.6),
+			#c5c9d2 calc(var(--puente) * 0.7),
+			#e2e4e9 calc(var(--puente) * 0.8),
+			#f6f7f9 calc(var(--puente) * 0.9),
 			#fefefe var(--puente)
 		);
 	}
@@ -84,17 +93,19 @@ const proceso = [
 		height: 100%;
 		object-fit: cover;
 		object-position: 60% top;
-		/* El borde izquierdo se funde con el degradado: sin línea de corte. */
-		-webkit-mask-image: linear-gradient(90deg, transparent 0, #000 70px);
-		mask-image: linear-gradient(90deg, transparent 0, #000 70px);
+		/* El borde izquierdo (130px) se funde con el degradado: sin línea de
+		   corte y con una transición tan larga como la de Accesorios. */
+		-webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, 0.55) 60px, #000 130px);
+		mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, 0.55) 60px, #000 130px);
 	}
 	.bz-ing-fundido {
 		display: none;
 	}
 
+	/* Con el texto más angosto (32px + 360px), el degradado puede empezar antes. */
 	@media (max-width: 1000px) {
 		.bz-ing-foto {
-			width: calc(100% - 416px);
+			width: min(65%, calc(100% - 392px));
 		}
 	}
 	/* Móvil: debajo del texto, de borde a borde y entera. El azul baja solo
@@ -118,7 +129,7 @@ const proceso = [
 			display: block;
 			position: absolute;
 			inset: 0;
-			background: linear-gradient(180deg, #0f1e46 0, rgba(15, 30, 70, 0) 16px);
+			background: linear-gradient(180deg, #0f1e46 0, rgba(15, 30, 70, 0) 5px);
 		}
 	}
 
@@ -130,9 +141,6 @@ const proceso = [
 	}
 
 	@media (max-width: 860px) {
-		.bz-serv-gallery {
-			grid-template-columns: 1fr 1fr !important;
-		}
 		.bz-serv-proceso {
 			grid-template-columns: 1fr 1fr !important;
 			gap: 28px !important;
@@ -154,9 +162,6 @@ const proceso = [
 		}
 	}
 	@media (max-width: 480px) {
-		.bz-serv-gallery {
-			grid-template-columns: 1fr !important;
-		}
 		.bz-serv-proceso {
 			grid-template-columns: 1fr !important;
 		}

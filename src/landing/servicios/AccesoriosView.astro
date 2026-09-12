@@ -38,14 +38,14 @@ const proceso = [
 		<div class="bz-acc-arcs" slot="media">
 			{fotosHero.map((foto, i) => (
 				<div class:list={['bz-acc-arc', { 'is-mid': i === 1 }]}>
-					<Image src={foto.src} alt={foto.alt} widths={[200, 400]} sizes="(max-width: 768px) 28vw, 170px" loading="eager" />
+					<Image src={foto.src} alt={foto.alt} widths={[200, 400]} sizes="(max-width: 768px) 30vw, 230px" loading="eager" />
 				</div>
 			))}
 		</div>
 	</HeroServicio>
 
 	<!-- GALERÍA -->
-	<div id="servicios" style="background:white; padding:64px 32px 16px;">
+	<div id="servicios" class="bz-section-wrap" style="background:white; padding:64px 32px 16px;">
 		<div style="max-width:1200px; margin:0 auto;">
 			<div style="text-align:center; margin-bottom:48px;">
 				<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-primary); margin-bottom:12px;">Galería</div>
@@ -70,8 +70,11 @@ const proceso = [
 		gap: calc(var(--arco) * 0.1);
 		flex-shrink: 0;
 	}
+	/* Arcos un 15% más anchos que --arco: las sordinas crecen sin cambiar el
+	   alto del hero, que sale de --arco y es el mismo en las tres páginas de
+	   servicio. */
 	.bz-acc-arc {
-		width: var(--arco);
+		width: calc(var(--arco) * 1.15);
 		height: calc(var(--arco) * 1.25);
 		border-radius: 999px 999px 0 0;
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.25));
@@ -87,19 +90,24 @@ const proceso = [
 		background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.16), rgba(var(--color-primary-rgb), 0.04));
 	}
 	.bz-acc-arc :global(img) {
-		width: calc(var(--arco) * 0.88);
-		height: calc(var(--arco) * 0.82);
+		width: calc(var(--arco) * 1.02);
+		height: calc(var(--arco) * 0.96);
 		object-fit: contain;
 		filter: drop-shadow(0 14px 14px rgba(15, 30, 70, 0.22));
 	}
 	.bz-acc-arc.is-mid :global(img) {
-		width: calc(var(--arco) * 0.96);
-		height: calc(var(--arco) * 0.9);
+		width: calc(var(--arco) * 1.1);
+		height: calc(var(--arco) * 1.04);
 	}
 
+	/* Móvil: los tres arcos a su ancho base, para que entren en la pantalla;
+	   las sordinas conservan el tamaño nuevo. */
 	@media (max-width: 768px) {
 		.bz-acc-arcs {
 			justify-content: center;
+		}
+		.bz-acc-arc {
+			width: var(--arco);
 		}
 	}
 
@@ -111,9 +119,6 @@ const proceso = [
 	}
 
 	@media (max-width: 860px) {
-		.bz-serv-gallery {
-			grid-template-columns: 1fr 1fr !important;
-		}
 		.bz-serv-proceso {
 			grid-template-columns: 1fr 1fr !important;
 			gap: 28px !important;
@@ -135,9 +140,6 @@ const proceso = [
 		}
 	}
 	@media (max-width: 480px) {
-		.bz-serv-gallery {
-			grid-template-columns: 1fr !important;
-		}
 		.bz-serv-proceso {
 			grid-template-columns: 1fr !important;
 		}
