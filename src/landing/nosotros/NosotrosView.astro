@@ -9,17 +9,16 @@ const confianza = [
 ---
 
 <PublicLayout title="Nosotros — Barzol">
-	<!-- HERO NOSOTROS -->
-	<div style="position:relative; padding:100px 32px 56px; text-align:center; overflow:hidden; background:var(--gradient-hero-dark);">
-		<img src="/nosotros-watermark.svg" alt="" aria-hidden="true" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); height:300px; width:auto; pointer-events:none; user-select:none;" />
+	<!-- HERO NOSOTROS — azul pizarra con un halo azul suave detrás de la marca:
+	     la marca (SVG blanco translúcido) gana contraste sin volverse protagonista. -->
+	<div class="bz-nos-hero">
+		<div class="bz-nos-halo" aria-hidden="true"></div>
+		<img src="/nosotros-watermark.svg" alt="" aria-hidden="true" class="bz-nos-marca" />
 		<div style="position:relative; max-width:680px; margin:0 auto;">
-			<div style="font-size:14px; font-weight:700; letter-spacing:0.22em; color:rgba(255,255,255,0.9); text-transform:uppercase; margin-bottom:6px;">Somos</div>
-			<h1 style="font-size:76px; font-weight:800; color:white; line-height:1; letter-spacing:-0.01em; margin-bottom:16px;">BARZOL</h1>
-			<p style="font-size:18px; font-weight:500; color:rgba(255,255,255,0.92); margin-bottom:24px;">Transformamos tus ideas con tecnología 3D</p>
-			<div style="display:inline-flex; align-items:center; gap:7px; padding:6px 14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); border-radius:99px;">
-				{/*<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="white" stroke-width="1.8"></rect><path d="M8 11V7a4 4 0 018 0v4" stroke="white" stroke-width="1.8" stroke-linecap="round"></path></svg>*/}
-				<span style="font-size:11.5px; font-weight:600; letter-spacing:0.02em; color:white;">Diseñamos con ingeniería aplicada y fabricamos con tecnología 3D <br> para crear soluciones reales</span>
-			</div>
+			<div class="bz-nos-somos">Somos</div>
+			<h1 class="bz-nos-titulo">BARZOL</h1>
+			<p class="bz-nos-lema">Transformamos tus ideas con tecnología 3D</p>
+			<p class="bz-nos-desc">Diseñamos con ingeniería aplicada y fabricamos con tecnología 3D para crear soluciones reales.</p>
 		</div>
 	</div>
 
@@ -29,9 +28,9 @@ const confianza = [
 			{/* Las columnas salen de la lista: con un número fijo, quitar un
 			    recuadro dejaba un hueco vacío al final. El ancho máximo escala
 			    igual, así cada recuadro conserva su tamaño (~170px). */}
-			<div style={`display:grid; grid-template-columns:repeat(${confianza.length},1fr); gap:14px; max-width:${confianza.length * 184}px; margin:0 auto;`}>
+			<div class="bz-confianza-grid" style={`display:grid; grid-template-columns:repeat(${confianza.length},1fr); gap:14px; max-width:${confianza.length * 184}px; margin:0 auto;`}>
 				{confianza.map((item) => (
-					<div style="background:white; border:1px solid var(--color-border-soft); border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+					<div class="bz-confianza-item" style="background:white; border:1px solid var(--color-border-soft); border-radius:14px; padding:22px 14px; display:flex; flex-direction:column; align-items:center; gap:12px;">
 						<div style="width:44px; height:44px; background:var(--color-primary-light); border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
 							{item.key === 'star' && (
 								<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="var(--color-primary)" stroke-width="1.7" stroke-linejoin="round"></path></svg>
@@ -111,6 +110,110 @@ const confianza = [
 	.nosotros-cta-secondary:hover {
 		border-color: var(--color-primary);
 		color: var(--color-primary);
+	}
+
+	.bz-nos-hero {
+		position: relative;
+		padding: 100px 32px 72px;
+		text-align: center;
+		overflow: hidden;
+		/* Punto medio (OKLab) entre el pizarra original del sitio
+		   (--gradient-hero-dark: #0b1928 → #2b3a57) y un azul más saturado
+		   (#0e1b3a → #1b2d55): conserva el subtono gris, un poco más oscuro. */
+		background: linear-gradient(135deg, #0c1a31, #233456);
+	}
+	.bz-nos-halo {
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.24) 0%, rgba(96, 165, 250, 0.09) 28%, rgba(96, 165, 250, 0) 55%);
+		pointer-events: none;
+	}
+	.bz-nos-somos {
+		font-size: 14px;
+		font-weight: 700;
+		letter-spacing: 0.22em;
+		color: rgba(255, 255, 255, 0.9);
+		text-transform: uppercase;
+		margin-bottom: 6px;
+	}
+	.bz-nos-titulo {
+		font-size: 76px;
+		font-weight: 800;
+		color: white;
+		line-height: 1;
+		letter-spacing: -0.01em;
+		margin-bottom: 16px;
+	}
+	.bz-nos-lema {
+		font-size: 18px;
+		font-weight: 500;
+		color: rgba(255, 255, 255, 0.92);
+		margin-bottom: 10px;
+	}
+	.bz-nos-desc {
+		font-size: 14.5px;
+		color: rgba(255, 255, 255, 0.8);
+		line-height: 1.65;
+		max-width: 460px;
+		margin: 0 auto;
+	}
+	.bz-nos-marca {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		height: 330px;
+		width: auto;
+		pointer-events: none;
+		user-select: none;
+	}
+
+	/* Móvil: las tres tarjetas de confianza no entran en una fila (el texto
+	   se salía de la pantalla): van una debajo de otra, con el ícono a la
+	   izquierda. */
+	@media (max-width: 560px) {
+		/* Textos del hero a escala de celular: el título ya no ocupa todo el
+		   ancho y el lema entra en una línea. */
+		.bz-nos-hero {
+			padding: 56px 20px 48px;
+		}
+		.bz-nos-marca {
+			height: 260px;
+		}
+		.bz-nos-somos {
+			font-size: 12px;
+			letter-spacing: 0.2em;
+		}
+		.bz-nos-titulo {
+			font-size: 52px;
+			margin-bottom: 12px;
+		}
+		/* Escala con el ancho para entrar en una línea hasta ~340px; si no
+		   entra, balance reparte las palabras en vez de dejar "3D" sola. */
+		.bz-nos-lema {
+			font-size: clamp(13.5px, 3.85vw, 15px);
+			margin-bottom: 8px;
+			text-wrap: balance;
+		}
+		.bz-nos-desc {
+			font-size: 13.5px;
+			line-height: 1.6;
+			max-width: 320px;
+			text-wrap: balance;
+		}
+		.bz-confianza-grid {
+			grid-template-columns: 1fr !important;
+			max-width: 340px !important;
+			gap: 10px !important;
+		}
+		.bz-confianza-item {
+			flex-direction: row !important;
+			padding: 14px 16px !important;
+			text-align: left;
+		}
+		.bz-confianza-item span {
+			text-align: left !important;
+		}
 	}
 
 	/* En pantalla angosta, misión y visión una debajo de la otra. */

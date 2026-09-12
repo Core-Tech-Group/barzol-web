@@ -106,8 +106,10 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 				<div style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--color-text-faint); text-transform:uppercase; margin-bottom:8px;">BARZOL</div>
 				<h1 style="font-size:24px; font-weight:700; color:var(--color-text); line-height:1.25; margin-bottom:12px;">{nombre}</h1>
 
-				<div style="display:flex; align-items:center; gap:12px; margin-bottom:22px; padding-bottom:22px; border-bottom:1px solid var(--color-surface-muted);">
-					<span style="font-size:30px; font-weight:700; color:var(--color-primary);">S/ {precio.toFixed(2)}</span>
+				{/* Alineados a la línea base: el precio tachado y el descuento se apoyan
+				    en la misma línea que el precio grande, no centrados contra su alto. */}
+				<div style="display:flex; align-items:baseline; flex-wrap:wrap; column-gap:12px; row-gap:6px; margin-bottom:22px; padding-bottom:22px; border-bottom:1px solid var(--color-surface-muted);">
+					<span style="font-size:30px; font-weight:700; line-height:1.1; color:var(--color-primary);">S/ {precio.toFixed(2)}</span>
 					{precioOriginal && (
 						<>
 							<span style="font-size:16px; color:var(--color-text-faint); text-decoration:line-through;">S/ {precioOriginal.toFixed(2)}</span>
@@ -126,13 +128,13 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 				</ul>
 
 				
-				<div style="display:flex; flex-direction:row; gap:8px; margin-bottom:24px; flex-wrap:wrap;">
-					<a href={`https://wa.me/51950759032?text=${encodeURIComponent(mensajeWhatsapp)}`} target="_blank" rel="noopener" class="product-cta-primary" style="display:inline-flex; align-items:center; gap:7px; padding:11px 15px; background:var(--color-whatsapp); color:white; font-size:12.5px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 3px 12px rgba(var(--color-whatsapp-rgb),0.3); white-space:nowrap;">
+				<div class="bz-product-ctas">
+					<a href={`https://wa.me/51950759032?text=${encodeURIComponent(mensajeWhatsapp)}`} target="_blank" rel="noopener" class="product-cta-primary" style="display:inline-flex; align-items:center; gap:7px; padding:11px 10px; background:var(--color-whatsapp); color:white; font-size:12.5px; font-weight:600; text-decoration:none; border-radius:9px; box-shadow:0 3px 12px rgba(var(--color-whatsapp-rgb),0.3); white-space:nowrap;">
 						<WhatsAppIcon size={16} fill="white" />
 						Consultar por WhatsApp
 					</a>
 					{breadcrumbMiddle && (
-						<a href={breadcrumbMiddle.href} class="product-cta-secondary" style="display:inline-flex; align-items:center; padding:11px 13px; background:white; border:1px solid var(--color-border); border-radius:9px; font-size:12.5px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap;">Ver más de {breadcrumbMiddle.label}</a>
+						<a href={breadcrumbMiddle.href} class="product-cta-secondary" style="display:inline-flex; align-items:center; padding:11px 10px; background:white; border:1px solid var(--color-border); border-radius:9px; font-size:12.5px; font-weight:500; color:var(--color-text-soft); text-decoration:none; white-space:nowrap;">Ver más de {breadcrumbMiddle.label}</a>
 					)}
 				</div>
 				<div style="background:var(--color-surface-soft); margin-bottom:24px; border:1px solid var(--color-border-soft); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:10px;">
@@ -228,6 +230,20 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 		}
 	}
 
+	/* Botones de acción en columnas iguales: comparten la fila cuando cada uno
+	   tiene al menos 200px (lo que ocupa "Consultar por WhatsApp") y, si no,
+	   pasan a uno por fila a todo el ancho. Nunca quedan de anchos distintos
+	   según su texto. */
+	.bz-product-ctas {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 8px;
+		margin-bottom: 24px;
+	}
+	.bz-product-ctas > a {
+		justify-content: center;
+	}
+
 	.product-cta-primary:hover {
 		background: var(--color-whatsapp-dark);
 	}
@@ -242,6 +258,15 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 			gap: 24px !important;
 			padding: 18px !important;
 		}
+		/* Una columna de grilla no se achica por debajo de su contenido más
+		   ancho: con 5 o más miniaturas, su fila (64px c/u) era más ancha que
+		   la tarjeta y empujaba todo el detalle fuera de la pantalla. Con
+		   min-width: 0 la columna mide lo que mide la tarjeta y la fila de
+		   miniaturas se desplaza de lado (overflow-x en .bz-thumbs). */
+		.bz-product-grid > *,
+		.bz-gallery {
+			min-width: 0;
+		}
 		.bz-gallery {
 			flex-direction: column-reverse !important;
 		}
@@ -253,6 +278,10 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 		.bz-thumbs {
 			flex-direction: row !important;
 			overflow-x: auto !important;
+			/* La galería es una columna con align-items: flex-start: sin esto la
+			   fila mide lo que suman las miniaturas, no el ancho de la tarjeta. */
+			width: 100%;
+			min-width: 0;
 		}
 		.bz-thumb {
 			width: 64px !important;
