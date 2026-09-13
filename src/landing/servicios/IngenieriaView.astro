@@ -1,10 +1,9 @@
 ---
-import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
 import HeroServicio from './HeroServicio.astro';
-import fotoHero from '@/assets/ingenieria-hero.jpg';
+import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
 const galeriaDb = await getGaleria('trabajos');
@@ -29,7 +28,7 @@ const proceso = [
 		Convertimos piezas reales en modelos digitales de precisión mediante escaneo 3D, ingeniería inversa y diseño CAD/CAE, para fabricar repuestos y piezas a medida.
 		<div class="bz-ing-foto" slot="media">
 			<div class="bz-ing-fundido" aria-hidden="true"></div>
-			<Image src={fotoHero} alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" widths={[768, 1280]} sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
+			<ImagenOptimizada nombre="ingenieria-hero" alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
 		</div>
 	</HeroServicio>
 

@@ -1,15 +1,8 @@
 ---
-import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCarousel from '@landing/producto/ProductCarousel.astro';
+import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import ServicePromoCard from './ServicePromoCard.astro';
-import heroImpresion from '@/assets/hero-impresion-3d.jpg';
-import heroDiseno from '@/assets/hero-diseno-cad.jpg';
-import heroEscaneo from '@/assets/hero-escaneo-3d.jpg';
-// Fotos de las tarjetas de servicios (sin fondo).
-import fotoServAccesorios from '@/assets/personalizado-nombre-firma.png';
-import fotoServIngenieria from '@/assets/servicio-ingenieria-avanzada.png';
-import fotoServEscaneo from '@/assets/servicio-escaneo-impresion-3d.png';
 import { getHomeItems } from '@shared/lib/home/homeService';
 import { getProductosByIds } from '@shared/lib/productos/productoService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
@@ -41,13 +34,14 @@ const sections = visibleSections
   .filter((s) => s.products.length > 0);
 
 // Fotos del slider del hero, en orden. Viven en el repo (no en R2): son parte
-// del diseño y así Astro las optimiza. `posicion` es el object-position de
+// del diseño; `nombre` es el de scripts/imagenes/imagenes.config.mjs, que
+// genera sus versiones WebP. `posicion` es el object-position de
 // cada una — el sujeto (producto o persona) está a la derecha en las tres, y
 // es lo que tiene que sobrevivir al recorte de `cover`.
 const heroSlides = [
-  { src: heroImpresion, alt: 'Ingeniero de Barzol supervisando la impresión 3D de una sordina', posicion: '78% center' },
-  { src: heroDiseno, alt: 'Ingeniero de Barzol diseñando en CAD un soporte para celular', posicion: '72% center' },
-  { src: heroEscaneo, alt: 'Ingeniero de Barzol escaneando en 3D una pieza metálica', posicion: '75% center' },
+  { nombre: 'hero-impresion-3d', alt: 'Ingeniero de Barzol supervisando la impresión 3D de una sordina', posicion: '78% center' },
+  { nombre: 'hero-diseno-cad', alt: 'Ingeniero de Barzol diseñando en CAD un soporte para celular', posicion: '72% center' },
+  { nombre: 'hero-escaneo-3d', alt: 'Ingeniero de Barzol escaneando en 3D una pieza metálica', posicion: '75% center' },
 ];
 ---
 
@@ -59,17 +53,17 @@ const heroSlides = [
 		    tiene fondo claro u oscuro — el texto se lee igual en todos los
 		    slides, y el slider solo cambia la foto.
 
-		    `widths`/`sizes` hacen que Astro emita versiones WebP por ancho. La
-		    primera es el LCP de la home: `fetchpriority=high`. Las demás
+		    Las versiones WebP por ancho las genera `npm run imagenes`
+		    (ImagenOptimizada). La primera es el LCP de la home:
+		    `fetchpriority=high`. Las demás
 		    también son `eager` —con `lazy` el navegador las posterga porque
 		    están invisibles (opacity 0) y el cruce mostraba el azul vacío—,
 		    pero con prioridad baja para no competir con la primera. */}
 		<div class="bz-hero-media">
 			{heroSlides.map((slide, i) => (
-				<Image
-					src={slide.src}
+				<ImagenOptimizada
+					nombre={slide.nombre}
 					alt={slide.alt}
-					widths={[768, 1280, 1920]}
 					sizes="(max-width: 768px) 100vw, 62vw"
 					loading="eager"
 					fetchpriority={i === 0 ? 'high' : 'low'}
@@ -125,7 +119,7 @@ const heroSlides = [
 				fondo="linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-border) 100%)"
 				arco="#c3d7f7"
 				acento="var(--color-primary)"
-				imagen={fotoServAccesorios}
+				imagen="personalizado-nombre-firma"
 			/>
 			<ServicePromoCard
 				title="Trabajos de<br />ingeniería <br class='bz-sc-br-movil' />avanzada"
@@ -133,7 +127,7 @@ const heroSlides = [
 				fondo="linear-gradient(135deg, #f5f7fa 0%, #e1e6ee 100%)"
 				arco="#cfd7e3"
 				acento="#334155"
-				imagen={fotoServIngenieria}
+				imagen="servicio-ingenieria-avanzada"
 				escala={1.1}
 			/>
 			<ServicePromoCard
@@ -142,7 +136,7 @@ const heroSlides = [
 				fondo="linear-gradient(135deg, #eaf4ff 0%, #c7e0fd 100%)"
 				arco="#a9cdf8"
 				acento="#1d5fa8"
-				imagen={fotoServEscaneo}
+				imagen="servicio-escaneo-impresion-3d"
 				escala={1.32}
 				giro={0}
 				origen="top right"

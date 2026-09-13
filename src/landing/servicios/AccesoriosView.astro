@@ -1,19 +1,16 @@
 ---
-import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
 import HeroServicio from './HeroServicio.astro';
+import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
-import fotoNombreFirma from '@/assets/personalizado-nombre-firma.png';
-import fotoLogoBanda from '@/assets/personalizado-logo-banda.png';
-import fotoNombreDiseno from '@/assets/personalizado-nombre-diseno.png';
 
 // Las tres sordinas del hero, de izquierda a derecha. La del medio va sobre el
 // arco destacado (más alto y azulado). Viven en el repo: son parte del diseño.
 const fotosHero = [
-  { src: fotoNombreFirma, alt: 'Sordina personalizada con nombre y firma' },
-  { src: fotoLogoBanda, alt: 'Sordina personalizada con el logo de una banda' },
-  { src: fotoNombreDiseno, alt: 'Sordina personalizada con nombre y diseño' },
+  { nombre: 'personalizado-nombre-firma', alt: 'Sordina personalizada con nombre y firma' },
+  { nombre: 'personalizado-logo-banda', alt: 'Sordina personalizada con el logo de una banda' },
+  { nombre: 'personalizado-nombre-diseno', alt: 'Sordina personalizada con nombre y diseño' },
 ];
 
 const galeriaDb = await getGaleria('accesorios');
@@ -38,7 +35,7 @@ const proceso = [
 		<div class="bz-acc-arcs" slot="media">
 			{fotosHero.map((foto, i) => (
 				<div class:list={['bz-acc-arc', { 'is-mid': i === 1 }]}>
-					<Image src={foto.src} alt={foto.alt} widths={[200, 400]} sizes="(max-width: 768px) 30vw, 230px" loading="eager" />
+					<ImagenOptimizada nombre={foto.nombre} alt={foto.alt} sizes="(max-width: 768px) 30vw, 230px" loading="eager" />
 				</div>
 			))}
 		</div>

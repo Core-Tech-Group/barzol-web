@@ -1,6 +1,5 @@
 ---
-import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
+import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 
 // Tarjeta de servicio del home: fondo claro con el tono propio del servicio,
 // un arco de color detrás de la foto y el texto en azul oscuro.
@@ -13,8 +12,9 @@ interface Props {
   arco: string;
   /** Color de la etiqueta "Servicios" y del botón. */
   acento: string;
-  /** Foto sin fondo. Es decorativa: el nombre del servicio ya lo dice el título. */
-  imagen: ImageMetadata;
+  /** Foto sin fondo (nombre en scripts/imagenes/imagenes.config.mjs). Es
+   *  decorativa: el nombre del servicio ya lo dice el título. */
+  imagen: string;
   /** Agranda la foto dentro de su caja, para piezas delgadas que con el
    *  mismo tamaño que las demás se ven chicas. Por defecto 1. */
   escala?: number;
@@ -37,7 +37,7 @@ const { title, href, fondo, arco, acento, imagen, escala = 1, giro = -8, origen 
 	{/* Caja de tamaño fijo: las tres fotos quedan en la misma posición, sin
 	    importar la proporción de cada imagen. */}
 	<div class="bz-sc-foto">
-		<Image src={imagen} alt="" widths={[200, 400]} sizes="190px" />
+		<ImagenOptimizada nombre={imagen} alt="" sizes="190px" />
 	</div>
 	<div class="bz-sc-cuerpo">
 		<div class="bz-sc-etiqueta">Servicios</div>

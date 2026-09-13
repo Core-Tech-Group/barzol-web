@@ -1,0 +1,32 @@
+---
+// Imagen fija del diseño ya convertida a WebP por `npm run imagenes`
+// (scripts/imagenes/). Se sirve tal cual desde public/img/, sin pasar por
+// /_image: no hay conversión en cada petición.
+//
+// Acepta los atributos de un <img> (class, style, loading, data-*, aria-*...),
+// que pasan directo a la etiqueta.
+import type { HTMLAttributes } from 'astro/types';
+import manifiesto from './imagenesOptimizadas.json';
+
+interface Props extends Omit<HTMLAttributes<'img'>, 'src' | 'srcset' | 'width' | 'height'> {
+  /** Nombre en scripts/imagenes/imagenes.config.mjs. */
+  nombre: string;
+  alt: string;
+  /** Qué ancho ocupa en pantalla, para que el navegador elija la versión justa. */
+  sizes: string;
+}
+
+const { nombre, sizes, loading = 'lazy', ...resto } = Astro.props;
+
+const imagen = (manifiesto as Record<string, { anchos: number[]; ancho: number; alto: number }>)[nombre];
+if (!imagen) {
+  throw new Error(`No existe la imagen optimizada "${nombre}": agregala en scripts/imagenes/imagenes.config.mjs y corré npm run imagenes.`);
+}
+
+const url = (ancho: number) => `/img/${nombre}-${ancho}.webp`;
+const srcset = imagen.anchos.map((ancho) => `${url(ancho)} ${ancho}w`).join(', ');
+// Para navegadores sin srcset: la versión más grande.
+const src = url(imagen.anchos[imagen.anchos.length - 1]);
+---
+
+<img src={src} srcset={srcset} sizes={sizes} width={imagen.ancho} height={imagen.alto} loading={loading} decoding="async" {...resto} />

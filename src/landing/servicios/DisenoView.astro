@@ -1,10 +1,8 @@
 ---
-import { Image } from 'astro:assets';
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
 import HeroServicio from './HeroServicio.astro';
-import fotoImpresora from '@/assets/escaneo-hero-impresora.jpg';
-import fotoEscaner from '@/assets/escaneo-hero-escaner.jpg';
+import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
 // Tercer servicio, misma estructura que AccesoriosView e IngenieriaView: hero
@@ -24,11 +22,11 @@ const galeria = galeriaDb
 		Ofrecemos servicios de escaneado 3D e impresión 3D para tus proyectos, digitalizando piezas y objetos con precisión para su reproducción, modificación o fabricación.<br />Realizamos envíos de tus impresiones 3D a todo el Perú.
 		<div class="bz-esc-fotos" slot="media">
 			<div class="bz-esc-foto is-impresora">
-				<Image src={fotoImpresora} alt="Impresora 3D de Barzol fabricando una pieza" widths={[300, 600]} sizes="(max-width: 768px) 30vw, 280px" loading="eager" />
+				<ImagenOptimizada nombre="escaneo-hero-impresora" alt="Impresora 3D de Barzol fabricando una pieza" sizes="(max-width: 768px) 30vw, 280px" loading="eager" />
 				<div class="bz-esc-fundido" aria-hidden="true"></div>
 			</div>
 			<div class="bz-esc-foto is-escaner">
-				<Image src={fotoEscaner} alt="Escaneo 3D de una pieza metálica sobre la plataforma giratoria" widths={[700, 1400]} sizes="(max-width: 768px) 70vw, 660px" loading="eager" />
+				<ImagenOptimizada nombre="escaneo-hero-escaner" alt="Escaneo 3D de una pieza metálica sobre la plataforma giratoria" sizes="(max-width: 768px) 70vw, 660px" loading="eager" />
 			</div>
 		</div>
 	</HeroServicio>

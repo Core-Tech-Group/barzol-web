@@ -1,0 +1,94 @@
+{
+  "hero-impresion-3d": {
+    "anchos": [
+      768,
+      1280,
+      1920
+    ],
+    "ancho": 2400,
+    "alto": 1349
+  },
+  "hero-diseno-cad": {
+    "anchos": [
+      768,
+      1280,
+      1920
+    ],
+    "ancho": 2400,
+    "alto": 1349
+  },
+  "hero-escaneo-3d": {
+    "anchos": [
+      768,
+      1280,
+      1673
+    ],
+    "ancho": 1673,
+    "alto": 940
+  },
+  "personalizado-nombre-firma": {
+    "anchos": [
+      240,
+      480
+    ],
+    "ancho": 480,
+    "alto": 425
+  },
+  "personalizado-logo-banda": {
+    "anchos": [
+      240,
+      470
+    ],
+    "ancho": 470,
+    "alto": 480
+  },
+  "personalizado-nombre-diseno": {
+    "anchos": [
+      240,
+      480
+    ],
+    "ancho": 480,
+    "alto": 379
+  },
+  "servicio-ingenieria-avanzada": {
+    "anchos": [
+      240,
+      480
+    ],
+    "ancho": 640,
+    "alto": 466
+  },
+  "servicio-escaneo-impresion-3d": {
+    "anchos": [
+      240,
+      480
+    ],
+    "ancho": 765,
+    "alto": 679
+  },
+  "escaneo-hero-impresora": {
+    "anchos": [
+      300,
+      600
+    ],
+    "ancho": 1086,
+    "alto": 1448
+  },
+  "escaneo-hero-escaner": {
+    "anchos": [
+      700,
+      1400
+    ],
+    "ancho": 1673,
+    "alto": 940
+  },
+  "ingenieria-hero": {
+    "anchos": [
+      768,
+      1280,
+      1672
+    ],
+    "ancho": 1672,
+    "alto": 941
+  }
+}
