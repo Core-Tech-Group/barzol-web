@@ -32,3 +32,6 @@ coverage/
 
 # artefactos del CLI de supabase
 supabase/.temp/
+
+# Docker
+docker/
