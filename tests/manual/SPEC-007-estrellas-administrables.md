@@ -1,6 +1,9 @@
 # Verificación manual pendiente — SPEC-007
 
-La migración Supabase se aplicará después del push por el responsable. Registrar fecha y producto de prueba sin datos sensibles.
+La migración Supabase se ejecutó el 2026-09-21 en SQL Editor; una lectura remota
+con la clave pública confirmó `rating_avg` y `rating_count` (HTTP 200). Aún falta
+probar el guardado con una sesión administrativa. Registrar producto de prueba
+sin datos sensibles.
 
 - [ ] **TEST-701 / REQ-701:** producto con `(0,0)` no muestra estrellas.
 - [ ] **TEST-702 / REQ-702:** panel rechaza promedio >5, más de una cifra decimal y conteo incoherente; base rechaza escritura directa inválida.

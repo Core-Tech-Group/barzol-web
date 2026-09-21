@@ -18,9 +18,5 @@
     "src/shared/lib/validation/productoSchema.ts",
     "src/shared/lib/validation/zodError.ts"
   ],
-  "demasiadoLargos": [
-    "src/admin/categorias/CategoriesAdmin.tsx",
-    "src/admin/inicio/InicioAdmin.tsx",
-    "src/admin/productos/ProductsAdmin.tsx"
-  ]
+  "demasiadoLargos": []
 }

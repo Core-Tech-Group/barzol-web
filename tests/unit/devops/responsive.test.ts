@@ -188,7 +188,7 @@ describe('SPEC-906 · revisarContrato · tokens.css y el marcado, juntos', () =>
 
   const marcado = {
     'src/admin/login/LoginView.astro': '<div class="bz-split-auth"><div class="bz-auth-brand">',
-    'src/admin/productos/ProductsAdmin.tsx': 'className="bz-table-head" ... className="admin-product-row bz-table-row"',
+    'src/admin/productos/ProductsAdminList.tsx': 'className="bz-table-head" ... className="admin-product-row bz-table-row"',
     'src/admin/layout/AdminLayout.astro': '<div class="bz-admin-shell">',
   };
 
@@ -215,7 +215,7 @@ describe('SPEC-906 · revisarContrato · tokens.css y el marcado, juntos', () =>
 
   it('[TEST-547] avisa si la tabla de productos pierde sus clases (REQ-992)', () => {
     // Arrange
-    const sinClase = { ...marcado, 'src/admin/productos/ProductsAdmin.tsx': 'display: grid' };
+    const sinClase = { ...marcado, 'src/admin/productos/ProductsAdminList.tsx': 'display: grid' };
 
     // Act
     const hallazgos = revisarContrato(tokens, sinClase) as Hallazgo[];

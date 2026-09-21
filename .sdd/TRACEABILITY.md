@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — SPEC ↔ TEST ↔ código
 
-> **Última actualización:** 2026-09-20 (SEO Esencial y estrellas administrables)
+> **Última actualización:** 2026-09-21 (migración de estrellas y editores modulares)
 > **Verificación automática:** `npm run sdd:trace`. Este documento es el resumen
 > legible; **la fuente de verdad es el gate**, que sí falla.
 
@@ -16,7 +16,8 @@
 | [SPEC-004](specs/SPEC-004-orden-productos.md) · Orden manual de productos | BORRADOR | ⬜ sin implementar (necesita migración + función `reordenar_productos`) | ⬜ matriz de 33 casos |
 | [SPEC-005](specs/SPEC-005-borrado-media-r2.md) · Borrado de imágenes en desuso (BZ-11) | BORRADOR | ⬜ sin implementar | ⬜ matriz de 22 casos |
 | [SPEC-006](specs/SPEC-006-seo-esencial.md) · SEO Esencial | **APROBADA** | ✅ sitemap, robots, canónicas y sondas publicados (`0c216d5`) | ✅ unitarios, CI workerd y humo en producción; ⏳ matriz manual completa |
-| [SPEC-007](specs/SPEC-007-estrellas-administrables.md) · Estrellas administrables | **APROBADA** | 🔶 código compatible; migración remota pendiente | ✅ unitarios; ⏳ UI y SQL remoto pendientes |
+| [SPEC-007](specs/SPEC-007-estrellas-administrables.md) · Estrellas administrables | **APROBADA** | ✅ código publicado y columnas legibles en Supabase | ✅ unitarios; ⏳ guardado autenticado y UI manual pendientes |
+| [SPEC-008](specs/SPEC-008-editores-admin-modulares.md) · Editores modulares | **APROBADA** | ✅ productos, inicio y categorías separados en archivos <500 líneas | ✅ render, interacciones y gate de tamaño; ⏳ UI autenticada manual |
 | [SPEC-900](specs/SPEC-900-gates-cicd.md) · Gates de CI/CD | BORRADOR | 🔶 workflow escrito, sin correr | ⬜ matriz de 14 provocaciones |
 | [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios |
 | [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | 🔶 auditoría de lectura hecha | ⬜ pgTAP pendiente |
@@ -40,7 +41,8 @@ estar citados en algún test o el gate falla.
 | SPEC-004 | 401–416 | 0 / 16 | aprobación humana · `/sdd-red` |
 | SPEC-005 | 501–512 | 0 / 12 | aprobación humana · despliegue por etapas (galerías → productos → inicio) |
 | SPEC-006 | 601–607 | **7 / 7 citados** | ejecutar matriz manual completa; sondas tras despliegue pasaron |
-| SPEC-007 | 701–707 | **7 / 7 citados** | aplicar SQL y ejecutar matriz manual |
+| SPEC-007 | 701–707 | **7 / 7 citados** | ejecutar matriz manual y escritura autenticada |
+| SPEC-008 | 801–804 | **4 / 4 citados** | inspección manual de los editores autenticados |
 | SPEC-900 | 901–911 | 0 / 11 | ejecutar la matriz de `SPEC-900.plan.md` |
 | SPEC-901 | 951–961 | 0 / 11 | tests unitarios del evaluador de sondas |
 | SPEC-902 | 921–933 | 0 / 13 | `BZ-70` · pgTAP |
@@ -59,7 +61,9 @@ estar citados en algún test o el gate falla.
 > **SPEC-006 y SPEC-007:** «citado» no equivale a verificado. Las pruebas manuales
 > en `tests/manual/` siguen pendientes porque `workerd` no arranca en la Orange Pi
 > ARM64 (fallo TCMalloc). CI x86 y sondas de producción pasaron para `0c216d5`.
-> SPEC-007 además requiere aplicar `supabase/20260920-calificaciones-administrables.sql`.
+> El usuario ejecutó `supabase/20260920-calificaciones-administrables.sql` y una
+> lectura remota con la clave pública confirmó ambas columnas (HTTP 200). Falta
+> probar escritura con sesión administrativa y revisar la UI visualmente.
 
 > **SPEC-904 REQ-979 está cubierto por un test que NO prueba producción.**
 > `clienteAutenticado.test.ts` verifica que la migración pendiente declara las
@@ -89,15 +93,15 @@ nuevo bloquea el gate.
 | Trinquete | Cuántos | Tarea |
 | :--- | ---: | :--- |
 | Archivos de lógica sin SPEC | 23 | `BZ-75` |
-| Archivos por encima de 500 líneas | 3 | `BZ-79` |
+| Archivos por encima de 500 líneas | 0 | `BZ-101` y `BZ-112` saldados |
 
 Prioridad de especificación (`BZ-75`): `productoMapper.ts` y `categoriaMapper.ts`
 primero — concentran las decisiones más sutiles y de ellos depende la navegación.
 `storage/mediaUrl.ts` sube de prioridad por su relación con `BZ-76`.
 
-Archivos por encima del límite (`BZ-79`): `ProductsAdmin.tsx` (1378),
-`InicioAdmin.tsx` (835), `CategoriesAdmin.tsx` (730). **No partirlos sin tests** —
-`BZ-60` va antes.
+Los tres editores heredados se dividieron después de añadir pruebas de render e
+interacción (`TEST-801` a `TEST-804`). El gate de tamaño ya no exceptúa esos
+archivos; `BZ-60` sigue pendiente para cobertura general de componentes.
 
 ## Comprobaciones del gate
 

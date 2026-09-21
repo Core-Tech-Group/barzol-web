@@ -152,8 +152,8 @@ export function revisarPanel() {
 const CONTRATO = [
   { clase: 'bz-split-auth', archivo: 'src/admin/login/LoginView.astro', req: 'REQ-991' },
   { clase: 'bz-auth-brand', archivo: 'src/admin/login/LoginView.astro', req: 'REQ-991' },
-  { clase: 'bz-table-head', archivo: 'src/admin/productos/ProductsAdmin.tsx', req: 'REQ-992' },
-  { clase: 'bz-table-row', archivo: 'src/admin/productos/ProductsAdmin.tsx', req: 'REQ-992' },
+  { clase: 'bz-table-head', archivo: 'src/admin/productos/ProductsAdminList.tsx', req: 'REQ-992' },
+  { clase: 'bz-table-row', archivo: 'src/admin/productos/ProductsAdminList.tsx', req: 'REQ-992' },
   { clase: 'bz-admin-shell', archivo: 'src/admin/layout/AdminLayout.astro', req: 'REQ-990' },
 ];
 
