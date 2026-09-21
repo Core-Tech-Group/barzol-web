@@ -3,6 +3,7 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
 import HeroServicio from './HeroServicio.astro';
+import IngenieriaIntro from './IngenieriaIntro.astro';
 import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
@@ -31,6 +32,8 @@ const proceso = [
 			<ImagenOptimizada nombre="ingenieria-hero" alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
 		</div>
 	</HeroServicio>
+
+	<IngenieriaIntro />
 
 	<!-- GALERÍA -->
 	<div id="servicios" class="bz-section-wrap" style="background:white; padding:64px 32px;">
