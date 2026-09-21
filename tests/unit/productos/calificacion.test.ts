@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { calificacionWriteSchema } from '@shared/lib/validation/calificacionSchema';
 import { mapProductoRowToProduct, type ProductoRow } from '@shared/lib/productos/productoMapper';
 import { patchCalificacion } from '../../../src/pages/api/productos/[id]/calificacion';
@@ -12,6 +13,16 @@ describe('SPEC-007 calificación administrable', () => {
     const resultado = calificacionWriteSchema.safeParse(entrada);
     // Assert
     expect(resultado.success).toBe(true);
+  });
+
+  it('[TEST-701] REQ-701 hace visible el estado vacío en tarjetas y ficha', () => {
+    const rating = readFileSync('src/landing/producto/Calificacion.astro', 'utf8');
+    const card = readFileSync('src/landing/producto/ProductCard.astro', 'utf8');
+    const detail = readFileSync('src/landing/producto/ProductoView.astro', 'utf8');
+
+    expect(rating).toContain('Sin calificaciones');
+    expect(card).not.toContain('ratingCount > 0 &&');
+    expect(detail).not.toContain('producto.ratingCount > 0 &&');
   });
 
   it.each([

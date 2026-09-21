@@ -17,6 +17,8 @@ export interface AdminProduct {
   statusLabel: 'Publicado' | 'Borrador';
   active: boolean;
   customizable: boolean;
+  ratingAvg?: number;
+  ratingCount?: number;
 }
 export interface EditDraft {
   name: string;

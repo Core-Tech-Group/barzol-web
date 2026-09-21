@@ -17,7 +17,7 @@ Formulario público, tokens, comentarios, moderación, favoritos, insignia de co
 ## Requisitos (EARS)
 
 ### [REQ-701] — Estado vacío
-MIENTRAS `rating_count` sea cero, el sistema DEBE tratar el producto como sin valoración, con promedio cero y sin estrellas públicas.
+MIENTRAS `rating_count` sea cero, el sistema DEBE tratar el producto como sin valoración y con promedio cero. Las tarjetas y la ficha DEBEN mostrar cinco estrellas vacías y el texto «Sin calificaciones», sin insinuar votos existentes.
 
 ### [REQ-702] — Rango
 CUANDO un administrador guarda una calificación, el sistema DEBE aceptar solamente un promedio entre 0 y 5 con una cifra decimal como máximo y un conteo entero no negativo; un conteo positivo requiere promedio mayor que cero.
@@ -36,6 +36,13 @@ MIENTRAS la migración de columnas aún no esté aplicada, el sistema DEBE mante
 
 ### [REQ-707] — Procedencia
 El sistema DEBE identificar los números como administrados por Barzol y NO DEBE emitir datos estructurados de reseñas ni afirmar compras verificadas.
+
+### [REQ-708] — Editor encontrable
+CUANDO un administrador abre un producto existente, el formulario DEBE mostrar promedio y cantidad en una sección visible. El guardado de esos valores DEBE usar el endpoint dedicado, informar el resultado y no sobrescribir otros campos. Un producto nuevo solo podrá recibir calificación después de crearse.
+
+## Enmienda 2026-09-21
+
+La revisión visual en producción mostró que todos los productos conservaban el valor `(0,0)` y que el único editor estaba oculto en un panel plegado encima del listado. REQ-701 ahora exige un estado vacío visible y REQ-708 sitúa la edición dentro del producto, según la revisión del usuario. Ningún valor se inventa ni se presenta como reseña verificada.
 
 ## Invariantes
 

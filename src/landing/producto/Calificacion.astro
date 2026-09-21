@@ -10,11 +10,16 @@ const texto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 1, maximum
 const porcentaje = `${Math.round((promedio / 5) * 100)}%`;
 ---
 
-{visible && (
+{visible ? (
   <span class="bz-rating" aria-label={`Calificación registrada por Barzol: ${texto} de 5, ${cantidad} valoraciones`}>
     <span aria-hidden="true" class="bz-rating-stars" style={`--rating-fill:${porcentaje}`}>★★★★★</span>
     <strong>{texto}</strong>
     <span>({cantidad})</span>
+  </span>
+) : (
+  <span class="bz-rating" aria-label="Sin calificaciones">
+    <span aria-hidden="true" class="bz-rating-empty-stars">☆☆☆☆☆</span>
+    <span>Sin calificaciones</span>
   </span>
 )}
 
@@ -29,4 +34,5 @@ const porcentaje = `${Math.round((promedio / 5) * 100)}%`;
     line-height: 1;
   }
   .bz-rating strong { color: var(--color-text); }
+  .bz-rating-empty-stars { color: var(--color-rating); font-size: 17px; letter-spacing: 1px; line-height: 1; }
 </style>

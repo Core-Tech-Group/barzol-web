@@ -118,7 +118,7 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 						</>
 					)}
 				</div>
-				{producto.ratingCount > 0 && <div style="margin-bottom:12px;"><Calificacion promedio={producto.ratingAvg} cantidad={producto.ratingCount} /></div>}
+				<div style="margin-bottom:12px;"><Calificacion promedio={producto.ratingAvg} cantidad={producto.ratingCount} /></div>
 				<p style="font-size:13.5px; color:var(--color-text-body); line-height:1.7; margin-bottom:12px;">{producto.descripcion}</p>
 				<ul style="list-style:none; display:flex; flex-direction:column; gap:7px; margin-bottom:22px; padding:0;">
 					{caracteristicas.map((bullet) => (

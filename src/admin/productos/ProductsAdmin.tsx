@@ -413,6 +413,7 @@ export function useProductsAdminModel({ initialProducts, categories, instruments
     categories,
     vendors,
     products,
+    setProducts,
     query,
     setQuery,
     activeCat,

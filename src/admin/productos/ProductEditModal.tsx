@@ -3,10 +3,15 @@ import type { ProductsAdminModel } from './ProductsAdmin';
 import ProductMediaInfoFields from './ProductMediaInfoFields';
 import ProductCategoryFields from './ProductCategoryFields';
 import ProductPriceStatusFields from './ProductPriceStatusFields';
+import ProductRatingEditor from './ProductRatingEditor';
 
 export default function ProductEditModal({ view }: { view: ProductsAdminModel }) {
   const { editIndex, saving, modalScrollRef, closeEdit, saveEdit } = view;
   const { editDraft } = view;
+  function ratingSaved(promedio: number, cantidad: number) {
+    view.setProducts((items) => items.map((item, index) =>
+      index === editIndex ? { ...item, ratingAvg: promedio, ratingCount: cantidad } : item));
+  }
   return (
     <>
       {/* MODAL: EDITAR / NUEVO PRODUCTO */}
@@ -26,6 +31,11 @@ export default function ProductEditModal({ view }: { view: ProductsAdminModel })
             </div>
 
             <div ref={modalScrollRef} style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', flex: 1, background: 'var(--color-bg)' }}>
+              <ProductRatingEditor
+                key={editIndex}
+                producto={editIndex >= 0 ? view.products[editIndex] : undefined}
+                onSaved={ratingSaved}
+              />
               <ProductMediaInfoFields view={view} editDraft={editDraft} />
               <ProductCategoryFields view={view} editDraft={editDraft} />
               <ProductPriceStatusFields view={view} editDraft={editDraft} />
