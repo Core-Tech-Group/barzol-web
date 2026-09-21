@@ -11,7 +11,7 @@ describe('Editores administrativos · render inicial', () => {
   it('[TEST-801] REQ-801 conserva listado y acciones del editor de productos', () => {
     // Arrange
     const products: AdminProduct[] = [{
-      id: '1', name: 'Soporte de trombón', category: 'Trombón', instrument: '',
+      id: '1', orden: 0, createdAt: '2026-09-20T00:00:00Z', name: 'Soporte de trombón', category: 'Trombón', instrument: '',
       vendor: 'Barzol', price: '95.00', originalPrice: '', description: '',
       keywords: '', features: [], photos: [null, null, null, null, null],
       statusLabel: 'Publicado', active: true, customizable: false,

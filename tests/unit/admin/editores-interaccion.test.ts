@@ -39,7 +39,7 @@ describe('Editores administrativos · interacciones principales', () => {
   it('[TEST-708] REQ-708 muestra la edición de calificación dentro del producto', () => {
     render(createElement(ProductsAdmin, {
       initialProducts: [{
-        id: '1', name: 'Soporte de trombón', category: 'Trombón', instrument: '',
+        id: '1', orden: 0, createdAt: '2026-09-20T00:00:00Z', name: 'Soporte de trombón', category: 'Trombón', instrument: '',
         vendor: 'Barzol', price: '95.00', originalPrice: '', description: '',
         keywords: '', features: [], photos: [null, null, null, null, null],
         statusLabel: 'Publicado', active: true, customizable: false,
@@ -60,7 +60,7 @@ describe('Editores administrativos · interacciones principales', () => {
     const onSaved = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     render(createElement(ProductRatingEditor, {
-      producto: { id: '7', name: 'Soporte', category: 'Trombón', instrument: '',
+      producto: { id: '7', orden: 0, createdAt: '2026-09-20T00:00:00Z', name: 'Soporte', category: 'Trombón', instrument: '',
         vendor: 'Barzol', price: '95.00', originalPrice: '', description: '',
         keywords: '', features: [], photos: [], statusLabel: 'Publicado',
         active: true, customizable: false, ratingAvg: 0, ratingCount: 0 },

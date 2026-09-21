@@ -44,11 +44,14 @@ erDiagram
         varchar(500) keywords
         numeric price
         numeric original_price "nullable"
+        numeric rating_avg "0..5, administrado"
+        integer rating_count "0 si no hay calificaciones"
         integer vendor_id FK
         integer category_id FK "debe ser categoria hoja, sin subcategorias"
         product_status status "enum: draft / published"
         boolean is_active
         boolean is_personalizable
+        int sort_order "posición por instrumento"
         timestamptz created_at
         timestamptz updated_at
         uuid created_by FK
@@ -163,11 +166,14 @@ erDiagram
 | keywords | varchar(500) | búsqueda interna |
 | price | numeric(10,2) | |
 | original_price | numeric(10,2) | nullable — precio tachado |
+| rating_avg | numeric(2,1) | promedio administrado; 0 si no hay calificaciones |
+| rating_count | integer | cantidad administrada; 0 si no hay calificaciones |
 | vendor_id | integer | FK → `vendor.id` |
-| category_id | integer | FK → `category.id`. **Regla de negocio:** debe apuntar a una categoría "hoja" (sin subcategorías propias) — no se puede asignar un producto a una categoría intermedia. Esto no se puede validar con un `CHECK` simple en SQL (requiere consultar si la categoría tiene hijos), así que se aplica con un trigger `BEFORE INSERT/UPDATE` o validación en el backend antes de guardar |
+| category_id | integer | FK → `category.id`. Puede apuntar al instrumento o a una subcategoría; el mapper deriva el instrumento raíz. |
 | status | `product_status` (enum) | `draft` \| `published`. Ver definición del tipo abajo |
 | is_active | boolean | visible/oculto, independiente de `status` |
 | is_personalizable | boolean | |
+| sort_order | integer | orden del producto dentro del instrumento raíz; migración pendiente `supabase/pendiente-orden-productos.sql` |
 | created_at / updated_at / created_by / updated_by | — | auditoría |
 
 ### `product_photo`
@@ -275,7 +281,7 @@ El formulario de producto en el admin debe cambiar el campo de texto libre `vend
 
 ## Nota sobre `product.category_id` (revertido a 1 sola categoría por producto)
 
-Se elimina `product_categories` (muchos a muchos). Cada producto vuelve a tener **una sola** `category_id`, con una regla adicional: debe ser una categoría de último nivel (sin subcategorías propias) — nunca una categoría intermedia como "Accesorios".
+Se elimina `product_categories` (muchos a muchos). Cada producto tiene **una sola** `category_id`, que puede apuntar directamente al instrumento o a una de sus subcategorías.
 
 **Trade-off aceptado conscientemente:** con esto, un producto ya no puede pertenecer simultáneamente a, por ejemplo, `Sordinas` y `Trompeta`. El filtro cruzado "ver todo lo de Trompeta" (sordinas + soportes + lo que sea, todo compatible con ese instrumento) **ya no es posible con este modelo**, salvo que en el futuro se agregue el instrumento como un atributo/etiqueta aparte del árbol de categorías — la alternativa que se descartó antes en la conversación. Queda documentado aquí para que la decisión no se pierda de vista más adelante si el negocio la vuelve a necesitar.
 

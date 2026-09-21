@@ -38,6 +38,8 @@ export interface Product {
   precioOriginal: number | null;
   ratingAvg: number;
   ratingCount: number;
+  orden: number;
+  ordenDisponible: boolean;
   categoriaId: string; // instrumento — obligatorio (ver DATABASE_SCHEMA.md: product.category_id es NOT NULL). Se deriva del padre de subcategoriaId cuando este apunta a una subcategoría anidada
   subcategoriaId: string | null; // null solo si categoriaId ya es en sí una categoría hoja (sin subcategorías propias)
   vendorId: string;

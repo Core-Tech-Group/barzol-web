@@ -1,15 +1,16 @@
 # SPEC-004 — Orden manual de productos ("Recomendados")
 
-**Estado:** BORRADOR
+**Estado:** APROBADA por solicitud de implementación del 2026-09-21
 **Capa:** 1 lógica + 3 workerd + 4 base de datos + presentación
 **Autor:** Claude (a pedido del responsable) · **Fecha:** 2026-09-11
 **Unidades destino:**
-`src/shared/lib/productos/ordenProducto.ts` (**no existe**) ·
+`src/shared/lib/productos/ordenProducto.ts` ·
+`src/shared/lib/productos/productoOrdenService.ts` ·
 `productoMapper.ts` · `productoService.ts` · `validation/productoSchema.ts` ·
-`src/pages/api/productos/orden.ts` (**no existe**) ·
+`src/pages/api/productos/orden.ts` ·
 `src/landing/shared/ordenProductos.ts` · `SortSelect.astro` · `CatalogoView.astro` ·
-`BusquedaView.astro` · `src/admin/productos/ordenAdmin.ts` (**no existe**) + isla del
-admin · `supabase/pendiente-orden-productos.sql` (**no existe**)
+`BusquedaView.astro` · `src/admin/productos/ordenAdmin.ts` + isla del
+admin · `supabase/pendiente-orden-productos.sql` (preparado, pendiente de aplicar)
 
 ---
 
@@ -176,6 +177,26 @@ DEBE numerar los productos existentes de cada instrumento desde `0`, en el orden
 > **Supuesto:** así "Recomendados" arranca mostrando lo mismo que hoy muestra el
 > sitio por defecto, y nada cambia de lugar el día que se publica.
 
+### [REQ-417] — Índice visible y movimiento numérico
+MIENTRAS esté activo el modo reordenar de una categoría, cada fila DEBE mostrar
+su posición visible `1..N` y permitir mover el producto a una posición válida
+mediante un control numérico, además de arrastrar. El número visible se calcula
+desde la lista, no se duplica en otra columna. Fuera de ese modo no se muestra.
+
+### [REQ-418] — Despliegue compatible antes de la migración
+MIENTRAS `product.sort_order` o `reordenar_productos` falten en Supabase, las
+lecturas públicas y el CRUD ordinario DEBEN conservarse operativos y la vista
+DEBE mantener el orden previo de más recientes. Un intento de guardar el nuevo
+orden DEBE informar que hay una migración pendiente, sin afirmar éxito.
+
+## Enmienda 2026-09-21
+
+El usuario aprobó la implementación y pidió índice visible más movimiento por
+número cuando la lista sea larga. La vista por categoría es el único lugar con
+reordenamiento. Se mantiene el alcance por instrumento de la SPEC original.
+`ProductsAdmin.tsx` ya fue dividido y tiene 489 líneas; la interfaz nueva va
+en un componente y funciones separados. La migración aún no se ha aplicado.
+
 ---
 
 ## Contrato
@@ -188,7 +209,7 @@ interface Product {
 }
 
 // src/shared/lib/productos/ordenProducto.ts — lógica pura, nuevo
-type ProductoOrdenable = Pick<Product, 'id' | 'categoriaId' | 'orden' | 'createdAt'>;
+type ProductoOrdenable = Pick<Product, 'id' | 'orden' | 'createdAt'>;
 
 /** REQ-402 — mayor + 1, o 0 si no hay. */
 export function siguienteOrden(ordenesDelInstrumento: readonly number[]): number;
@@ -287,7 +308,7 @@ export function guardarOrden(cambios: CambioOrden[], enviar?: (url: string, init
   opción no se quita, solo deja de ser la de por defecto.
 - **Cambio de orden visible el día del despliegue** si la migración numera
   distinto de "más recientes primero" (REQ-415).
-- **`ProductsAdmin.tsx` tiene 1.423 líneas** y está en el trinquete de `BZ-79`.
-  La UI de reordenar va en un módulo aparte, no dentro de ese archivo.
+- **`ProductsAdmin.tsx` está cerca del límite de 500 líneas.** La UI de
+  reordenar va en un módulo aparte, no dentro de ese archivo.
 - `schema.sql:110`, `DATABASE_SCHEMA.md` y `SCHEMA_REFERENCE.md` dicen que
   `product` no tiene `sort_order`: hay que corregirlos con la migración.

@@ -107,7 +107,7 @@ CREATE TRIGGER trg_category_updated_at
 -- vendor_id / category_id usan RESTRICT: no se puede borrar una marca
 -- o categoría mientras tenga productos asociados
 -- code autogenerado por secuencia
--- SIN sort_order (se quitó — no aplica con una sola categoría por producto)
+-- sort_order ordena productos por instrumento; ver migración SPEC-004.
 -- =========================================================
 
 CREATE SEQUENCE product_code_seq START 5000;
@@ -122,6 +122,7 @@ CREATE TABLE product (
     original_price     numeric(10,2),
     rating_avg         numeric(2,1) NOT NULL DEFAULT 0.0,
     rating_count       integer NOT NULL DEFAULT 0,
+    sort_order         integer NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
     vendor_id          integer NOT NULL REFERENCES vendor(id) ON DELETE RESTRICT,
     category_id        integer NOT NULL REFERENCES category(id) ON DELETE RESTRICT,
     status             product_status NOT NULL DEFAULT 'draft',

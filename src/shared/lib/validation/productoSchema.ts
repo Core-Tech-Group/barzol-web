@@ -26,3 +26,14 @@ export const productoWriteSchema = z.object({
 });
 
 export type ProductoWrite = z.infer<typeof productoWriteSchema>;
+
+export const ordenProductosSchema = z.object({
+  cambios: z.array(z.object({
+    id: z.string().regex(/^[1-9]\d*$/),
+    orden: z.number().int().min(0).max(2147483647),
+  })).min(1).superRefine((items, ctx) => {
+    if (new Set(items.map((i) => i.id)).size !== items.length || new Set(items.map((i) => i.orden)).size !== items.length) {
+      ctx.addIssue({ code: 'custom', message: 'Ids u órdenes duplicados.' });
+    }
+  }),
+});

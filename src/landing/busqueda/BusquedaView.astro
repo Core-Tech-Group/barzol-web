@@ -31,7 +31,8 @@ const categoryFilters = categoriasDb.map((c) => ({ id: c.id, nombre: c.nombre, s
 // El orden se aplica ANTES de paginar: si no, cada página se ordenaría por
 // separado y el listado completo quedaría desordenado.
 const orden = parseOrden(Astro.url.searchParams.get('orden'));
-const ordenados = ordenarProductos(matched, orden);
+const ordenInstrumento = new Map(categoriasDb.map((c) => [c.id, c.orden]));
+const ordenados = ordenarProductos(matched, orden, ordenInstrumento);
 
 const PAGE_SIZE = 12;
 const totalPages = Math.max(1, Math.ceil(ordenados.length / PAGE_SIZE));
@@ -40,7 +41,7 @@ const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
 const pageItems = ordenados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
 // La paginación debe conservar el orden elegido, igual que conserva `q`.
-const paginacionParams: Record<string, string> = { orden };
+const paginacionParams: Record<string, string> = orden === ORDEN_POR_DEFECTO ? {} : { orden };
 if (query.trim()) paginacionParams.q = query.trim();
 
 // "Limpiar" descarta el texto buscado y devuelve al catálogo completo — no a

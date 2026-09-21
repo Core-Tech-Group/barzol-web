@@ -1,5 +1,5 @@
 ---
-import { ORDEN_OPCIONES, type OrdenValor } from './ordenProductos';
+import { ORDEN_OPCIONES, hrefParaOrden, type OrdenValor } from './ordenProductos';
 
 interface Props {
   orden: OrdenValor;
@@ -12,14 +12,6 @@ const { orden } = Astro.props;
 // solo abre y cierra el panel). Se conservan los demás parámetros —`q` en
 // /busqueda, por ejemplo— y se descarta `page`: al reordenar, la página 3 del
 // orden anterior ya no significa nada.
-function hrefPara(valor: string): string {
-  const params = new URLSearchParams(Astro.url.searchParams);
-  params.set('orden', valor);
-  params.delete('page');
-  const qs = params.toString();
-  return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
-}
-
 const seleccionada = ORDEN_OPCIONES.find((o) => o.valor === orden) ?? ORDEN_OPCIONES[0];
 ---
 
@@ -34,7 +26,7 @@ const seleccionada = ORDEN_OPCIONES.find((o) => o.valor === orden) ?? ORDEN_OPCI
 	<div class="bz-sort-menu" data-sort-menu hidden role="listbox" aria-label="Ordenar por">
 		{ORDEN_OPCIONES.map((opcion) => (
 			<a
-				href={hrefPara(opcion.valor)}
+				href={hrefParaOrden(Astro.url.pathname, Astro.url.searchParams, opcion.valor)}
 				class:list={['bz-sort-option', { 'is-active': opcion.valor === orden }]}
 				role="option"
 				aria-selected={opcion.valor === orden}

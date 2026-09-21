@@ -172,7 +172,7 @@ erDiagram
 | status | `product_status` (enum) | `draft` \| `published`. Ver definición del tipo abajo |
 | is_active | boolean | visible/oculto, independiente de `status` |
 | is_personalizable | boolean | |
-| sort_order | int | orden del producto dentro de su categoría — ya no es ambiguo porque cada producto tiene una sola categoría |
+| sort_order | int | posición dentro del instrumento raíz (`category` o su padre); entero ≥ 0. Migración: `supabase/pendiente-orden-productos.sql`, pendiente de aplicar en producción |
 | created_at / updated_at / created_by / updated_by | — | auditoría |
 
 ### `product_photo`

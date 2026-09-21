@@ -49,6 +49,8 @@
 | TEST-W063 | Una sola llamada | admin, 12 cambios | el fake de Supabase registra **una** llamada, a `rpc('reordenar_productos')` | REQ-410 |
 | TEST-W061 | PATCH inválido | id repetido | `400`; ningún `sort_order` cambió | REQ-411 |
 | TEST-W062 | Sin sesión | PATCH sin cookie | `401` | REQ-411 |
+| TEST-089 | Índice y movimiento numérico en categoría | mover de posición 7 a 1 | números visibles `1..N`, orden local actualizado | REQ-417 |
+| TEST-090 | DB sin columna/función | fila antigua o RPC ausente | listado estable; guardado informa migración pendiente | REQ-418 |
 
 > Prefijos: sin prefijo = capa 1 · `W` = workerd.
 
@@ -72,11 +74,13 @@
 | REQ-414 | TEST-068, TEST-069, TEST-080 | ⏳ |
 | REQ-415 | TEST-087, TEST-088 | ⏳ |
 | REQ-416 | TEST-077 | ⏳ |
+| REQ-417 | TEST-089 | ⏳ |
+| REQ-418 | TEST-090 | ⏳ |
 
 **Huecos declarados:**
-- **REQ-405–407 y REQ-409** se prueban sobre `ordenAdmin.ts`, no sobre la isla.
-  Que el arrastre y el aviso de salida **funcionen en pantalla** solo lo dice
-  `BZ-74` (E2E); la capa de componentes sigue bloqueada por `BZ-60`.
+- **REQ-405–407 y REQ-409** tienen pruebas de lógica y una interacción de la isla
+  en jsdom (`ordenAdminUI.test.ts`). El arrastre físico y la navegación real
+  siguen pendientes de la matriz manual y de un navegador compatible.
 - **REQ-415 (TEST-087, TEST-088)** comprueba lo que la migración **declara**,
   no que esté aplicada. Igual que SPEC-904 REQ-979.
 - **La atomicidad de REQ-410 no la prueba ningún test de este plan.** El fake

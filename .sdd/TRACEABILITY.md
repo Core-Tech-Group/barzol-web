@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — SPEC ↔ TEST ↔ código
 
-> **Última actualización:** 2026-09-21 (migración de estrellas y editores modulares)
+> **Última actualización:** 2026-09-21 (SPEC-004: orden manual, SQL pendiente)
 > **Verificación automática:** `npm run sdd:trace`. Este documento es el resumen
 > legible; **la fuente de verdad es el gate**, que sí falla.
 
@@ -13,7 +13,7 @@
 | [SPEC-001](specs/SPEC-001-precio-catalogo.md) · Precio de catálogo | BORRADOR | ⬜ sin implementar | ⬜ |
 | [SPEC-002](specs/SPEC-002-media-key-r2.md) · Claves de R2 | **APROBADA** | ✅ `storage/mediaKey.ts` + `POST /api/media` | ✅ 22 unit + 7 workerd |
 | [SPEC-003](specs/SPEC-003-slug-publico.md) · Slug público | **APROBADA** | ✅ `text/slugify.ts` | ✅ 19 tests |
-| [SPEC-004](specs/SPEC-004-orden-productos.md) · Orden manual de productos | BORRADOR | ⬜ sin implementar (necesita migración + función `reordenar_productos`) | ⬜ matriz de 33 casos |
+| [SPEC-004](specs/SPEC-004-orden-productos.md) · Orden manual de productos | **APROBADA** | ✅ código de admin, catálogo, API y SQL preparado; ⏳ SQL remoto | ✅ pruebas unitarias e interacción; ⏳ RLS/visita manual |
 | [SPEC-005](specs/SPEC-005-borrado-media-r2.md) · Borrado de imágenes en desuso (BZ-11) | BORRADOR | ⬜ sin implementar | ⬜ matriz de 22 casos |
 | [SPEC-006](specs/SPEC-006-seo-esencial.md) · SEO Esencial | **APROBADA** | ✅ sitemap, robots, canónicas y sondas publicados (`0c216d5`) | ✅ unitarios, CI workerd y humo en producción; ⏳ matriz manual completa |
 | [SPEC-007](specs/SPEC-007-estrellas-administrables.md) · Estrellas administrables | **APROBADA** | ✅ columnas legibles y estado vacío publicado (`3f02a1a`); editor en modal | ✅ unitarios, interacción y HTML público; ⏳ guardado autenticado y UI manual pendientes |
@@ -38,7 +38,7 @@ estar citados en algún test o el gate falla.
 | SPEC-001 | 001–007 | 0 / 7 | implementar `catalogPrice.ts` |
 | SPEC-002 | 201–208 | **8 / 8** | — |
 | SPEC-003 | 301–305 | **5 / 5** | — |
-| SPEC-004 | 401–416 | 0 / 16 | aprobación humana · `/sdd-red` |
+| SPEC-004 | 401–418 | **18 / 18 citados** | aplicar SQL remoto y probar sesión/RLS real |
 | SPEC-005 | 501–512 | 0 / 12 | aprobación humana · despliegue por etapas (galerías → productos → inicio) |
 | SPEC-006 | 601–607 | **7 / 7 citados** | ejecutar matriz manual completa; sondas tras despliegue pasaron |
 | SPEC-007 | 701–708 | **8 / 8 citados** | ejecutar matriz manual y escritura autenticada |

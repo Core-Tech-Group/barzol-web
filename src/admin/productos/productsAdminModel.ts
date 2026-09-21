@@ -4,6 +4,8 @@ export const IMAGE_ACCEPT = IMAGE_MIME_TYPES.join(',');
 
 export interface AdminProduct {
   id: string;
+  orden: number;
+  createdAt: string;
   name: string;
   category: string;
   instrument: string;

@@ -1,10 +1,15 @@
 import { Icon } from '@admin/shared/AdminIcons';
 import type { ProductsAdminModel } from './ProductsAdmin';
 import { PAGE_SIZE } from './productsAdminModel';
+import { useRef } from 'react';
+import { useProductOrder } from './useProductOrder';
+import ProductOrderControls from './ProductOrderControls';
 
 export default function ProductsAdminList({ view }: { view: ProductsAdminModel }) {
   const { categories } = view;
-  const { products, query, setQuery, activeCat, setActiveCat, setPage, setDupConfirmIndex, setDelConfirmIndex, filtered, totalPages, safePage, pageStart, pageItems, openEdit, openNewProduct, toggleActive } = view;
+  const { products, query, setQuery, activeCat, setActiveCat, setPage, setDupConfirmIndex, setDelConfirmIndex, filtered, totalPages, safePage, pageStart, openEdit, openNewProduct, toggleActive } = view;
+  const order = useProductOrder(view);
+  const dragFrom = useRef<number | null>(null);
   return (
     <>
       {/* TOP BAR */}
@@ -113,6 +118,16 @@ export default function ProductsAdminList({ view }: { view: ProductsAdminModel }
           </div>
         </div>
 
+        {order.enabled && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Arrastra un producto o cambia su número de posición. El orden se aplica a toda esta categoría.</span>
+          <button type="button" onClick={order.save} disabled={!order.dirty || order.saving}
+            style={{ padding: '8px 14px', background: 'var(--color-primary)', color: 'white', border: 0, borderRadius: 7, cursor: order.dirty ? 'pointer' : 'default', opacity: order.dirty ? 1 : .5 }}>
+            {order.saving ? 'Guardando…' : 'Guardar orden'}
+          </button>
+          {order.message && <span role="status" style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>{order.message}</span>}
+        </div>}
+        {!order.enabled && order.anyDirty && <p role="status" style={{ color: 'var(--color-orange)', fontSize: 13 }}>Hay cambios de orden sin guardar. Vuelve a la categoría para guardarlos.</p>}
+
         {/* TABLE */}
         <div style={{ background: 'white', border: '1px solid var(--color-border-soft)', borderRadius: 12, overflow: 'hidden' }}>
           <div className="bz-table-head" style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, padding: '13px 20px', background: 'var(--color-surface-soft)', borderBottom: '1px solid var(--color-border-soft)' }}>
@@ -123,14 +138,20 @@ export default function ProductsAdminList({ view }: { view: ProductsAdminModel }
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Acciones</span>
           </div>
 
-          {pageItems.map((p) => (
+          {order.pageItems.map((p, position) => (
             <div
               key={p.id}
               className="admin-product-row bz-table-row"
               onClick={() => openEdit(p._i)}
+              draggable={order.enabled}
+              onDragStart={(e) => { if (!order.enabled) return; dragFrom.current = position; e.dataTransfer.effectAllowed = 'move'; }}
+              onDragOver={(e) => { if (order.enabled) e.preventDefault(); }}
+              onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (order.enabled && dragFrom.current !== null) order.move(dragFrom.current, position + 1); dragFrom.current = null; }}
+              onDragEnd={() => { dragFrom.current = null; }}
               style={{ display: 'grid', gridTemplateColumns: '2.6fr 1.1fr 1fr 0.8fr 90px', gap: 12, alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border-faint)', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                {order.enabled && <ProductOrderControls position={position} total={order.rows.length} move={order.move} />}
                 <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--color-surface-muted)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   {p.photos[0] ? (
                     <img src={p.photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -235,7 +256,7 @@ export default function ProductsAdminList({ view }: { view: ProductsAdminModel }
 
           {filtered.length === 0 && <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13.5 }}>No se encontraron productos.</div>}
 
-          {filtered.length > PAGE_SIZE && (
+          {!order.enabled && filtered.length > PAGE_SIZE && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
               <span style={{ fontSize: 12.5, color: 'var(--color-text-muted)' }}>
                 {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filtered.length)} de {filtered.length}

@@ -34,7 +34,8 @@ const matched = sinFiltro ? await getProductosPublicados() : await getProductosB
 // El orden se aplica ANTES de paginar: si no, cada página se ordenaría por
 // separado y el listado completo quedaría desordenado.
 const orden = parseOrden(Astro.url.searchParams.get('orden'));
-const ordenados = ordenarProductos(matched, orden);
+const ordenInstrumento = new Map(categoriasDb.map((c) => [c.id, c.orden]));
+const ordenados = ordenarProductos(matched, orden, ordenInstrumento);
 
 const PAGE_SIZE = 12;
 const totalPages = Math.max(1, Math.ceil(ordenados.length / PAGE_SIZE));

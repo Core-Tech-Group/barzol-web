@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Product, Vendor } from '../../types';
 import { mapProductoRowToProduct, type ProductoRow } from './productoMapper';
 import { getCategorias, getCategoryRowsForProductMapper } from '../categorias/categoriaService';
+import { ordenParaGuardar } from './productoOrdenService';
 
 // ÚNICA fuente de productos del proyecto (ver ARCHITECTURE.md § Regla de
 // datos mock). Ninguna vista debe definir su propio arreglo de productos.
@@ -20,6 +21,7 @@ function toProductoRow(r: any): ProductoRow {
     original_price: r.original_price === null ? null : Number(r.original_price),
     rating_avg: r.rating_avg == null ? 0 : Number(r.rating_avg),
     rating_count: r.rating_count == null ? 0 : Number(r.rating_count),
+    sort_order: r.sort_order == null ? undefined : Number(r.sort_order),
     category_id: String(r.category_id),
     vendor_id: String(r.vendor_id),
     status: r.status,
@@ -179,7 +181,7 @@ async function resolveVendorId(supabaseAuth: SupabaseClient, vendorNombre: strin
   return data.id;
 }
 
-function toProductRow(input: ProductoWriteInput, categoryId: number, vendorId: number) {
+function toProductRow(input: ProductoWriteInput, categoryId: number, vendorId: number, orden?: number) {
   return {
     name: input.nombre,
     description: input.descripcion,
@@ -191,6 +193,7 @@ function toProductRow(input: ProductoWriteInput, categoryId: number, vendorId: n
     status: input.publicado ? 'published' : 'draft',
     is_active: input.activo,
     is_personalizable: input.personalizable,
+    ...(orden === undefined ? {} : { sort_order: orden }),
   };
 }
 
@@ -239,9 +242,10 @@ export async function createProducto(supabaseAuth: SupabaseClient, input: Produc
     resolveVendorId(supabaseAuth, input.vendorNombre),
   ]);
 
+  const orden = await ordenParaGuardar(supabaseAuth, input.categoriaNombre);
   const { data, error } = await supabaseAuth
     .from('product')
-    .insert(toProductRow(input, categoryId, vendorId))
+    .insert(toProductRow(input, categoryId, vendorId, orden))
     .select('id')
     .single();
   if (error) throw error;
@@ -261,9 +265,10 @@ export async function updateProducto(
     resolveVendorId(supabaseAuth, input.vendorNombre),
   ]);
 
+  const orden = await ordenParaGuardar(supabaseAuth, input.categoriaNombre, id);
   const { error } = await supabaseAuth
     .from('product')
-    .update(toProductRow(input, categoryId, vendorId))
+    .update(toProductRow(input, categoryId, vendorId, orden))
     .eq('id', Number(id));
   if (error) throw error;
 

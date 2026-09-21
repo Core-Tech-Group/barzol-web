@@ -3,6 +3,7 @@ import AdminLayout from '@admin/layout/AdminLayout.astro';
 import ProductsAdmin, { type AdminProduct, TODAS_LAS_CATEGORIAS } from './ProductsAdmin.tsx';
 import { getProductos, getVendors } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
+import { compararRecientes } from '@shared/lib/productos/ordenProducto';
 
 // Adaptador: toma la forma canónica de los servicios (alineada a
 // DATABASE_SCHEMA.md — ids normalizados, precios numéricos) y arma las props
@@ -25,10 +26,12 @@ const instrumentsByCategory: Record<string, string[]> = Object.fromEntries(categ
 // alto, que es el insertado después.
 const recientesPrimero = productosDb
 	.slice()
-	.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || Number(b.id) - Number(a.id));
+	.sort(compararRecientes);
 
 const products: AdminProduct[] = recientesPrimero.map((p) => ({
 	id: p.id,
+	orden: p.orden,
+	createdAt: p.createdAt,
 	name: p.nombre,
 	category: p.categoriaId ? categoryById.get(p.categoriaId)?.nombre ?? '' : '',
 	instrument: p.subcategoriaId ? subcategoryById.get(p.subcategoriaId)?.nombre ?? '' : '',

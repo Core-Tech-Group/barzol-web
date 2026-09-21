@@ -24,6 +24,7 @@ export interface ProductoRow {
   original_price: number | null;
   rating_avg?: number;
   rating_count?: number;
+  sort_order?: number;
   category_id: string;
   vendor_id: string;
   status: 'draft' | 'published';
@@ -49,6 +50,8 @@ export function mapProductoRowToProduct(row: ProductoRow, categoryRows: Category
     precioOriginal: row.original_price,
     ratingAvg: row.rating_avg ?? 0,
     ratingCount: row.rating_count ?? 0,
+    orden: row.sort_order ?? 0,
+    ordenDisponible: row.sort_order != null,
     categoriaId: (parent ?? leaf)?.id ?? row.category_id,
     subcategoriaId: parent ? leaf!.id : null,
     vendorId: row.vendor_id,
