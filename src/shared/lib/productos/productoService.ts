@@ -18,6 +18,8 @@ function toProductoRow(r: any): ProductoRow {
     keywords: r.keywords,
     price: Number(r.price),
     original_price: r.original_price === null ? null : Number(r.original_price),
+    rating_avg: r.rating_avg == null ? 0 : Number(r.rating_avg),
+    rating_count: r.rating_count == null ? 0 : Number(r.rating_count),
     category_id: String(r.category_id),
     vendor_id: String(r.vendor_id),
     status: r.status,

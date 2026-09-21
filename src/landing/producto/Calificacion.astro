@@ -1,0 +1,32 @@
+---
+interface Props {
+  promedio: number;
+  cantidad: number;
+}
+
+const { promedio, cantidad } = Astro.props;
+const visible = cantidad > 0 && promedio > 0 && promedio <= 5;
+const texto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(promedio);
+const porcentaje = `${Math.round((promedio / 5) * 100)}%`;
+---
+
+{visible && (
+  <span class="bz-rating" aria-label={`Calificación registrada por Barzol: ${texto} de 5, ${cantidad} valoraciones`}>
+    <span aria-hidden="true" class="bz-rating-stars" style={`--rating-fill:${porcentaje}`}>★★★★★</span>
+    <strong>{texto}</strong>
+    <span>({cantidad})</span>
+  </span>
+)}
+
+<style>
+  .bz-rating { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-soft); font-size: 12px; line-height: 1.4; }
+  .bz-rating-stars {
+    background: linear-gradient(90deg, var(--color-rating) var(--rating-fill), var(--color-border) var(--rating-fill));
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 16px;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .bz-rating strong { color: var(--color-text); }
+</style>

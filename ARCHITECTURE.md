@@ -218,17 +218,24 @@ src/
 | Ruta | Layout | Vista real | Propósito |
 |---|---|---|---|
 | `/` | PublicLayout | `landing/home/HomeView.astro` | Home |
+| `/catalogo` | PublicLayout | `landing/catalogo/CatalogoView.astro` | Catálogo completo |
 | `/catalogo/[categoria]` | PublicLayout | `landing/catalogo/CatalogoView.astro` | Listado de productos por categoría |
-| `/producto/[slug]` | PublicLayout | `landing/producto/ProductoView.astro` | Ficha de producto |
+| `/producto/[slugCode]` | PublicLayout | `landing/producto/ProductoView.astro` | Ficha de producto por `code` |
 | `/galeria` | PublicLayout | `landing/galeria/GaleriaView.astro` | Galería de fotos |
-| `/servicios` | PublicLayout | `landing/servicios/ServiciosView.astro` | Institucional |
+| `/servicios` | redirección | `astro.config.mjs` | Lleva a accesorios personalizados |
+| `/servicios/accesorios-personalizados` | PublicLayout | `landing/servicios/AccesoriosView.astro` | Servicio público |
+| `/servicios/escaneo-impresion-3d` | PublicLayout | `landing/servicios/DisenoView.astro` | Servicio público |
+| `/servicios/trabajos-de-ingenieria-avanzada` | PublicLayout | `landing/servicios/IngenieriaView.astro` | Servicio público |
 | `/nosotros` | PublicLayout | `landing/nosotros/NosotrosView.astro` | Institucional |
 | `/busqueda` | PublicLayout | `landing/busqueda/BusquedaView.astro` | Resultados de búsqueda, usa `Pagination.astro` |
+| `/sitemap.xml` | endpoint SSR | `pages/sitemap.xml.ts` | Mapa de URLs públicas vigentes |
+| `/robots.txt` | endpoint SSR | `pages/robots.txt.ts` | Reglas de rastreo y enlace al sitemap |
 | `/500` | ErrorLayout | `pages/500.astro` | Error de servidor |
 | `/404` | ErrorLayout | `pages/404.astro` | Ruta inexistente |
 | `/admin/login` | AdminLayout | `admin/login/LoginView.astro` | Login del panel (Supabase Auth real) |
 | `/admin` | AdminLayout | `admin/dashboard/DashboardView.astro` | Dashboard del panel |
-| `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD de productos |
+| `/admin/productos` | AdminLayout | `admin/productos/ProductosView.astro` | CRUD y calificaciones administrables |
+| `/api/productos/[id]/calificacion` | endpoint protegido | `pages/api/productos/[id]/calificacion.ts` | PATCH de promedio y cantidad |
 | `/admin/categorias` | AdminLayout | `admin/categorias/CategoriasView.astro` | CRUD de categorías |
 | `/admin/inicio` | AdminLayout | `admin/inicio/InicioView.astro` | Hero, banners y secciones de la home |
 | `/admin/galeria-accesorios` | AdminLayout | `admin/galeria/GaleriaAccesoriosView.astro` | Galería de accesorios |

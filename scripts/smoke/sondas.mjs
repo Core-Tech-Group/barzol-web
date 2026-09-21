@@ -33,8 +33,8 @@ export async function pedir(url, { metodo = 'GET', token } = {}) {
   }
 }
 
-const pasa = (id, descripcion, ms) => ({ id, descripcion, estado: 'PASA', detalle: null, ms });
-const falla = (id, descripcion, detalle, ms) => ({ id, descripcion, estado: 'FALLA', detalle, ms });
+export const pasa = (id, descripcion, ms) => ({ id, descripcion, estado: 'PASA', detalle: null, ms });
+export const falla = (id, descripcion, detalle, ms) => ({ id, descripcion, estado: 'FALLA', detalle, ms });
 // AVISO es lo que no se pudo comprobar, no lo que falló. Decir PASA sin haberlo
 // verificado es la mentira que REQ-933 prohíbe en la auditoría de RLS, y vale
 // igual acá: no cambia el código de salida, pero se ve en el informe.

@@ -120,6 +120,8 @@ CREATE TABLE product (
     keywords           varchar(500),
     price              numeric(10,2) NOT NULL,
     original_price     numeric(10,2),
+    rating_avg         numeric(2,1) NOT NULL DEFAULT 0.0,
+    rating_count       integer NOT NULL DEFAULT 0,
     vendor_id          integer NOT NULL REFERENCES vendor(id) ON DELETE RESTRICT,
     category_id        integer NOT NULL REFERENCES category(id) ON DELETE RESTRICT,
     status             product_status NOT NULL DEFAULT 'draft',
@@ -128,7 +130,11 @@ CREATE TABLE product (
     created_at         timestamptz NOT NULL DEFAULT now(),
     updated_at         timestamptz NOT NULL DEFAULT now(),
     created_by         uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
-    updated_by         uuid REFERENCES admin_profile(id) ON DELETE SET NULL
+    updated_by         uuid REFERENCES admin_profile(id) ON DELETE SET NULL,
+    CONSTRAINT product_rating_consistency CHECK (
+        (rating_count = 0 AND rating_avg = 0)
+        OR (rating_count > 0 AND rating_avg > 0 AND rating_avg <= 5)
+    )
 );
 
 ALTER SEQUENCE product_code_seq OWNED BY product.code;

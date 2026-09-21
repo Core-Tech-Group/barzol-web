@@ -19,6 +19,7 @@ import {
   paginaNoEncontrada,
   portadaViva,
 } from './smoke/sondas.mjs';
+import { seoEsencial } from './smoke/seo.mjs';
 
 // El defecto apunta al despliegue VIGENTE, y cambiarlo es obligatorio al mudar
 // de cuenta (SPEC-908 REQ-1008). Un defecto obsoleto no falla: interroga el sitio
@@ -65,6 +66,7 @@ async function main() {
     await paginaNoEncontrada(base),
     ...(await estadoYCommit(base, { token, commit })),
     await imagenDesdeR2(base),
+    ...(await seoEsencial(base)),
   ];
 
   for (const r of resultados) {

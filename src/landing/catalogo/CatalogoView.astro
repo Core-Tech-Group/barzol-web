@@ -42,7 +42,7 @@ const requestedPage = Number(Astro.url.searchParams.get('page')) || 1;
 const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
 const pageItems = ordenados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
+const products = pageItems.map((p) => ({ id: p.id, href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0], ratingAvg: p.ratingAvg, ratingCount: p.ratingCount }));
 
 // "Limpiar" quita el filtro de categoría y deja el catálogo completo — la
 // misma vista, sin filtrar. Conserva el orden: es una preferencia de
@@ -56,7 +56,13 @@ const breadcrumbItems = sinFiltro
   : [{ label: 'Inicio', href: '/' }, { label: categoryName }];
 ---
 
-<PublicLayout title={`${categoryName} — Barzol`}>
+<PublicLayout
+  title={`${categoryName} — Barzol`}
+  descripcion={categoriaActual ? `Explora accesorios musicales para ${categoryName.toLowerCase()} diseñados y fabricados por Barzol en Perú.` : undefined}
+  canonicalPath={`${sinFiltro ? '/catalogo' : `/catalogo/${categoriaActual.slug}`}${currentPage > 1 ? `?page=${currentPage}` : ''}`}
+  noindex={Boolean(categoria) && !categoriaActual}
+  preservePage={currentPage > 1}
+>
 	<Breadcrumb items={breadcrumbItems} />
 
 	<!-- CATEGORY HERO -->
@@ -88,7 +94,7 @@ const breadcrumbItems = sinFiltro
 			</div>
 			<div class="bz-cat-product-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
 				{products.map((p) => (
-					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} foto={p.foto} />
+					<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} foto={p.foto} ratingAvg={p.ratingAvg} ratingCount={p.ratingCount} />
 				))}
 			</div>
 

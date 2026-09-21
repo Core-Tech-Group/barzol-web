@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '@admin/layout/AdminLayout.astro';
 import ProductsAdmin, { type AdminProduct, TODAS_LAS_CATEGORIAS } from './ProductsAdmin.tsx';
+import CalificacionesAdmin from './CalificacionesAdmin.tsx';
 import { getProductos, getVendors } from '@shared/lib/productos/productoService';
 import { getCategorias } from '@shared/lib/categorias/categoriaService';
 
@@ -46,5 +47,6 @@ const products: AdminProduct[] = recientesPrimero.map((p) => ({
 ---
 
 <AdminLayout title="Admin · Productos — Barzol" active="productos">
+	<CalificacionesAdmin client:load productos={recientesPrimero.map((p) => ({ id: p.id, nombre: p.nombre, promedio: p.ratingAvg, cantidad: p.ratingCount }))} />
 	<ProductsAdmin client:load initialProducts={products} categories={categories} instrumentsByCategory={instrumentsByCategory} vendors={vendors} />
 </AdminLayout>

@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — SPEC ↔ TEST ↔ código
 
-> **Última actualización:** 2026-09-11 (5ª revisión — alta de SPEC-004 y SPEC-005, enmienda de SPEC-905)
+> **Última actualización:** 2026-09-20 (SEO Esencial y estrellas administrables)
 > **Verificación automática:** `npm run sdd:trace`. Este documento es el resumen
 > legible; **la fuente de verdad es el gate**, que sí falla.
 
@@ -15,6 +15,8 @@
 | [SPEC-003](specs/SPEC-003-slug-publico.md) · Slug público | **APROBADA** | ✅ `text/slugify.ts` | ✅ 19 tests |
 | [SPEC-004](specs/SPEC-004-orden-productos.md) · Orden manual de productos | BORRADOR | ⬜ sin implementar (necesita migración + función `reordenar_productos`) | ⬜ matriz de 33 casos |
 | [SPEC-005](specs/SPEC-005-borrado-media-r2.md) · Borrado de imágenes en desuso (BZ-11) | BORRADOR | ⬜ sin implementar | ⬜ matriz de 22 casos |
+| [SPEC-006](specs/SPEC-006-seo-esencial.md) · SEO Esencial | **APROBADA** | 🔶 sitemap, robots, canónicas y sondas escritos | ✅ unitarios; ⏳ HTML local/producción pendiente por workerd ARM64 |
+| [SPEC-007](specs/SPEC-007-estrellas-administrables.md) · Estrellas administrables | **APROBADA** | 🔶 código compatible; migración remota pendiente | ✅ unitarios; ⏳ UI y SQL remoto pendientes |
 | [SPEC-900](specs/SPEC-900-gates-cicd.md) · Gates de CI/CD | BORRADOR | 🔶 workflow escrito, sin correr | ⬜ matriz de 14 provocaciones |
 | [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios |
 | [SPEC-902](specs/SPEC-902-rls-supabase.md) · Políticas RLS | BORRADOR | 🔶 auditoría de lectura hecha | ⬜ pgTAP pendiente |
@@ -37,6 +39,8 @@ estar citados en algún test o el gate falla.
 | SPEC-003 | 301–305 | **5 / 5** | — |
 | SPEC-004 | 401–416 | 0 / 16 | aprobación humana · `/sdd-red` |
 | SPEC-005 | 501–512 | 0 / 12 | aprobación humana · despliegue por etapas (galerías → productos → inicio) |
+| SPEC-006 | 601–607 | **7 / 7 citados** | ejecutar matriz manual y sondas tras despliegue |
+| SPEC-007 | 701–707 | **7 / 7 citados** | aplicar SQL y ejecutar matriz manual |
 | SPEC-900 | 901–911 | 0 / 11 | ejecutar la matriz de `SPEC-900.plan.md` |
 | SPEC-901 | 951–961 | 0 / 11 | tests unitarios del evaluador de sondas |
 | SPEC-902 | 921–933 | 0 / 13 | `BZ-70` · pgTAP |
@@ -51,6 +55,11 @@ estar citados en algún test o el gate falla.
 > `src` sale de `imagenUrl` y que las vistas no vuelven a descartar el campo —
 > que es la regresión concreta que hubo. Que la foto **se vea** solo lo puede
 > decir `BZ-74` (E2E); la capa de componentes sigue bloqueada por `BZ-60`.
+
+> **SPEC-006 y SPEC-007:** «citado» no equivale a verificado. Las pruebas manuales
+> en `tests/manual/` siguen pendientes porque `workerd` no arranca en la Orange Pi
+> ARM64 (fallo TCMalloc). CI x86 y sondas de producción completan la verificación.
+> SPEC-007 además requiere aplicar `supabase/20260920-calificaciones-administrables.sql`.
 
 > **SPEC-904 REQ-979 está cubierto por un test que NO prueba producción.**
 > `clienteAutenticado.test.ts` verifica que la migración pendiente declara las

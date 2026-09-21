@@ -62,6 +62,11 @@ lo oculte. Ver `SPEC-902`.
 **`is_active` / `activo`** — Distinto de `publicado`. Un producto puede estar
 publicado y descatalogado.
 
+**`rating_avg` / `rating_count`** — Promedio (0–5, un decimal) y cantidad
+administrados para un producto. `(0, 0)` significa «sin valoración». No son
+reseñas verificadas ni alimentan `AggregateRating`. La migración aditiva de
+SPEC-007 habilita estas columnas en Supabase.
+
 **`precio` / `precioOriginal`** — `price` y `original_price` en Postgres, tipo
 `numeric`. **Hoy llegan al dominio como `number` decimal.** La Constitución (Regla
 3) exige céntimos enteros dentro de la lógica pura; la conversión ocurre en el

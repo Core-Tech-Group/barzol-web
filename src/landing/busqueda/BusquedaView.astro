@@ -49,10 +49,10 @@ if (query.trim()) paginacionParams.q = query.trim();
 // URL cuando ya es el de por defecto.
 const limpiarHref = orden === ORDEN_POR_DEFECTO ? '/catalogo' : `/catalogo?orden=${orden}`;
 
-const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
+const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0], ratingAvg: p.ratingAvg, ratingCount: p.ratingCount }));
 ---
 
-<PublicLayout title={`Buscar "${query}" — Barzol`}>
+<PublicLayout title={`Buscar "${query}" — Barzol`} noindex>
 	<!-- SEARCH HEADER -->
 	<div style="background:white; border-bottom:1px solid var(--color-border-soft); padding:16px 0;">
 		<div style="max-width:1200px; margin:0 auto; padding:0 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
@@ -79,7 +79,7 @@ const results = pageItems.map((p) => ({ href: productoUrl(p), nombre: p.nombre, 
 				<>
 					<div class="bz-search-results-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
 						{results.map((p) => (
-							<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} foto={p.foto} />
+						<ProductCard href={p.href} nombre={p.nombre} precio={p.precio} precioOriginal={p.precioOriginal} foto={p.foto} ratingAvg={p.ratingAvg} ratingCount={p.ratingCount} />
 						))}
 					</div>
 

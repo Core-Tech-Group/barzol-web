@@ -9,6 +9,8 @@ interface Product {
   marca?: string;
   isNew?: boolean;
   foto?: string;
+  ratingAvg?: number;
+  ratingCount?: number;
 }
 
 interface Props {
@@ -37,7 +39,9 @@ const { title, products } = Astro.props;
 						precioOriginal={product.precioOriginal}
 						marca={product.marca}
 						isNew={product.isNew}
-						foto={product.foto}
+							foto={product.foto}
+							ratingAvg={product.ratingAvg}
+							ratingCount={product.ratingCount}
 					/>
 				</div>
 			))}

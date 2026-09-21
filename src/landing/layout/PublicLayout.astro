@@ -4,6 +4,7 @@ import { ClientRouter } from 'astro:transitions';
 import Header from '@landing/shared/Header.astro';
 import Footer from '@landing/shared/Footer.astro';
 import WhatsAppButton from '@landing/shared/WhatsAppButton.astro';
+import { canonicalUrl } from '@shared/lib/seo/sitemap';
 
 interface Props {
   title?: string;
@@ -11,18 +12,23 @@ interface Props {
   descripcion?: string;
   /** URL absoluta de la imagen de esa tarjeta (WhatsApp, Facebook...). Sin ella, sale solo texto. */
   imagen?: string;
+  canonicalPath?: string;
+  noindex?: boolean;
+  preservePage?: boolean;
 }
 
 const {
   title = 'Barzol',
   descripcion = 'Accesorios exclusivos para tu instrumento musical, diseñados y fabricados con tecnología 3D.',
   imagen,
+  canonicalPath,
+  noindex = false,
+  preservePage = false,
 } = Astro.props;
 
-// Open Graph: lo que leen WhatsApp, Facebook, etc. al pegar un link del sitio
-// para armar la vista previa. La URL va sin query string para que todas las
-// variantes de una página compartan la misma tarjeta.
-const urlCanonica = new URL(Astro.url.pathname, Astro.url.origin).href;
+// Open Graph comparte la URL canónica: se eliminan filtros y parámetros de
+// rastreo; solo las páginas de catálogo paginadas conservan ?page=N.
+const urlCanonica = canonicalUrl(canonicalPath ?? `${Astro.url.pathname}${Astro.url.search}`, { preservePage });
 ---
 
 <html lang="es">
@@ -39,6 +45,7 @@ const urlCanonica = new URL(Astro.url.pathname, Astro.url.origin).href;
 		/>
 		<title>{title}</title>
 		<meta name="description" content={descripcion} />
+		{noindex ? <meta name="robots" content="noindex,follow" /> : <link rel="canonical" href={urlCanonica} />}
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Barzol" />
 		<meta property="og:locale" content="es_PE" />

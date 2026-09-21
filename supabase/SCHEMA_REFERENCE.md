@@ -43,6 +43,8 @@ erDiagram
         varchar(500) keywords
         numeric price
         numeric original_price "nullable"
+        numeric rating_avg "0..5, una cifra decimal; valor administrativo"
+        integer rating_count "0 si no hay valoraciones"
         integer vendor_id FK
         integer category_id FK "instrumento o subcategoria, cualquier nivel"
         product_status status "enum: draft / published"
@@ -163,6 +165,8 @@ erDiagram
 | keywords | varchar(500) | búsqueda interna |
 | price | numeric(10,2) | |
 | original_price | numeric(10,2) | nullable — precio tachado |
+| rating_avg | numeric(2,1) | promedio administrado, 0–5; 0 si no hay valoraciones |
+| rating_count | integer | cantidad administrada; 0 si no hay valoraciones |
 | vendor_id | integer | FK → `vendor.id` |
 | category_id | integer | FK → `category.id`. Puede apuntar a cualquier nivel del árbol — instrumento o subcategoría. Hasta el 2026-08-14 un trigger exigía que fuera siempre una hoja; se sacó para permitir productos sin subcategoría asignada (categoría sin subcategorías definidas todavía, por ejemplo) |
 | status | `product_status` (enum) | `draft` \| `published`. Ver definición del tipo abajo |

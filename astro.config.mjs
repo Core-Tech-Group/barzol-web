@@ -38,6 +38,7 @@ const commitSha = shaCompleto ? shaCompleto.slice(0, 7) : 'desconocido';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://barzol3d.com',
   output: 'server',
 
   // `/servicios` existía como página propia y renderizaba ServiciosView. El

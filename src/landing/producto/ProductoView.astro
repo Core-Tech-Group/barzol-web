@@ -2,6 +2,7 @@
 import PublicLayout from '@landing/layout/PublicLayout.astro';
 import Breadcrumb from '@landing/shared/Breadcrumb.astro';
 import ProductCarousel from './ProductCarousel.astro';
+import Calificacion from './Calificacion.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import type { Product } from '@shared/types';
 import { getProductosByCategoria } from '@shared/lib/productos/productoService';
@@ -38,7 +39,7 @@ const breadcrumbMiddle = categoria ? { label: categoria.nombre, href: `/catalogo
 // no toda la tabla product.
 const leafIds = categoria ? [categoria.id, ...categoria.subcategorias.map((s) => s.id)] : [];
 const suggestedDb = leafIds.length ? await getProductosByCategoria(leafIds, { excludeId: producto.id, limit: 4 }) : [];
-const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0] }));
+const suggested = suggestedDb.map((p) => ({ href: productoUrl(p), nombre: p.nombre, precio: p.precio, precioOriginal: p.precioOriginal ?? undefined, foto: p.fotos[0], ratingAvg: p.ratingAvg, ratingCount: p.ratingCount }));
 
 // "Consultar por WhatsApp": el link del producto va en el mensaje para que
 // WhatsApp arme la tarjeta con la foto (la leen de las etiquetas Open Graph
@@ -51,7 +52,7 @@ const imagenCompartir = fotos[0] ? new URL(fotos[0], Astro.url.origin).href : un
 const descripcionCompartir = producto.descripcion.trim() || undefined;
 ---
 
-<PublicLayout title={`${nombre} — Barzol`} descripcion={descripcionCompartir} imagen={imagenCompartir}>
+<PublicLayout title={`${nombre} — Barzol`} descripcion={descripcionCompartir} imagen={imagenCompartir} canonicalPath={productoUrl(producto)}>
 	<Breadcrumb
 		items={[
 			{ label: 'Inicio', href: '/' },
@@ -117,6 +118,7 @@ const descripcionCompartir = producto.descripcion.trim() || undefined;
 						</>
 					)}
 				</div>
+				{producto.ratingCount > 0 && <div style="margin-bottom:12px;"><Calificacion promedio={producto.ratingAvg} cantidad={producto.ratingCount} /></div>}
 				<p style="font-size:13.5px; color:var(--color-text-body); line-height:1.7; margin-bottom:12px;">{producto.descripcion}</p>
 				<ul style="list-style:none; display:flex; flex-direction:column; gap:7px; margin-bottom:22px; padding:0;">
 					{caracteristicas.map((bullet) => (
