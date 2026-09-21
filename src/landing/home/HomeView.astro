@@ -98,7 +98,7 @@ const heroSlides = [
 	</section>
 
 	<!-- PRODUCT SECTIONS -->
-	<div class="bz-section-wrap" style="max-width:1200px; margin:0 auto; padding:0 32px;">
+	<div class="bz-section-wrap bz-home-product-sections" style="max-width:1440px; margin:0 auto; padding:0 24px; --carousel-card-width:208px;">
 		{sections.map((section, i) => (
 			<div style={i === 0 ? 'margin-top:48px;' : undefined}>
 				<ProductCarousel title={section.title} products={section.products} />
@@ -147,6 +147,11 @@ const heroSlides = [
 </PublicLayout>
 
 <style>
+	/* En 1366 px caben 6 × 208 px + 5 × 12 px dentro de 1318 px. */
+	.bz-home-product-sections :global(.carousel-track) {
+		justify-content: safe center;
+	}
+
 	/* Zona de fotos: la derecha del hero. El texto queda sobre el azul sólido
 	   del contenedor. */
 	.bz-hero-media {

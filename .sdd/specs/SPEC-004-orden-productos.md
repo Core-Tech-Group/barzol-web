@@ -10,7 +10,7 @@
 `src/pages/api/productos/orden.ts` ·
 `src/landing/shared/ordenProductos.ts` · `SortSelect.astro` · `CatalogoView.astro` ·
 `BusquedaView.astro` · `src/admin/productos/ordenAdmin.ts` + isla del
-admin · `supabase/pendiente-orden-productos.sql` (preparado, pendiente de aplicar)
+admin · `supabase/pendiente-orden-productos.sql` (aplicado por el usuario)
 
 ---
 
@@ -195,7 +195,8 @@ El usuario aprobó la implementación y pidió índice visible más movimiento p
 número cuando la lista sea larga. La vista por categoría es el único lugar con
 reordenamiento. Se mantiene el alcance por instrumento de la SPEC original.
 `ProductsAdmin.tsx` ya fue dividido y tiene 489 líneas; la interfaz nueva va
-en un componente y funciones separados. La migración aún no se ha aplicado.
+en un componente y funciones separados. El usuario aplicó después una variante
+del SQL con verificación de nulos y validación explícita del `CHECK`.
 
 ---
 

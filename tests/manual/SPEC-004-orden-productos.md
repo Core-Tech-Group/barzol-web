@@ -10,4 +10,4 @@
 6. Editar nombre, precio, fotos o características de un producto y comprobar que el orden no se pierde. Crear un producto en la categoría: debe quedar al final. Moverlo a otra categoría: debe quedar al final de la nueva.
 7. En una ventana sin sesión, intentar `PATCH /api/productos/orden` con un cuerpo válido: debe responder `401`. Con sesión, probar un cuerpo repetido o posición negativa: debe responder `400` y no cambiar la lista.
 
-**Estado 2026-09-21:** pendiente de SQL remoto y navegador autenticado. Las pruebas Node y el gate SDD verifican la lógica local; no sustituyen esta comprobación.
+**Estado 2026-09-21:** SQL remoto aplicado; lectura de 26 productos y rechazo de RPC anónima verificados. Pendiente navegador autenticado para los casos 1–6 y comprobación con sesión real del caso 7.

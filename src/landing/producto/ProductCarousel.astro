@@ -31,7 +31,7 @@ const { title, products } = Astro.props;
 		</button>
 		<div class="carousel-track" data-noscroll style="display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; scroll-behavior:smooth;">
 			{products.map((product) => (
-				<div style="flex-shrink:0; width:218px;">
+				<div style="flex-shrink:0; width:var(--carousel-card-width, 218px);">
 					<ProductCard
 						href={product.href}
 						nombre={product.nombre}
