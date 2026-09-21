@@ -9,13 +9,13 @@
 - `https://barzol3d.com/`, `/robots.txt` y `/sitemap.xml`: HTTP 200.
 - Sitemap: 40 URLs únicas. La portada, catálogo, galería y página «Nosotros» entregan HTML con canónica HTTPS, sin `noindex` ni cabecera `X-Robots-Tag`.
 - El `robots.txt` del Worker permite `/` y declara `Sitemap: https://barzol3d.com/sitemap.xml`. No necesita habilitarse en Cloudflare. Una política gestionada de Cloudflare, si se activa, puede anteponer reglas; verificar siempre la respuesta pública final.
-- `http://barzol3d.com/` entrega 200 y no redirige. Los DNS NS son de Cloudflare; no se observó TXT `google-site-verification` en la consulta pública.
+- `http://barzol3d.com/` entrega 200 y no redirige. Los DNS NS son de Cloudflare. El TXT `google-site-verification` añadido por el titular ya responde desde el resolvedor local y `1.1.1.1`; su valor coincide con el entregado en la conversación. Esto confirma publicación DNS, no la aprobación de la propiedad dentro de Search Console.
 - Una solicitud que declara `User-Agent: Googlebot` recibió 200. Esto no prueba que el Googlebot real pueda pasar reglas WAF o que Google haya indexado la URL.
 
 ## Acciones en las cuentas del dominio
 
 1. En Cloudflare, abrir **SSL/TLS → Edge Certificates → Always Use HTTPS** y activarlo. Comprobar que `http://barzol3d.com/` devuelve 301/308 hacia `https://barzol3d.com/`, sin bucle. La configuración vive en el panel de la zona, no en `wrangler.jsonc`.
-2. Con una cuenta Google que administrará el sitio, abrir [Search Console](https://search.google.com/search-console/welcome), añadir la propiedad de dominio `barzol3d.com` y copiar el TXT único `google-site-verification=…` que Google entregue. En **Cloudflare → DNS → Records**, añadir un registro TXT para `@` con ese valor. No sustituir otros TXT. Volver a Search Console y pulsar **Verificar**; conservar el registro.
+2. En la propiedad de dominio `barzol3d.com` ya creada en [Search Console](https://search.google.com/search-console/welcome), pulsar **Verificar**. El TXT está publicado y coincide; conservarlo en Cloudflare después de verificar. Si Google aún no lo encuentra, esperar propagación y reintentar sin crear registros duplicados.
 3. En **Search Console → Sitemaps**, enviar `https://barzol3d.com/sitemap.xml` y anotar si Google lo lee y cuántas URLs descubre. El sitemap ya anunciado en `robots.txt` no aparecerá necesariamente en este informe hasta que se envíe desde la propiedad.
 4. En **Inspección de URL**, introducir `https://barzol3d.com/`. Guardar el estado indexado, motivo de exclusión si existe, canónica elegida por Google, fecha de último rastreo y resultado de **Probar URL publicada**. Si la prueba permite indexación, pulsar **Solicitar indexación** una vez. Inspeccionar también una URL de producto del sitemap.
 5. Si Google indica que no puede rastrear, mirar **Cloudflare → Security → Analytics → Events** para solicitudes verificadas de Googlebot y su acción. Corregir solo la regla que realmente bloquea o desafía; usar la clasificación de bot verificado (`cf.client.bot`) cuando corresponda, nunca confiar únicamente en el texto `User-Agent`.
