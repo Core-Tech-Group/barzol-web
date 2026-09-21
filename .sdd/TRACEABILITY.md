@@ -16,7 +16,7 @@
 | [SPEC-004](specs/SPEC-004-orden-productos.md) · Orden manual de productos | BORRADOR | ⬜ sin implementar (necesita migración + función `reordenar_productos`) | ⬜ matriz de 33 casos |
 | [SPEC-005](specs/SPEC-005-borrado-media-r2.md) · Borrado de imágenes en desuso (BZ-11) | BORRADOR | ⬜ sin implementar | ⬜ matriz de 22 casos |
 | [SPEC-006](specs/SPEC-006-seo-esencial.md) · SEO Esencial | **APROBADA** | ✅ sitemap, robots, canónicas y sondas publicados (`0c216d5`) | ✅ unitarios, CI workerd y humo en producción; ⏳ matriz manual completa |
-| [SPEC-007](specs/SPEC-007-estrellas-administrables.md) · Estrellas administrables | **APROBADA** | 🔶 columnas legibles; enmienda de UX de calificación en curso | ✅ unitarios e interacción; ⏳ guardado autenticado y UI manual pendientes |
+| [SPEC-007](specs/SPEC-007-estrellas-administrables.md) · Estrellas administrables | **APROBADA** | ✅ columnas legibles y estado vacío publicado (`3f02a1a`); editor en modal | ✅ unitarios, interacción y HTML público; ⏳ guardado autenticado y UI manual pendientes |
 | [SPEC-008](specs/SPEC-008-editores-admin-modulares.md) · Editores modulares | **APROBADA** | ✅ productos, inicio y categorías separados en archivos <500 líneas | ✅ render, interacciones y gate de tamaño; ⏳ UI autenticada manual |
 | [SPEC-900](specs/SPEC-900-gates-cicd.md) · Gates de CI/CD | BORRADOR | 🔶 workflow escrito, sin correr | ⬜ matriz de 14 provocaciones |
 | [SPEC-901](specs/SPEC-901-smoke-produccion.md) · Humo post-deploy | BORRADOR | ✅ `scripts/smoke.mjs` | 🔶 ejecutado contra prod, sin tests unitarios |
