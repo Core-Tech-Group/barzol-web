@@ -1,0 +1,45 @@
+---
+import Calificacion from '@landing/producto/Calificacion.astro';
+import type { ResumenCalificaciones } from '@shared/lib/productos/calificacionGlobal';
+
+interface Props {
+  resumen: ResumenCalificaciones;
+}
+
+const { resumen } = Astro.props;
+const cantidadTexto = new Intl.NumberFormat('es-PE').format(resumen.cantidad);
+---
+
+<section class="global-rating" aria-label="Calificación general de productos">
+  <h2>Calificación general</h2>
+  <Calificacion promedio={resumen.promedio} cantidad={resumen.cantidad} mostrarCantidad={false} />
+  {resumen.cantidad > 0 ? (
+    <span class="global-rating-count">de 5 · {cantidadTexto} {resumen.cantidad === 1 ? 'calificación' : 'calificaciones'} de productos</span>
+  ) : (
+    <span class="global-rating-count">0,0 de 5 · Aún sin calificaciones de productos</span>
+  )}
+</section>
+
+<style>
+  .global-rating {
+    max-width: 1350px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    border-bottom: 1px solid var(--color-border-soft);
+    color: var(--color-text);
+  }
+  .global-rating h2 { font-size: 14px; font-weight: 600; margin: 0; }
+  .global-rating-count { color: var(--color-text-soft); font-size: 13px; }
+  .global-rating :global(.bz-rating) { font-size: 14px; }
+  .global-rating :global(.bz-rating-stars) { font-size: 20px; }
+  @media (max-width: 480px) {
+    .global-rating { padding: 14px 20px; gap: 5px 10px; }
+    .global-rating h2 { width: 100%; text-align: center; }
+    .global-rating-count { text-align: center; }
+  }
+</style>

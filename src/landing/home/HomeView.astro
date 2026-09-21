@@ -3,8 +3,10 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import ProductCarousel from '@landing/producto/ProductCarousel.astro';
 import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import ServicePromoCard from './ServicePromoCard.astro';
+import CalificacionGlobal from './CalificacionGlobal.astro';
 import { getHomeItems } from '@shared/lib/home/homeService';
 import { getProductosByIds } from '@shared/lib/productos/productoService';
+import { getCalificacionGlobal } from '@shared/lib/productos/calificacionGlobalService';
 import { productoUrl } from '@shared/lib/productos/productoUrl';
 
 // Adaptador: las secciones de productos del home (administradas en
@@ -12,7 +14,7 @@ import { productoUrl } from '@shared/lib/productos/productoUrl';
 // que espera ProductCarousel (href/nombre/precio). Los banners de imagen no
 // se renderizan todavía en esta vista — el hero actual es estático, sin
 // slots de imagen — así que solo se muestran las secciones de tipo 'seccion'.
-const homeItemsDb = await getHomeItems();
+const [homeItemsDb, calificacionGlobal] = await Promise.all([getHomeItems(), getCalificacionGlobal()]);
 const visibleSections = homeItemsDb.filter((it) => it.tipo === 'seccion' && it.visible);
 
 // Solo se piden los productos que las secciones visibles realmente
@@ -97,8 +99,10 @@ const heroSlides = [
 		)}
 	</section>
 
+	<CalificacionGlobal resumen={calificacionGlobal} />
+
 	<!-- PRODUCT SECTIONS -->
-	<div class="bz-section-wrap bz-home-product-sections" style="max-width:1440px; margin:0 auto; padding:0 24px; --carousel-card-width:208px;">
+	<div class="bz-section-wrap bz-home-product-sections" style="max-width:1350px; margin:0 auto; padding:0 24px; --carousel-card-width:207px;">
 		{sections.map((section, i) => (
 			<div style={i === 0 ? 'margin-top:48px;' : undefined}>
 				<ProductCarousel title={section.title} products={section.products} />
@@ -147,9 +151,17 @@ const heroSlides = [
 </PublicLayout>
 
 <style>
-	/* En 1366 px caben 6 × 208 px + 5 × 12 px dentro de 1318 px. */
+	/* 6 × 207 + 5 × 12 = 1302 px: justo el área útil máxima. */
 	.bz-home-product-sections :global(.carousel-track) {
 		justify-content: safe center;
+	}
+	@media (min-width: 1366px) {
+		.bz-home-product-sections :global(.carousel-track) {
+			scroll-snap-type: x mandatory;
+		}
+		.bz-home-product-sections :global(.carousel-track > div) {
+			scroll-snap-align: start;
+		}
 	}
 
 	/* Zona de fotos: la derecha del hero. El texto queda sobre el azul sólido

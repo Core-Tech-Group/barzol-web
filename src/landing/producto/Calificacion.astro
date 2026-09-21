@@ -2,9 +2,10 @@
 interface Props {
   promedio: number;
   cantidad: number;
+  mostrarCantidad?: boolean;
 }
 
-const { promedio, cantidad } = Astro.props;
+const { promedio, cantidad, mostrarCantidad = true } = Astro.props;
 const visible = cantidad > 0 && promedio > 0 && promedio <= 5;
 const texto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(promedio);
 const porcentaje = `${Math.round((promedio / 5) * 100)}%`;
@@ -14,7 +15,7 @@ const porcentaje = `${Math.round((promedio / 5) * 100)}%`;
   <span class="bz-rating" aria-label={`Calificación registrada por Barzol: ${texto} de 5, ${cantidad} valoraciones`}>
     <span aria-hidden="true" class="bz-rating-stars" style={`--rating-fill:${porcentaje}`}>★★★★★</span>
     <strong>{texto}</strong>
-    <span>({cantidad})</span>
+    {mostrarCantidad && <span>({cantidad})</span>}
   </span>
 ) : (
   <span class="bz-rating" aria-label="Sin calificaciones">

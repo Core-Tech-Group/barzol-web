@@ -18,8 +18,10 @@ muestran margen lateral sobrante. Hay secciones con más de cinco productos;
 ### [REQ-1101] — Seis tarjetas en escritorio amplio
 MIENTRAS una sección del inicio tenga al menos seis productos y el viewport de
 escritorio mida 1366 px o más, el sistema DEBE mostrar seis tarjetas completas
-en la primera posición del carrusel, sin cortar la sexta. El bloque DEBE quedar
-centrado horizontalmente con márgenes laterales equilibrados.
+en la primera posición del carrusel, sin cortar la sexta ni dejar visible parte
+de una séptima. El bloque DEBE quedar centrado horizontalmente con márgenes
+laterales equilibrados. El límite DEBE seguir siendo seis en escritorios más
+anchos y después de usar las flechas del carrusel.
 
 ### [REQ-1102] — Menos de seis y pantallas estrechas
 MIENTRAS una sección tenga menos de seis productos, el sistema DEBE centrar
@@ -37,3 +39,12 @@ de las tarjetas del carrusel de la ficha de producto y de los catálogos.
 No se cambia el número de productos guardados en Supabase ni se agrega un
 producto a secciones que solo contienen cinco. No se cambia el hero, cabecera,
 catálogo, búsqueda ni ficha de producto.
+
+## Enmienda 2026-09-21
+
+La captura de producción muestra seis tarjetas enteras y una séptima parcial
+en un escritorio amplio. El ancho anterior (1440 px con 24 px laterales) dejaba
+1392 px para una fila que ocupaba 1308 px. REQ-1101 fija ahora también el
+máximo visible. El ancho previsto es 1350 px con 24 px laterales y tarjetas de
+207 px: 6 × 207 + 5 × 12 = 1302 px, incluso con 15 px de scrollbar en una
+ventana de 1366 px.
