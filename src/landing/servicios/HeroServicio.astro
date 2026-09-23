@@ -11,6 +11,8 @@
 //              alto del hero y, en móvil, el de la franja clara inferior.
 //   zonaClara: false deja el fondo todo azul, para cuando el slot cubre el
 //              lado derecho entero con fotos.
+//   altoMinimo: reserva altura adicional en escritorio cuando el texto es
+//               extenso; en móvil el contenido conserva su flujo vertical.
 // El slot puede leer --alto-hero (alto del hero en desktop) para dimensionarse.
 interface Props {
   titulo: string;
@@ -18,12 +20,13 @@ interface Props {
   arcoMovil: string;
   altoMedia: number;
   zonaClara?: boolean;
+  altoMinimo?: string;
 }
 
-const { titulo, arco, arcoMovil, altoMedia, zonaClara = true } = Astro.props;
+const { titulo, arco, arcoMovil, altoMedia, zonaClara = true, altoMinimo = '0px' } = Astro.props;
 ---
 
-<div class="bz-sh" style={`--arco-desktop:${arco}; --arco-movil:${arcoMovil}; --alto-media:${altoMedia};`}>
+<div class="bz-sh" style={`--arco-desktop:${arco}; --arco-movil:${arcoMovil}; --alto-media:${altoMedia}; --alto-minimo:${altoMinimo};`}>
 	{zonaClara && <div class="bz-sh-fondo" aria-hidden="true"></div>}
 	<div class="bz-sh-inner">
 		<div class="bz-sh-texto">
@@ -69,7 +72,7 @@ const { titulo, arco, arcoMovil, altoMedia, zonaClara = true } = Astro.props;
 	.bz-sh-inner {
 		position: relative;
 		z-index: 2;
-		min-height: var(--alto-hero);
+		min-height: max(var(--alto-hero), var(--alto-minimo));
 		padding: 0 72px;
 		display: flex;
 		align-items: flex-end;

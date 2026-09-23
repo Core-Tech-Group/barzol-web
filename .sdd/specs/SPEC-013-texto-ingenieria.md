@@ -2,34 +2,31 @@
 
 **Estado:** APROBADA por solicitud explícita del responsable (2026-09-21)
 **Capa:** presentación Astro
-**Unidades:** `src/landing/servicios/IngenieriaView.astro`, `IngenieriaIntro.astro`
+**Unidades:** `src/landing/servicios/IngenieriaView.astro`, `HeroServicio.astro`
 **Tablero:** BZ-121
 
 ## Contexto
 
-El hero de ingeniería resume el servicio y enlaza directamente con la galería.
-El responsable aportó tres párrafos adicionales sobre métodos, aplicaciones y
-materiales, para explicar mejor el alcance antes de mostrar los trabajos.
+El responsable reemplazó el bloque explicativo inferior por dos párrafos más
+compactos que deben formar parte del hero de ingeniería, antes de la galería.
 
 ## Requisitos (EARS)
 
 ### [REQ-1301] — Contenido
-CUANDO se carga la página de ingeniería avanzada, el sistema DEBE mostrar el
-texto aportado sobre escaneo 3D, ingeniería inversa, CAD/CAE, repuestos,
-réplicas, piezas personalizadas, maquetas, aplicaciones y materiales entre el
-hero y la galería.
+CUANDO se carga la página de ingeniería avanzada, el hero DEBE mostrar los dos
+párrafos aportados sobre escaneo 3D, ingeniería inversa, CAD/CAE, aplicaciones
+y materiales. El sistema NO DEBE repetirlos en un bloque inferior.
 
 ### [REQ-1302] — Conservación
-CUANDO se añade el texto, el sistema DEBE conservar el hero, su imagen y
-fundido, la galería dinámica con lightbox y los estilos de ambas secciones.
+CUANDO se reemplaza el texto, el sistema DEBE conservar la imagen y fundido del
+hero y la galería dinámica con lightbox.
 
 ### [REQ-1303] — Lectura adaptable
-MIENTRAS el viewport sea móvil o de escritorio, el nuevo texto DEBE mantener
-ancho y espacio legibles sin desbordamiento horizontal ni alterar el orden de
-lectura del hero y la galería.
+MIENTRAS el viewport sea móvil o de escritorio, el hero DEBE disponer de altura
+suficiente para el nuevo texto, sin superponerlo a la imagen, recortarlo ni
+provocar desbordamiento horizontal.
 
 ## Límites
 
-Sin cambios de datos, rutas, SEO, galería o componentes compartidos. El
-contenido aportado no se convierte en afirmación de certificación médica ni
-de material específico de un producto del catálogo.
+Sin cambios de datos, rutas, SEO o galería. `HeroServicio` solo puede recibir
+una altura mínima opcional y compatible con las otras páginas de servicio.

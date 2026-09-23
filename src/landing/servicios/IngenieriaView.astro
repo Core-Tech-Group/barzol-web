@@ -3,7 +3,6 @@ import PublicLayout from '@landing/layout/PublicLayout.astro';
 import WhatsAppIcon from '@landing/shared/WhatsAppIcon.astro';
 import GalleryLightbox from './GalleryLightbox.tsx';
 import HeroServicio from './HeroServicio.astro';
-import IngenieriaIntro from './IngenieriaIntro.astro';
 import ImagenOptimizada from '@landing/shared/ImagenOptimizada.astro';
 import { getGaleria } from '@shared/lib/galeria/galeriaService';
 
@@ -25,15 +24,16 @@ const proceso = [
 <PublicLayout title="Trabajos de ingeniería avanzada — Barzol">
 	<!-- HERO — misma altura que Accesorios y Escaneo; la foto a la derecha, a
 	     toda la altura, unida al azul con un degradado. -->
-	<HeroServicio titulo="Trabajos de ingeniería avanzada" arco="clamp(120px, 13.5vw, 210px)" arcoMovil="min(27vw, 130px)" altoMedia={1.5} zonaClara={false}>
-		Convertimos piezas reales en modelos digitales de precisión mediante escaneo 3D, ingeniería inversa y diseño CAD/CAE, para fabricar repuestos y piezas a medida.
+	<HeroServicio titulo="Trabajos de ingeniería avanzada" arco="clamp(120px, 13.5vw, 210px)" arcoMovil="min(27vw, 130px)" altoMedia={1.5} altoMinimo="460px" zonaClara={false}>
+		<span class="bz-ing-descripcion">
+			<span>Mediante escaneo 3D, ingeniería inversa y diseño CAD/CAE, digitalizamos, desarrollamos y fabricamos repuestos y componentes para automóviles, laboratorios y maquinaria; réplicas, piezas personalizadas, prototipos, maquetas arquitectónicas y otras soluciones con alta precisión.</span>
+			<span>Utilizamos materiales que van desde polímeros convencionales y técnicos hasta materiales reforzados con fibra de carbono, seleccionados según las necesidades y requerimientos de cada proyecto.</span>
+		</span>
 		<div class="bz-ing-foto" slot="media">
 			<div class="bz-ing-fundido" aria-hidden="true"></div>
 			<ImagenOptimizada nombre="ingenieria-hero" alt="Ingeniero de Barzol comparando una pieza metálica con su modelo escaneado en 3D" sizes="(max-width: 768px) 100vw, 660px" loading="eager" />
 		</div>
 	</HeroServicio>
-
-	<IngenieriaIntro />
 
 	<!-- GALERÍA -->
 	<div id="servicios" class="bz-section-wrap" style="background:white; padding:64px 32px;">
@@ -49,6 +49,11 @@ const proceso = [
 </PublicLayout>
 
 <style>
+	.bz-ing-descripcion {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
 	/* ---------- Foto del hero ---------- */
 	/* El degradado empieza al 35% del ancho, igual que el de Accesorios, o
 	   donde termina el texto (72px + 440px) si eso queda más a la derecha: nunca
